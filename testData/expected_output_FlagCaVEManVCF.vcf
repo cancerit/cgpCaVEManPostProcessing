@@ -1,0 +1,72 @@
+##fileformat=VCFv4.1
+##fileDate=20120915
+##source_20120915.1=CavemanMerge2Vcf.pl
+##vcfProcessLog_20120915.3=<InputVCF=<.>,InputVCFSource=<CaVEMan>,InputVCFVer=<V|0_8_10|02_07_12>,InputVCFParam=<MUT_RATE=0.000006,MUT_CUTOFF=0.8,SNP_RATE=0.001000,REF_BIAS=0.950000,NORMAL_CONTAMINATION=0.342,MAX_READ_DEPTH_PER_SAMPLE=500,SNP_CUTOFF=0.95>>
+##vcfProcessLog_20120915.4=<InputVCF=<6426.v1.cave.sub.tab>,InputVCFSource=<CavemanMerge2Vcf.pl>,InputVCFVer=<(16889:17028M)>,InputVCFParam=<n=1234567,np=genomic,tl=HiSeq,r=genome.fa,tj=.,tp=genomic,v=GRCh37,s=HUMAN,nl=HiSeq,nj=.,o=tmp.test.vcf,i=6426.v1.cave.sub.tab,t=1234568>>
+##reference=genome.fa
+##contig=<ID=11,assembly=GRCh37,length=135006516,species=HUMAN>
+##contig=<ID=21,assembly=GRCh37,length=48129895,species=HUMAN>
+##contig=<ID=7,assembly=GRCh37,length=159138663,species=HUMAN>
+##contig=<ID=Y,assembly=GRCh37,length=59373566,species=HUMAN>
+##contig=<ID=17,assembly=GRCh37,length=81195210,species=HUMAN>
+##contig=<ID=2,assembly=GRCh37,length=243199373,species=HUMAN>
+##contig=<ID=22,assembly=GRCh37,length=51304566,species=HUMAN>
+##contig=<ID=1,assembly=GRCh37,length=249250621,species=HUMAN>
+##contig=<ID=18,assembly=GRCh37,length=78077248,species=HUMAN>
+##contig=<ID=16,assembly=GRCh37,length=90354753,species=HUMAN>
+##contig=<ID=13,assembly=GRCh37,length=115169878,species=HUMAN>
+##contig=<ID=6,assembly=GRCh37,length=171115067,species=HUMAN>
+##contig=<ID=X,assembly=GRCh37,length=155270560,species=HUMAN>
+##contig=<ID=3,assembly=GRCh37,length=198022430,species=HUMAN>
+##contig=<ID=MT,assembly=GRCh37,length=16569,species=HUMAN>
+##contig=<ID=9,assembly=GRCh37,length=141213431,species=HUMAN>
+##contig=<ID=12,assembly=GRCh37,length=133851895,species=HUMAN>
+##contig=<ID=20,assembly=GRCh37,length=63025520,species=HUMAN>
+##contig=<ID=14,assembly=GRCh37,length=107349540,species=HUMAN>
+##contig=<ID=15,assembly=GRCh37,length=102531392,species=HUMAN>
+##contig=<ID=8,assembly=GRCh37,length=146364022,species=HUMAN>
+##contig=<ID=4,assembly=GRCh37,length=191154276,species=HUMAN>
+##contig=<ID=19,assembly=GRCh37,length=59128983,species=HUMAN>
+##contig=<ID=10,assembly=GRCh37,length=135534747,species=HUMAN>
+##contig=<ID=5,assembly=GRCh37,length=180915260,species=HUMAN>
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##INFO=<ID=MP,Number=1,Type=Float,Description="Sum of CaVEMan somatic genotype probabilities">
+##INFO=<ID=GP,Number=1,Type=Float,Description="Sum of CaVEMan germline genotype probabilities">
+##INFO=<ID=TG,Number=1,Type=String,Description="Most probable genotype as called by CaVEMan">
+##INFO=<ID=TP,Number=1,Type=Float,Description="Probability of most probable genotype as called by CaVEMan">
+##INFO=<ID=SG,Number=1,Type=String,Description="2nd most probable genotype as called by CaVEMan">
+##INFO=<ID=SP,Number=1,Type=Float,Description="Probability of 2nd most probable genotype as called by CaVEMan">
+##INFO=<ID=DS,Number=.,Type=String,Description="DBSnp ID of known SNP">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=AA,Number=1,Type=Integer,Description="Reads presenting a A for this position">
+##FORMAT=<ID=CA,Number=1,Type=Integer,Description="Reads presenting a C for this position">
+##FORMAT=<ID=GA,Number=1,Type=Integer,Description="Reads presenting a G for this position">
+##FORMAT=<ID=TA,Number=1,Type=Integer,Description="Reads presenting a T for this position">
+##FORMAT=<ID=PM,Number=1,Type=Float,Description="Proportion of mut allele">
+##SAMPLE=<ID=NORMAL,Description="Normal",Accession=1234567,Platform=<HiSeq,GAII>,Protocol=genomic,SampleName=PDtestb>
+##SAMPLE=<ID=TUMOUR,Description="Mutant",Accession=1234568,Platform=HiSeq,Protocol=genomic,SampleName=PDtesta>
+##cgpAnalysisProc_20130206.1=123456
+##FILTER=<ID=DTH,Description="Less than 1/3 mutant alleles were >= 25 base quality">
+##FILTER=<ID=RP,Description="Coverage was less than 8 and no mutant alleles were found in the first 2/3 of a read (shifted 0.08 from the start and extended 0.08 more than 2/3 of the read length)">
+##FILTER=<ID=MN,Description="More than 0.05 of mutant alleles that were >= 15 base quality found in the matched normal">
+##FILTER=<ID=PT,Description="Mutant alleles all on one direction of read (1rd allowed on opposite strand) and in second half of the read. Second half of read contains the motif GGC[AT]G in sequenced orientation and the mean base quality of all bases after the motif was less than 20">
+##FILTER=<ID=GI,Description="Position falls within a germline indel using the supplied bed file">
+##FILTER=<ID=MQ,Description="Mean mapping quality of the mutant allele reads was < 21">
+##FILTER=<ID=SR,Description="Position falls within a simple repeat using the supplied bed file">
+##FILTER=<ID=CR,Description="Position falls within a centromeric repeat using the supplied bed file">
+##FILTER=<ID=PH,Description="Mutant reads were on one strand (permitted proportion on other strand: 0.04), and mean mutant base quality was less than 21">
+##FILTER=<ID=VUM,Description="Position has >= 3 mutant allele present in at least 1 percent unmatched normal samples in the unmatched VCF.">
+##FILTER=<ID=SE,Description="Coverage is >= 10 on each strand but mutant allele is only present on one strand">
+##FILTER=<ID=MNP,Description="Tumour sample mutant allele proportion - normal sample mutant allele proportion < 0.2">
+##vcfProcessLog_20120916.1=<InputVCF=<input_FlagCaVEManVCF.vcf.1>,InputVCFSource=<FlagCaVEManVCF.pl>,InputVCFVer=<(17053:17054M)>,InputVCFParam=<h=.,g=germline_indel.bed,f=input_FlagCaVEManVCF.vcf.1,t=GENOME,loud=.,n=testflagwt.bam,m=testflagmt.bam,v=flag.to.vcf.convert.ini,s=HUMAN,l=2000,c=flag.vcf.config.tmp.ini,idx=1,o=actual_output_flagVCF.vcf.1,sp=.,b=testData,ab=testData,p=123456,umv=unmatchedVCF,ref=genome.fa.fai>>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NORMAL	TUMOUR
+15	22095504	ID_36061	G	A	.	PT	DP=22;MP=8.4e-01;GP=1.5e-01;TG=GG/AG;TP=8.1e-01;SG=AG/GG;SP=7.8e-02	GT:AA:CA:GA:TA:PM	0|0:0:0:9:0:0.0e+00	0|1:4:0:9:0:3.1e-01
+17	3989655	ID_27766	G	C	.	SE;DTH	DP=57;MP=8.2e-01;GP=2.7e-06;TG=GG/CG;TP=8.2e-01;SG=GG/GG;SP=1.8e-01	GT:AA:CA:GA:TA:PM	0|0:0:0:29:0:0.0e+00	0|1:0:4:24:0:1.4e-01
+21	11089399	ID_577	G	A	.	MNP	DP=441;MP=1.0e+00;GP=4.6e-38;TG=GG/AGGG;TP=1.0e+00;SG=GG/AAGG;SP=2.1e-18	GT:AA:CA:GA:TA:PM	0|0:7:0:209:0:3.2e-02	0|1:22:0:203:0:9.8e-02
+21	11096569	ID_621	G	T	.	MN;MNP	DP=293;MP=1.0e+00;GP=2.7e-17;TG=GG/GGGT;TP=1.0e+00;SG=GG/GGTT;SP=2.3e-15	GT:AA:CA:GA:TA:PM	0|0:0:0:120:5:4.0e-02	0|1:0:0:155:13:7.7e-02
+21	14356712	ID_3592	T	C	.	CR;MNP	DP=708;MP=1.0e+00;GP=8.6e-48;TG=TT/CTTT;TP=1.0e+00;SG=TT/TTTT;SP=2.7e-06	GT:AA:CA:GA:TA:PM	0|0:0:6:0:274:2.1e-02	0|1:0:20:0:408:4.7e-02
+21	31260941	ID_4227	G	C	.	PASS	DP=114;MP=1.0e+00;GP=4.9e-13;TG=GG/CGGG;TP=1.0e+00;SG=GG/CCGG;SP=5.7e-04	GT:AA:CA:GA:TA:PM	0|0:0:0:48:0:0.0e+00	0|1:0:11:55:0:1.7e-01
+21	33190581	ID_2872	T	G	.	SE;MQ;MNP	DP=111;MP=1.0e+00;GP=2.0e-03;TG=TT/GTTT;TP=1.0e+00;SG=GT/TTTT;SP=2.0e-03	GT:AA:CA:GA:TA:PM	0|0:0:0:1:35:2.8e-02	0|1:0:0:5:70:6.7e-02
+21	44244371	ID_3243	C	A	.	GI;MNP	DP=88;MP=1.0e+00;GP=1.2e-04;TG=CC/ACCC;TP=1.0e+00;SG=CC/CCCC;SP=3.9e-03	GT:AA:CA:GA:TA:PM	0|0:1:33:0:0:2.9e-02	0|1:5:49:0:0:9.3e-02
+21	45251767	ID_3262	A	T	.	RP;VUM	DP=41;MP=9.7e-01;GP=1.0e-04;TG=AA/AAAT;TP=9.0e-01;SG=AA/AATT;SP=6.8e-02	GT:AA:CA:GA:TA:PM	0|0:21:0:0:0:0.0e+00	0|1:17:0:0:3:1.5e-01
+22	22641325	ID_29247	T	A	.	SR;MNP	DP=66;MP=9.1e-01;GP=9.4e-02;TG=TT/ATT;TP=9.1e-01;SG=AT/TTT;SP=9.3e-02	GT:AA:CA:GA:TA:PM	0|0:1:0:0:24:4.0e-02	0|1:6:0:0:35:1.5e-01

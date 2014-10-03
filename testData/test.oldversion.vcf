@@ -1,0 +1,52 @@
+##fileformat=VCFv4.1
+##fileDate=20130223
+##source_20130323.1=CavemanMerge2Vcf.pl
+##cavemanVersion=0_3_0
+##cavemanParams="=;=;=;=;=;=;="
+##vcfProcessLog_20130323.1=<InputVCF=<tmp.tab>,InputVCFSource=<CavemanMerge2Vcf.pl>,InputVCFVer=<1.1>,InputVCFParam=<tl=GAII,np=pulldown,n=1234567,rs=601227714,r=genome.fa,tp=pulldown,tj=.,v=GRCh37,s=HUMAN,nl=GAII,p=936557,nj=.,rt=601255280,t=1234568,i=tmp.tab>>
+##cgpAnalysisProc_20130323.1=936557
+##reference=genome.fa
+##contig=<ID=11,assembly=GRCh37,length=135006516,species=HUMAN>
+##contig=<ID=21,assembly=GRCh37,length=48129895,species=HUMAN>
+##contig=<ID=7,assembly=GRCh37,length=159138663,species=HUMAN>
+##contig=<ID=Y,assembly=GRCh37,length=59373566,species=HUMAN>
+##contig=<ID=17,assembly=GRCh37,length=81195210,species=HUMAN>
+##contig=<ID=2,assembly=GRCh37,length=243199373,species=HUMAN>
+##contig=<ID=22,assembly=GRCh37,length=51304566,species=HUMAN>
+##contig=<ID=1,assembly=GRCh37,length=249250621,species=HUMAN>
+##contig=<ID=18,assembly=GRCh37,length=78077248,species=HUMAN>
+##contig=<ID=16,assembly=GRCh37,length=90354753,species=HUMAN>
+##contig=<ID=13,assembly=GRCh37,length=115169878,species=HUMAN>
+##contig=<ID=6,assembly=GRCh37,length=171115067,species=HUMAN>
+##contig=<ID=X,assembly=GRCh37,length=155270560,species=HUMAN>
+##contig=<ID=3,assembly=GRCh37,length=198022430,species=HUMAN>
+##contig=<ID=MT,assembly=GRCh37,length=16569,species=HUMAN>
+##contig=<ID=9,assembly=GRCh37,length=141213431,species=HUMAN>
+##contig=<ID=12,assembly=GRCh37,length=133851895,species=HUMAN>
+##contig=<ID=20,assembly=GRCh37,length=63025520,species=HUMAN>
+##contig=<ID=14,assembly=GRCh37,length=107349540,species=HUMAN>
+##contig=<ID=15,assembly=GRCh37,length=102531392,species=HUMAN>
+##contig=<ID=8,assembly=GRCh37,length=146364022,species=HUMAN>
+##contig=<ID=4,assembly=GRCh37,length=191154276,species=HUMAN>
+##contig=<ID=19,assembly=GRCh37,length=59128983,species=HUMAN>
+##contig=<ID=10,assembly=GRCh37,length=135534747,species=HUMAN>
+##contig=<ID=5,assembly=GRCh37,length=180915260,species=HUMAN>
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##INFO=<ID=MP,Number=1,Type=Float,Description="Sum of CaVEMan somatic genotype probabilities">
+##INFO=<ID=GP,Number=1,Type=Float,Description="Sum of CaVEMan germline genotype probabilities">
+##INFO=<ID=TG,Number=1,Type=String,Description="Most probable genotype as called by CaVEMan">
+##INFO=<ID=TP,Number=1,Type=Float,Description="Probability of most probable genotype as called by CaVEMan">
+##INFO=<ID=SG,Number=1,Type=String,Description="2nd most probable genotype as called by CaVEMan">
+##INFO=<ID=SP,Number=1,Type=Float,Description="Probability of 2nd most probable genotype as called by CaVEMan">
+##INFO=<ID=DS,Number=.,Type=String,Description="DBSnp ID of known SNP">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=AA,Number=1,Type=Integer,Description="Reads presenting a A for this position">
+##FORMAT=<ID=CA,Number=1,Type=Integer,Description="Reads presenting a C for this position">
+##FORMAT=<ID=GA,Number=1,Type=Integer,Description="Reads presenting a G for this position">
+##FORMAT=<ID=TA,Number=1,Type=Integer,Description="Reads presenting a T for this position">
+##FORMAT=<ID=PM,Number=1,Type=Float,Description="Proportion of mut allele">
+##SAMPLE=<ID=NORMAL,Description="Normal",Accession=1234567,Platform=GAII,Protocol=pulldown,SampleName=PDtesta>
+##SAMPLE=<ID=TUMOUR,Description="Mutant",Accession=1234568,Platform=GAII,Protocol=pulldown,SampleName=PDtestb>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NORMAL	TUMOUR
+7	131833427	601251715	T	C	.	.	DP=59;MP=1.0e+00;GP=1.6e-08;TG=TT/CC;TP=9.9e-01;SG=TT/CT;SP=1.1e-02	GT:AA:CA:GA:TA:PM	0/0:0:0:0:33:0.0e+00	1/1:0:15:0:11:5.8e-01
+7	137407167	601251762	C	G	.	.	DP=92;MP=1.0e+00;GP=1.3e-09;TG=CC/CG;TP=1.0e+00;SG=CC/CC;SP=1.3e-04	GT:AA:CA:GA:TA:PM	0/0:0:52:1:0:1.9e-02	0/1:0:34:5:0:1.3e-01

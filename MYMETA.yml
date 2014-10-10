@@ -24,4 +24,4 @@ requires:
   Devel::Cover: 1.09
   Pod::Coverage: 0.23
   Test::Fatal: 0.013
-version: v1.0.0
+version: v1.0.1

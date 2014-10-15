@@ -2,21 +2,21 @@
 
 ##########LICENCE##########
 # Copyright (c) 2014 Genome Research Ltd.
-# 
+#
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
-# 
+#
 # This file is part of cgpCaVEManPostProcessing.
-# 
+#
 # cgpCaVEManPostProcessing is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
 # Software Foundation; either version 3 of the License, or (at your option) any
 # later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 # FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 # details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##########
@@ -748,7 +748,7 @@ sub validateInput {
   		pod2usage("Non existant or unreadable germline indel bed file: ".$opts->{'g'}."\n");
   	}
   }
-  if($opts->{'umv'}){
+  if($opts->{'umv'} && !~ m/^(http|ftp)/){
   	if(! -e $opts->{'umv'} || ! -d $opts->{'umv'} || ! -r $opts->{'umv'}){
   		pod2usage("Unmatched VCF location directory has bad permissions or doesn't exist: ".$opts->{'umv'}."\n");
   	}

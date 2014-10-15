@@ -2,25 +2,26 @@
 
 ##########LICENCE##########
 # Copyright (c) 2014 Genome Research Ltd.
-# 
+#
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
-# 
+#
 # This file is part of cgpCaVEManPostProcessing.
-# 
+#
 # cgpCaVEManPostProcessing is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
 # Software Foundation; either version 3 of the License, or (at your option) any
 # later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 # FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 # details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##########
 
+SOURCE_BEDTOOLS="https://github.com/arq5x/bedtools2/releases/download/v2.21.0/bedtools-2.21.0.tar.gz"
 
 done_message () {
     if [ $? -eq 0 ]; then
@@ -33,6 +34,16 @@ done_message () {
         echo "    Please check INSTALL file for items that should be installed by a package manager"
         exit 1
     fi
+}
+
+get_distro () {
+  if hash curl 2>/dev/null; then
+    curl -sS -o $1.tar.gz -L $2
+  else
+    wget -nv -O $1.tar.gz $2
+  fi
+  mkdir -p $1
+  tar --strip-components 1 -C $1 -zxf $1.tar.gz
 }
 
 if [ "$#" -ne "1" ] ; then
@@ -93,6 +104,25 @@ fi
 
 #add bin path for install tests
 export PATH="$INST_PATH/bin:$PATH"
+
+echo -n "Building bedtools ..."
+if [ -e $SETUP_DIR/bedtools.success ]; then
+  echo -n " previously installed ...";
+else
+  cd $SETUP_DIR
+  (
+  set -x
+  if [ ! -e bedtools ]; then
+    get_distro "bedtools2" $SOURCE_BEDTOOLS
+  fi
+  make -C bedtools2 -j$CPU
+  cp bedtools2/bin/* $INST_PATH/bin/.
+  touch $SETUP_DIR/bedtools.success
+  )>>$INIT_DIR/setup.log 2>&1
+fi
+done_message "" "Failed to build bedtools."
+
+cd $INIT_DIR
 
 echo -n "Installing Perl prerequisites ..."
 if ! ( perl -MExtUtils::MakeMaker -e 1 >/dev/null 2>&1); then

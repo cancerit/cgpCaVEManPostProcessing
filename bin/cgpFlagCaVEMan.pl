@@ -748,7 +748,7 @@ sub validateInput {
   		pod2usage("Non existant or unreadable germline indel bed file: ".$opts->{'g'}."\n");
   	}
   }
-  if($opts->{'umv'} && !~ m/^(http|ftp)/){
+  if($opts->{'umv'} && $opts->{'umv'} !~ m/^(http|ftp)/){
   	if(! -e $opts->{'umv'} || ! -d $opts->{'umv'} || ! -r $opts->{'umv'}){
   		pod2usage("Unmatched VCF location directory has bad permissions or doesn't exist: ".$opts->{'umv'}."\n");
   	}

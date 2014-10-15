@@ -345,7 +345,14 @@ sub getIntersectMatches{
 	return if(!defined($bedFile));
 	#Run intersect and parse output.
 	#Build command
-	my $cmd = '/software/CGP/bin/bedtools-2.17.0 intersect -sorted -a '.$vcfFile.' -b '.$bedFile.'';
+	my $cmd;
+	if(-e '/software/CGP') {
+	  $cmd = '/software/CGP/bin/bedtools-2.17.0';
+	}
+	else {
+	  $cmd = 'bedtools';
+	}
+	$cmd .= ' intersect -sorted -a '.$vcfFile.' -b '.$bedFile.'';
 	#Run intersect
 	my $IN;
 	my $pid = open($IN,$cmd.' 2>&1 |');

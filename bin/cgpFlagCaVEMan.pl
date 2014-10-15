@@ -248,15 +248,21 @@ sub buildUnmatchedVCFFileListFromReference{
 			$count++;
 			#The files will be named according to line index rather than contig name.
 			my $fileName = $umLoc."/unmatchedNormal.".$count.".vcf.gz";
-			#If file exists, add it to the list, otherwise, fail.
-			if(! -e $fileName){
-				warn("Couldn't find the unmatched VCF normal file $fileName corresponding to contig $chr in given location.\nAny mutations on this contig will NOT be flagged with the unmatched VCF normal flag.");
-				next;
+			my $umVcfTabix;
+			if($fileName =~ /^(http|ftp)/) {
+			  $umVcfTabix = new Tabix(-data => $fileName);
 			}
-			my $idx = $fileName.".tbi";
-	    croak ("Tabix file for unmatchedNormalVCF file $idx does not exist.\n") if(! -e $idx);
-	    my $umVcfTabix = new Tabix(-data => $fileName, -index => $idx);
-			$fileList->{$chr} = $umVcfTabix;
+			else {
+        #If file exists, add it to the list, otherwise, fail.
+        if(! -e $fileName){
+          warn("Couldn't find the unmatched VCF normal file $fileName corresponding to contig $chr in given location.\nAny mutations on this contig will NOT be flagged with the unmatched VCF normal flag.");
+          next;
+        }
+        my $idx = $fileName.".tbi";
+        croak ("Tabix file for unmatchedNormalVCF file $idx does not exist.\n") if(! -e $idx);
+        $umVcfTabix = new Tabix(-data => $fileName, -index => $idx);
+	    }
+			$fileList->{$chr} = $umVcfTabix if(defined $umVcfTabix);
 		}
 	close($REF);
 	return $fileList;

@@ -2,21 +2,21 @@
 
 ##########LICENCE##########
 # Copyright (c) 2014 Genome Research Ltd.
-# 
+#
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
-# 
+#
 # This file is part of cgpCaVEManPostProcessing.
-# 
+#
 # cgpCaVEManPostProcessing is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
 # Software Foundation; either version 3 of the License, or (at your option) any
 # later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 # FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 # details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##########
@@ -248,15 +248,21 @@ sub buildUnmatchedVCFFileListFromReference{
 			$count++;
 			#The files will be named according to line index rather than contig name.
 			my $fileName = $umLoc."/unmatchedNormal.".$count.".vcf.gz";
-			#If file exists, add it to the list, otherwise, fail.
-			if(! -e $fileName){
-				warn("Couldn't find the unmatched VCF normal file $fileName corresponding to contig $chr in given location.\nAny mutations on this contig will NOT be flagged with the unmatched VCF normal flag.");
-				next;
+			my $umVcfTabix;
+			if($fileName =~ /^(http|ftp)/) {
+			  $umVcfTabix = new Tabix(-data => $fileName);
 			}
-			my $idx = $fileName.".tbi";
-	    croak ("Tabix file for unmatchedNormalVCF file $idx does not exist.\n") if(! -e $idx);
-	    my $umVcfTabix = new Tabix(-data => $fileName, -index => $idx);
-			$fileList->{$chr} = $umVcfTabix;
+			else {
+        #If file exists, add it to the list, otherwise, fail.
+        if(! -e $fileName){
+          warn("Couldn't find the unmatched VCF normal file $fileName corresponding to contig $chr in given location.\nAny mutations on this contig will NOT be flagged with the unmatched VCF normal flag.");
+          next;
+        }
+        my $idx = $fileName.".tbi";
+        croak ("Tabix file for unmatchedNormalVCF file $idx does not exist.\n") if(! -e $idx);
+        $umVcfTabix = new Tabix(-data => $fileName, -index => $idx);
+	    }
+			$fileList->{$chr} = $umVcfTabix if(defined $umVcfTabix);
 		}
 	close($REF);
 	return $fileList;
@@ -345,7 +351,14 @@ sub getIntersectMatches{
 	return if(!defined($bedFile));
 	#Run intersect and parse output.
 	#Build command
-	my $cmd = '/software/CGP/bin/bedtools-2.17.0 intersect -sorted -a '.$vcfFile.' -b '.$bedFile.'';
+	my $cmd;
+	if(-e '/software/CGP') {
+	  $cmd = '/software/CGP/bin/bedtools-2.17.0';
+	}
+	else {
+	  $cmd = 'bedtools';
+	}
+	$cmd .= ' intersect -sorted -a '.$vcfFile.' -b '.$bedFile.'';
 	#Run intersect
 	my $IN;
 	my $pid = open($IN,$cmd.' 2>&1 |');
@@ -748,7 +761,7 @@ sub validateInput {
   		pod2usage("Non existant or unreadable germline indel bed file: ".$opts->{'g'}."\n");
   	}
   }
-  if($opts->{'umv'}){
+  if($opts->{'umv'} && $opts->{'umv'} !~ m/^(http|ftp)/){
   	if(! -e $opts->{'umv'} || ! -d $opts->{'umv'} || ! -r $opts->{'umv'}){
   		pod2usage("Unmatched VCF location directory has bad permissions or doesn't exist: ".$opts->{'umv'}."\n");
   	}

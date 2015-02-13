@@ -348,16 +348,15 @@ sub getVCFToAddResultsOfFilters{
 
 sub getIntersectMatches{
 	my ($vcfFile,$bedFile,$flagName) = @_;
-	return if(!defined($bedFile));
+	return 0 if(!defined $bedFile);
+	die "ERROR: Unable to find $bedFile" unless(-e $bedFile);
+	if(-s _ == 0) {
+	  warn "WARN: Empty bed file $bedFile ... skipping intersect";
+	  return 0;
+	}
 	#Run intersect and parse output.
 	#Build command
-	my $cmd;
-	if(-e '/software/CGP') {
-	  $cmd = '/software/CGP/bin/bedtools-2.17.0';
-	}
-	else {
-	  $cmd = 'bedtools';
-	}
+	my $cmd = 'bedtools';
 	$cmd .= ' intersect -sorted -a '.$vcfFile.' -b '.$bedFile.'';
 	#Run intersect
 	my $IN;

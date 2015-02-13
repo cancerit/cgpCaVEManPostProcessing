@@ -30,13 +30,16 @@ use Carp;
 use Const::Fast qw(const);
 use Attribute::Abstract;
 
-our $VERSION = '1.0.2';
+our $VERSION = '1.1.0';
 
 const my $MATCH_CIG => 'M';
 const my $SKIP_CIG => 'N';
 const my $INS_CIG => 'I';
 const my $DEL_CIG => 'D';
 const my $SOFT_CLIP_CIG => 'S';
+
+const my $MIN_SINGLE_END_CVG => 10;
+const my $MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
 
 my $muts;
 my $norms;
@@ -104,6 +107,82 @@ sub keepSW{
 		$keepSW = $keep;
 	}
 	return $keepSW;
+}
+
+sub getSingleEndResult{
+	my ($self) = @_;
+	if(!defined($self->{'single'})){
+		$self->{'single'} = $self->_calculateSingleEndResult();
+	}
+	return $self->{'single'};
+}
+
+sub _calculateSingleEndResult{
+	my ($self) = @_;
+	return 1 if($self->_muts->{'pcvg'} < $self->minSingleEndCoverage() || $self->_muts->{'ncvg'} < $self->minSingleEndCoverage());
+	my $hasPos = 0;
+	my $hasNeg = 0;
+	foreach my $str(@{$self->_muts->{'tstr'}}){
+		if($str == -1){
+			$hasNeg++;
+		}elsif($str == 1){
+			$hasPos++;
+		}
+		return 1 if($hasNeg > 0 && $hasPos > 0);
+	}
+	if($hasNeg == 0 || $hasPos == 0){
+		return 0;
+	}
+	return 1;
+}
+
+sub minSingleEndCoverage{
+	my ($self,$p) = @_;
+	if(defined($p)){
+		 $self->{'sec'} = $p;
+	}else{
+		if(!defined($self->{'sec'})){
+			$self->{'sec'} = $MIN_SINGLE_END_CVG;
+		}
+	}
+	return $self->{'sec'};
+}
+
+sub getMatchedNormalProportionResult{
+	my ($self) = @_;
+	if(!defined($self->{'umpropres'})){
+		$self->{'umpropres'} = $self->_calculateMatchedNormalProportion();
+	}
+	return $self->{'umpropres'};
+}
+
+sub _calculateMatchedNormalProportion{
+	my ($self) = @_;
+	#Calculate tumour proportion of mut allele
+	my $tumProp = 0;
+	if(scalar(@{$self->_muts->{'tqs'}}) > 0){
+		$tumProp = scalar(@{$self->_muts->{'tqs'}})/$self->_muts->{'tumcvg'};
+	}
+	#Calculate normal proportion of mut allele
+	my $normProp = 0;
+	if(exists($self->_muts->{'nqs'}) && scalar(@{$self->_muts->{'nqs'}}) > 0){
+		$normProp = scalar(@{$self->_muts->{'nqs'}})/$self->_muts->{'normcvg'};
+	}
+	#Fail if the difference is less than the given proportion/percentage
+	return 0 if($normProp > 0 && ($tumProp - $normProp) < $self->matchedNormalMaxMutProportion());
+	return 1;
+}
+
+sub matchedNormalMaxMutProportion{
+	my ($self,$p) = @_;
+	if(defined($p)){
+		 $self->{'mnmmp'} = $p;
+	}else{
+		if(!defined($self->{'mnmmp'})){
+			$self->{'mnmmp'} = $MATCHED_NORMAL_MAX_MUT_PROP;
+		}
+	}
+	return $self->{'mnmmp'};
 }
 
 =item minAnalysedQual

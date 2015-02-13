@@ -1,20 +1,20 @@
 ##########LICENCE##########
 # Copyright (c) 2014 Genome Research Ltd.
-# 
+#
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
-# 
+#
 # This file is part of cgpCaVEManPostProcessing.
-# 
+#
 # cgpCaVEManPostProcessing is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
 # Software Foundation; either version 3 of the License, or (at your option) any
 # later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 # FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 # details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##########
@@ -32,7 +32,6 @@ use base qw(Sanger::CGP::CavemanPostProcessor::PostProcessor);
 
 const my $MAX_MATCHED_NORM_MUT_ALLELE_PROP => 0.05;
 const my $MAX_PHASING_MINORITY_STRAND_PROP => 0.04;
-const my $MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
 const my $RD_POS_BEGINNING_OF_RD_PROP => 0.08;
 const my $RD_POS_END_OF_TWOTHIRDS_EXTEND_PROP => 0.08;
 const my $MIN_PASS_AVG_QUAL_PENTAMER => 20;
@@ -46,7 +45,6 @@ const my $MIN_NORM_MUT_ALLELE_BASE_QUAL => 15;
 const my $MIN_RD_POS_DEPTH => 8;
 const my $MATCHED_NORMAL_ALLELE_HICVG_CUTOFF => 2;
 const my $MAX_MATCHED_NORMAL_ALLELE_HICVG_PROPORTION => 0.03;
-const my $MIN_SINGLE_END_CVG => 10;
 
 #---------------
 #	Init methods
@@ -97,59 +95,6 @@ sub _checkNormMuts{
 	return 1;
 }
 
-sub getSingleEndResult{
-	my ($self) = @_;
-	if(!defined($self->{'single'})){
-		$self->{'single'} = $self->_calculateSingleEndResult();
-	}
-	return $self->{'single'};
-}
-
-sub _calculateSingleEndResult{
-	my ($self) = @_;
-	return 1 if($self->_muts->{'pcvg'} < $self->minSingleEndCoverage() || $self->_muts->{'ncvg'} < $self->minSingleEndCoverage());
-	my $hasPos = 0;
-	my $hasNeg = 0;
-	foreach my $str(@{$self->_muts->{'tstr'}}){
-		if($str == -1){
-			$hasNeg++;
-		}elsif($str == 1){
-			$hasPos++;
-		}
-		return 1 if($hasNeg > 0 && $hasPos > 0);
-	}
-	if($hasNeg == 0 || $hasPos == 0){
-		return 0;
-	}
-	return 1;
-}
-
-sub getMatchedNormalProportionResult{
-	my ($self) = @_;
-	if(!defined($self->{'umpropres'})){
-		$self->{'umpropres'} = $self->_calculateMatchedNormalProportion();
-	}
-	return $self->{'umpropres'};
-}
-
-sub _calculateMatchedNormalProportion{
-	my ($self) = @_;
-	#Calculate tumour proportion of mut allele
-	my $tumProp = 0;
-	if(scalar(@{$self->_muts->{'tqs'}}) > 0){
-		$tumProp = scalar(@{$self->_muts->{'tqs'}})/$self->_muts->{'tumcvg'};
-	}
-	#Calculate normal proportion of mut allele
-	my $normProp = 0;
-	if(exists($self->_muts->{'nqs'}) && scalar(@{$self->_muts->{'nqs'}}) > 0){
-		$normProp = scalar(@{$self->_muts->{'nqs'}})/$self->_muts->{'normcvg'};
-	}
-	#Fail if the difference is less than the given proportion/percentage
-	return 0 if($normProp > 0 && ($tumProp - $normProp) < $self->matchedNormalMaxMutProportion());
-	return 1;
-}
-
-
 #-----------------
 #	Getters/setters
 #-----------------
@@ -175,30 +120,6 @@ sub maxMatchedNormalAlleleHiCvgProportion{
 		}
 	}
 	return $self->{'mmnahcvp'};
-}
-
-sub matchedNormalMaxMutProportion{
-	my ($self,$p) = @_;
-	if(defined($p)){
-		 $self->{'mnmmp'} = $p;
-	}else{
-		if(!defined($self->{'mnmmp'})){
-			$self->{'mnmmp'} = $MATCHED_NORMAL_MAX_MUT_PROP;
-		}
-	}
-	return $self->{'mnmmp'};
-}
-
-sub minSingleEndCoverage{
-	my ($self,$p) = @_;
-	if(defined($p)){
-		 $self->{'sec'} = $p;
-	}else{
-		if(!defined($self->{'sec'})){
-			$self->{'sec'} = $MIN_SINGLE_END_CVG;
-		}
-	}
-	return $self->{'sec'};
 }
 
 #----------

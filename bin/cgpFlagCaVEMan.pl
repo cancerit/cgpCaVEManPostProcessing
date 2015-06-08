@@ -44,6 +44,8 @@ use Config::IniFiles;
 use FindBin qw($Bin);
 use Tabix;
 use Const::Fast qw(const);
+use LWP::Simple;
+use IO::Zlib;
 
 use File::ShareDir qw(dist_dir);
 
@@ -82,10 +84,14 @@ const my $CONFIG_BEDFILES => "BEDFILES";
 
 const my $CONFIG_DEFAULT => 'DEFAULT';
 
+const my $UNMATCHED_FORMAT_VCF => 'VCF';
+const my $UNMATCHED_FORMAT_BED=> 'BED';
+
 my $index = undef;
 my $intersectFlagStore;
 my $unmatchedForOutput;
 my $unmatchedFH;
+my $umformat = $UNMATCHED_FORMAT_VCF;
 
 my $opts = option_builder();
 validateInput($opts);
@@ -157,12 +163,13 @@ sub main{
 			warn "Performing HSD intersect\n" if($opts->{'loud'});
 			getIntersectMatches($opts->{'f'},$hsdBed,$HIGH_SEQ_DEPTH_HIT_KEY);
 		}
+		#Setup postprocessing module
 		my $unmatchedVCFFlag = 0;
 		if(grep(/unmatchedNormalVcfFlag/,@$flagList)){
 			warn "Generating hash of unmatched normal VCF files\n" if($opts->{'loud'});
 			$unmatchedVCFFlag = 1;
 			#Build up a list of VCF files present in the location passed, there will be on per chromosome....
-			$umNormVcf = buildUnmatchedVCFFileListFromReference($opts->{'umv'},$opts->{'ref'});
+			$umNormVcf = buildUnmatchedVCFFileListFromReference($opts->{'umv'},$opts->{'ref'},$configParams);
 		}
 	#Setup postprocessing module
 	#my $flagger;
@@ -234,37 +241,111 @@ sub main{
 	warn "Done flagging\n" if($opts->{'loud'});
 }
 
+sub check_exists_remote{
+  my ($fileloc) = @_;
+  if($fileloc =~ /^(http|ftp)/){
+    if (head($fileloc)) {
+      return 1;
+    }else{
+      return 0;
+    }
+  }else{
+    return 1 if(-e $fileloc);
+  }
+  return 0;
+}
+
+sub _checkConfigAndBedUnmatched{
+  my ($bedloc,$cfg) = @_;
+  my $FH;
+  my $check = 0;
+  $FH = new IO::Zlib;
+  $FH->open($bedloc,"rb") or croak("Error opening zipped bed file '$bedloc': $!");
+    while(<$FH>){
+      my $line = $_;
+      if($line =~ m/^\s*#PARAMS/){
+        #Unmatched normal panel for CaVEMan
+        #PARAMS vcfUnmatchedMinMutAlleleCvg=3   vcfUnmatchedMinSamplePct=1.000  panelMD5=f7150610e2af583780f55cc58e278063
+        chomp($line);
+        my ($tmp,$tmp2,$vcfminmut,$tmp3,$vcfminsamp,$tmp4,$md5) = split /\s+|=/, $line ;
+        if($vcfminmut == $cfg->{"vcfUnmatchedMinMutAlleleCvg"} && $vcfminsamp ==  $cfg->{"vcfUnmatchedMinSamplePct"}){
+          $check = 1;
+          last;
+        }
+      }elsif($line !~ m/^\s*#/){#Assumes header line comes first. This will cause an error if it's not or it's not present.
+        last;
+      }
+    }
+  $FH->close or croak("Error closing zipped bed file '$bedloc': $!");
+  return $check;
+}
+
 sub buildUnmatchedVCFFileListFromReference{
-	my ($umLoc,$refFai) = @_;
+	my ($umLoc,$refFai,$cfg) = @_;
 	my $fileList;
 	my $REF;
 	my $count = 0;
-	open($REF, '<', $refFai) or croak("Error opening reference index $refFai: $!");
-		while(<$REF>){
-			my $line = $_;
-			next if($line =~ m/^\s*#/);
-			chomp($line);
-			my ($chr,undef) = split(/\t/,$line);
-			$count++;
-			#The files will be named according to line index rather than contig name.
-			my $fileName = $umLoc."/unmatchedNormal.".$count.".vcf.gz";
-			my $umVcfTabix;
-			if($fileName =~ /^(http|ftp)/) {
-			  $umVcfTabix = new Tabix(-data => $fileName);
-			}
-			else {
-        #If file exists, add it to the list, otherwise, fail.
-        if(! -e $fileName){
-          warn("Couldn't find the unmatched VCF normal file $fileName corresponding to contig $chr in given location.\nAny mutations on this contig will NOT be flagged with the unmatched VCF normal flag.");
-          next;
+	my $bedloc = $umLoc."/unmatchedNormal.bed.gz";
+	if(check_exists_remote($bedloc)){
+	  #Single bed file found.
+    $umformat = $UNMATCHED_FORMAT_BED;
+    #Check here that the header matches the params set in the configs.
+    croak("Unmatched panel parameters in bed provided don't match those in the config file.") if(_checkConfigAndBedUnmatched($bedloc,$cfg)!=1);
+    #Check the tabix file exists.
+    my $umBedTabix = $bedloc.".tbi";
+    croak("Unmatched bedfile $umBedTabix") if (! -e $umBedTabix);
+	  open($REF, '<', $refFai) or croak("Error opening reference index $refFai: $!");
+      while(<$REF>){
+        my $line = $_;
+        next if($line =~ m/^\s*#/);
+        chomp($line);
+        my ($chr,undef) = split(/\t/,$line);
+        $fileList->{$chr} = new Tabix(-data => $bedloc, -index => $umBedTabix);
+      }
+    close($REF);
+	}
+	else{
+    open($REF, '<', $refFai) or croak("Error opening reference index $refFai: $!");
+      while(<$REF>){
+        my $line = $_;
+        next if($line =~ m/^\s*#/);
+        chomp($line);
+        my ($chr,undef) = split(/\t/,$line);
+        $count++;
+        #The files will be named according to line index rather than contig name.
+        my $umVcfTabix;
+        if($umformat eq $UNMATCHED_FORMAT_VCF){
+          my $fileName = $umLoc."/unmatchedNormal.".$count.".vcf.gz";
+
+          if (!check_exists_remote($fileName)){
+            croak("Couldn't find vcf file '$fileName'.");
+          }
+          if($fileName =~ /^(http|ftp)/) {
+            $umVcfTabix = new Tabix(-data => $fileName);
+          }
+          else {
+            #If file exists, add it to the list, otherwise, fail.
+            if(! -e $fileName){
+              warn("Couldn't find the unmatched VCF normal file $fileName corresponding to contig $chr in given location.\nAny mutations on this contig will NOT be flagged with the unmatched VCF normal flag.");
+              next;
+            }
+            my $idx = $fileName.".tbi";
+            croak ("Tabix file for unmatchedNormalVCF file $idx does not exist.\n") if(! -e $idx);
+            $umVcfTabix = new Tabix(-data => $fileName, -index => $idx);
+          }
+        }else{
+          if($bedloc =~ /^(http|ftp)/) {
+            $umVcfTabix = new Tabix(-data => $bedloc);
+          }else{
+            my $idx = $bedloc.".tbi";
+            croak ("Tabix file for unmatchedNormal bed file $idx does not exist.\n") if(! -e $idx);
+            $umVcfTabix = new Tabix(-data => $bedloc, -index => $idx);
+          }
         }
-        my $idx = $fileName.".tbi";
-        croak ("Tabix file for unmatchedNormalVCF file $idx does not exist.\n") if(! -e $idx);
-        $umVcfTabix = new Tabix(-data => $fileName, -index => $idx);
-	    }
-			$fileList->{$chr} = $umVcfTabix if(defined $umVcfTabix);
-		}
-	close($REF);
+        $fileList->{$chr} = $umVcfTabix if(defined $umVcfTabix);
+      }
+    close($REF);
+  }
 	return $fileList;
 }
 
@@ -356,7 +437,7 @@ sub getIntersectMatches{
 	}
 	#Run intersect and parse output.
 	#Build command
-	my $cmd = 'bedtools';
+	my $cmd = 'bedtools-2.23.0';
 	$cmd .= ' intersect -sorted -a '.$vcfFile.' -b '.$bedFile.'';
 	#Run intersect
 	my $IN;
@@ -425,34 +506,44 @@ sub runFlagger{
 		return 1;
 	}elsif($flagName eq 'unmatchedNormalVcfFlag'){
 		if(defined($isInUmVCF)){
-			my ($ch,$po,$ident,$refAll,$altAll,$quality,$filts,$info,$format,@samples) = split(/\t/,$isInUmVCF);
-			#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	PD4106b	PD4107b	PD4108b	PD4109b	PD4110b	PD4111b	PD4112b	PD4113b	PD4114b	PD4115b
-			my ($geno,@formats) = split(':',$format);
-			my $sampleHitCount = 0;
-			my $totalSampleCnt = 0;
-			foreach my $sampData(@samples){
-				next if($sampData eq ".");
-				$totalSampleCnt++;
-				#GT:GF:CF:TF:AF	0|0:41:0:0:0
-				my ($gentype,@data) = split(':',$sampData);
-				my $totalCvg = 0;
-				my $mutAlleleCvg = 0;
-				my $proportion = 0;
-				for (my $i=0;$i<scalar(@data);$i++){
-					next unless ($formats[$i] =~ m/^[ACGT]{1}[A-Z]$/);
-					$totalCvg += $data[$i];
-					if(substr($formats[$i],0,1) eq $mut){
-						$mutAlleleCvg = $data[$i];
-					}
-				}
-				if($mutAlleleCvg >= $cfg->{"vcfUnmatchedMinMutAlleleCvg"}){
-					$sampleHitCount++;
-				}
-				if((($sampleHitCount/scalar($totalSampleCnt))*100) >= $cfg->{"vcfUnmatchedMinSamplePct"}){
-					return 0;
-				}
-			}
-			return 1 if($totalSampleCnt == 0);
+		  if($umformat eq $UNMATCHED_FORMAT_BED){#Check for bed rather than VCF
+
+        my ($chr,$start,$stop,$score,$mutlist) = split(/\t/,$isInUmVCF);
+        return 0 if($mutlist =~ m/$mut/i);
+
+      #End of if this is BED unmatched
+		  }elsif($umformat eq $UNMATCHED_FORMAT_VCF){
+
+        my ($ch,$po,$ident,$refAll,$altAll,$quality,$filts,$info,$format,@samples) = split(/\t/,$isInUmVCF);
+        #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	PD4106b	PD4107b	PD4108b	PD4109b	PD4110b	PD4111b	PD4112b	PD4113b	PD4114b	PD4115b
+        my ($geno,@formats) = split(':',$format);
+        my $sampleHitCount = 0;
+        my $totalSampleCnt = 0;
+        foreach my $sampData(@samples){
+          next if($sampData eq ".");
+          $totalSampleCnt++;
+          #GT:GF:CF:TF:AF	0|0:41:0:0:0
+          my ($gentype,@data) = split(':',$sampData);
+          my $totalCvg = 0;
+          my $mutAlleleCvg = 0;
+          my $proportion = 0;
+          for (my $i=0;$i<scalar(@data);$i++){
+            next unless ($formats[$i] =~ m/^[ACGT]{1}[A-Z]$/);
+            $totalCvg += $data[$i];
+            if(substr($formats[$i],0,1) eq $mut){
+              $mutAlleleCvg = $data[$i];
+            }
+          }
+          if($mutAlleleCvg >= $cfg->{"vcfUnmatchedMinMutAlleleCvg"}){
+            $sampleHitCount++;
+          }
+          if((($sampleHitCount/scalar($totalSampleCnt))*100) >= $cfg->{"vcfUnmatchedMinSamplePct"}){
+            return 0;
+          }
+        }
+        return 1 if($totalSampleCnt == 0);
+			}#End of if this is VCF
+
 		}
 		return 1;
 	}elsif($flagName eq 'centromericRepeatFlag'){

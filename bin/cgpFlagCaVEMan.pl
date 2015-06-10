@@ -437,7 +437,7 @@ sub getIntersectMatches{
 	}
 	#Run intersect and parse output.
 	#Build command
-	my $cmd = 'bedtools-2.23.0';
+	my $cmd = 'bedtools';
 	$cmd .= ' intersect -sorted -a '.$vcfFile.' -b '.$bedFile.'';
 	#Run intersect
 	my $IN;

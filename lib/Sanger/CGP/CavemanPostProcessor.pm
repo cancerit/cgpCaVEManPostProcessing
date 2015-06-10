@@ -30,7 +30,7 @@ use Carp;
 use Const::Fast qw(const);
 use Attribute::Abstract;
 
-our $VERSION = '1.1.0';
+our $VERSION = '1.2.0';
 
 const my $MATCH_CIG => 'M';
 const my $SKIP_CIG => 'N';

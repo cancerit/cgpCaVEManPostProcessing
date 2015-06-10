@@ -1,6 +1,8 @@
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.18404.svg)](http://dx.doi.org/10.5281/zenodo.18404)
+
 LICENCE
 =======
-Copyright (c) 2014 Genome Research Ltd.
+Copyright (c) 2014,2015 Genome Research Ltd.
 
 Author: Cancer Genome Project <cgpit@sanger.ac.uk>
 

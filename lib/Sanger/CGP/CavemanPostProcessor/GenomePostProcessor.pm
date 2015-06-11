@@ -62,8 +62,6 @@ sub _init{
 
 sub clearResults{
 	my ($self) = @_;
-	$self->{'single'} = undef;
-	$self->{'umpropres'} = undef;
 	$self->SUPER::clearResults();
 	return 1;
 }

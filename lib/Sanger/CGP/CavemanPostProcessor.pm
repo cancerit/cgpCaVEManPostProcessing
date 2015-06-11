@@ -29,8 +29,9 @@ use POSIX qw(strftime);
 use Carp;
 use Const::Fast qw(const);
 use Attribute::Abstract;
+use Data::Dumper;
 
-our $VERSION = '1.2.0';
+our $VERSION = '1.2.1';
 
 const my $MATCH_CIG => 'M';
 const my $SKIP_CIG => 'N';

@@ -189,7 +189,7 @@ sub main{
 		#load flagtoVCF config ini
 		my $cfg = Config::IniFiles->new( -file => $opts->{'v'} );
 
-		if(exists($opts->{'p'})){
+		if(exists($opts->{'p'}) && defined($opts->{'p'})){
 			$vcf->add_header_line({key=>'cgpAnalysisProc',value=>$opts->{'p'}}, append=>1);
 		}
 		#add flag list for this species/study type combination to FILTER fields.

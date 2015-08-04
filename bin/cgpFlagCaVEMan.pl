@@ -177,7 +177,7 @@ sub main{
 	my $VCFOUT;
 	my $infoWritten = 0;
 	#Open VCF input file
-	my $vcf = Vcf->new(file=>$opts->{'f'}, -version=>'4.1');
+	my $vcf = Vcf->new(file=>$opts->{'f'}, version=>'4.1');
 	warn "Starting flagging\n" if($opts->{'loud'});
 	#Open output VCF file
 	open($VCFOUT , '>', $opts->{'o'}) || croak("Error trying to open VCF output file ".$opts->{'o'}.": $!");

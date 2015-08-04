@@ -1,31 +1,32 @@
 ##########LICENCE##########
 # Copyright (c) 2014 Genome Research Ltd.
-# 
+#
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
-# 
+#
 # This file is part of cgpCaVEManPostProcessing.
-# 
+#
 # cgpCaVEManPostProcessing is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
 # Software Foundation; either version 3 of the License, or (at your option) any
 # later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 # FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 # details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##########
 
 use strict;
-use Test::More tests => 11;
+use Test::More tests => 13;
 use FindBin;
 use strict;
 use warnings FATAL => 'all';
 use Carp;
 use Data::Dumper;
+use Capture::Tiny qw(capture);
 
 use FindBin qw($Bin);
 my $script_path = "$Bin/../bin/";
@@ -88,7 +89,8 @@ sub run_flag{
 			" -g $test_germ_indel_bed -v $test_vcf_convert_config ".
 			"--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
 			"-u $unmatched_vcf -ref $ref";
-	ok(system($cmd) == 0,"Flagging ran correctly");
+	my ($out, $err, $exit) = capture{ system($cmd) };
+	is($exit, 0,'Flagging ran correctly');
 }
 
 sub run_old_flag{
@@ -97,7 +99,8 @@ sub run_old_flag{
 			" -g $test_germ_indel_bed -v $test_vcf_convert_config ".
 			" -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
 			" -u $unmatched_vcf -ref $ref";
-	ok(system($cmd) == 0,"Old version flagging ran correctly");
+	my ($out, $err, $exit) = capture{ system($cmd) };
+	is($exit, 0, 'Old version flagging ran correctly');
 }
 
 sub checkSupportedButNoFlags{
@@ -106,7 +109,9 @@ sub checkSupportedButNoFlags{
 			" -v $test_vcf_convert_config".
 			" --index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
 			"-u $unmatched_vcf -ref $ref";
-	ok(system($cmd) == 0,"Correctly runs with warnings as no flags available.");
+	my ($out, $err, $exit) = capture{ system($cmd) };
+	like($err, qr/No flagList found in .+ for section HUMAN_PULLDOWN FLAGLIST. No flagging will be done./, 'Correctly runs with warnings as no flags available (check message).');
+	is($exit, 0, 'Correctly runs with warnings as no flags available (check exitcode).');
 }
 
 sub checkUnsupportedOption{
@@ -115,7 +120,9 @@ sub checkUnsupportedOption{
 			" -v $test_vcf_convert_config".
 			" --index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc -x".
 			" -u $unmatched_vcf -ref $ref";
-	ok(system($cmd) != 0,"Correctly fails for not supported CL option.");
+	my ($out, $err, $exit) = capture{ system($cmd) };
+	like($err, qr/Unknown parameter: -x at .+ line \d+./, 'Correctly fails for not supported CL option (check message).');
+	isnt($exit, 0, 'Correctly fails for not supported CL option (check exitcode).');
 }
 
 sub compare{

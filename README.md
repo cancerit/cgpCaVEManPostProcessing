@@ -43,8 +43,9 @@ For details of the underlying algorithm please see the [CaVEMan](http://cancerit
 ###Dependencies/Install
 Please install the following first:
 
-* [PCAP-core](http://github.com/ICGC-TCGA-PanCancer/PCAP-core/releases)
-* [cgpCaVEManWrapper](http://github.com/cancerit/cgpCaVEManPostProcessing/releases)
+* [cgpVcf](https://github.com/cancerit/cgpVcf/releases)
+* [Bio::DB::Sam](http://search.cpan.org/~lds/Bio-SamTools/lib/Bio/DB/Sam.pm)
+    * If you have an install of PCAP-core this is already available
 
 Please see these for any child dependencies.
 

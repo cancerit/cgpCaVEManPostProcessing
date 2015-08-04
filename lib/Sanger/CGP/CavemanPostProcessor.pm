@@ -31,7 +31,7 @@ use Const::Fast qw(const);
 use Attribute::Abstract;
 use Data::Dumper;
 
-our $VERSION = '1.2.2';
+our $VERSION = '1.3.0';
 
 const my $MATCH_CIG => 'M';
 const my $SKIP_CIG => 'N';

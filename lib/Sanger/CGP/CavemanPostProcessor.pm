@@ -31,7 +31,7 @@ use Const::Fast qw(const);
 use Attribute::Abstract;
 use Data::Dumper;
 
-our $VERSION = '1.3.0';
+our $VERSION = '1.3.1';
 
 const my $MATCH_CIG => 'M';
 const my $SKIP_CIG => 'N';
@@ -277,6 +277,7 @@ sub _callbackTumFetch{
 	return if((int($flagValue) & 256) != 0);
 	return if((int($flagValue) & 512) != 0);
 	return if((int($flagValue) & 1024) != 0);
+	return if((int($flagValue) & 2048) != 0); #Exclude supplementary alignments
 	#Quick check that were covering the base with this read (skips/indels are ignored)
 	if(_isCurrentPosCoveredFromAlignment($algn) == 1){
 		#Get the correct read position.
@@ -435,6 +436,7 @@ sub _callbackMatchedNormFetch{
 	return if((int($flagValue) & 256) != 0);
 	return if((int($flagValue) & 512) != 0);
 	return if((int($flagValue) & 1024) != 0);
+	return if((int($flagValue) & 2048) != 0); #Exclude supplementary alignments
 	#Quick check that were covering the base with this read (skips/indels are ignored)
 	if(_isCurrentPosCoveredFromAlignment($algn) == 1){
 		#Get the correct read position.

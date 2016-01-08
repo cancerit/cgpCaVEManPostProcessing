@@ -38,6 +38,7 @@ const my $SKIP_CIG => 'N';
 const my $INS_CIG => 'I';
 const my $DEL_CIG => 'D';
 const my $SOFT_CLIP_CIG => 'S';
+const my $HARD_CLIP_CIG => 'H';
 
 const my $MIN_SINGLE_END_CVG => 10;
 const my $MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
@@ -325,12 +326,12 @@ sub _callbackTumFetch{
 
 		#return if(uc($qbase) ne uc($mutBase));
 
-		return if ($keepSW == 0 && $xt eq 'M');
+		return if ($keepSW == 0 && defined($xt) && $xt eq 'M');
 
 		return if($qscore < $minAnalysedQual);
 
 		my $rdPos = $rdPosIndexOfInterest;
-		my $ln = length($algn->qseq);
+		my $ln = $algn->l_qseq;
 
 		$muts->{'tumcvg'} += 1;
 
@@ -350,6 +351,9 @@ sub _callbackTumFetch{
 		my $rdName = $algn->qname;
 
 		return if(uc($qbase) ne uc($mutBase));
+		
+		my $softclipcount = _get_soft_clip_count_from_cigar($algn->cigar_array);
+		my $primaryalnscore = $algn->get_tag_values('AS'); 		
 
 		#Tum quals
 		push(@{$muts->{'tqs'}},$qscore);
@@ -374,10 +378,27 @@ sub _callbackTumFetch{
 
 		#Mapping quals
 		push(@{$muts->{'tmq'}},$algn->qual);
+		
+		#AlnScoresPrm
+		push(@{$muts->{'alnp'}},$primaryalnscore);
+				
+		#Softclipping
+		push(@{$muts->{'sclp'}},$softclipcount);
 
 		#print Dumper($a);
 	}
 	return 1;
+}
+
+sub _get_soft_clip_count_from_cigar{
+	my ($cig_arr) = @_;
+	my $count = 0;
+	foreach my $cigentry(@$cig_arr){
+		if($cigentry->[0] eq $SOFT_CLIP_CIG){
+			$count += $cigentry->[1];
+		}
+	}
+	return $count;
 }
 
 sub _getReadPositionFromAlignment{

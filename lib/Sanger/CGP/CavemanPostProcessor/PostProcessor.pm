@@ -24,9 +24,12 @@ use strict;
 use Bio::DB::Sam;
 use Bio::DB::Sam::Constants;
 use Bio::DB::Bam::Alignment;
-use POSIX qw(strftime);
+use POSIX qw(strftime ceil);
+use List::Util qw (sum);
 use Carp;
 use Const::Fast qw(const);
+
+use Data::Dumper;
 
 use Sanger::CGP::CavemanPostProcessor;
 our $VERSION = Sanger::CGP::CavemanPostProcessor->VERSION;
@@ -88,6 +91,9 @@ sub clearResults{
 	$self->{'XTCheck'} = undef;
 	$self->{'single'} = undef;
 	$self->{'umpropres'} = undef;
+	$self->{'clipmed'} = undef;
+	$self->{'alnmedrd'} = undef;
+	$self->{'algnmed'} = undef;
 	return 1;
 }
 
@@ -617,6 +623,53 @@ sub _checkNormMuts{
 
 	}
 	return 1;
+}
+
+sub median{
+	return (sum( ( sort { $a <=> $b } @_ )[ int( $#_/2 ), ceil( $#_/2 ) ] )/2);
+}
+
+sub _checkMedianClipping{
+	my ($self) = @_;
+	return sprintf('%.2f',median(@{$self->_muts->{'sclp'}}));
+}
+
+sub _calcPrimAlignmentScoreReadAdjustedMedian{
+  my ($self) = @_;
+  my $adj;
+  for(my $i=0; $i<scalar(@{$self->_muts->{'alnp'}}); $i++){
+    $adj->[$i] = $self->_muts->{'alnp'}->[$i] / $self->_muts->{'trl'}->[$i];
+  }
+  return sprintf('%.2f',median(@{$adj}));
+}
+
+sub getClipMedianResult{
+	my ($self) = @_;
+	if(!defined($self->{'clipmed'})){
+		$self->{'clipmed'} = $self->_checkMedianClipping();
+	}
+	return $self->{'clipmed'};
+}
+
+sub getAlignmentScoreMedianReadAdjusted{
+  my ($self) = @_;
+	if(!defined($self->{'alnmedrd'})){
+    $self->{'alnmedrd'} = $self->_calcPrimAlignmentScoreReadAdjustedMedian();
+  }
+  return $self->{'alnmedrd'};
+}
+
+sub getAlignmentScoreMedian{
+  my ($self) = @_;
+  if(!defined($self->{'algnmed'})){
+    $self->{'algnmed'} = $self->_calcPrimAlignmentScoreMedian();
+  }
+  return $self->{'algnmed'};
+}
+
+sub _calcPrimAlignmentScoreMedian{
+  my ($self) = @_;
+	return sprintf('%.2f',median(@{$self->_muts->{'alnp'}}));
 }
 
 #----------

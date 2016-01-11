@@ -585,6 +585,12 @@ sub runFlagger{
 		}
 
 		return -1;
+	}elsif($flagName eq 'clippingMedianFlag'){
+		$$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getClipMedianResult());
+	}elsif($flagName eq 'alignmentScoreReadLengthAdjustedFlag'){
+    $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAlignmentScoreMedianReadAdjusted());	
+	}elsif($flagName eq 'alnScoreMedianFlag'){	
+    $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAlignmentScoreMedian());	
 	}elsif($flagName eq 'lowMutBurdenFlag'){
 		#Low mut burden
 		croak('LOW_MUT_BURDEN');

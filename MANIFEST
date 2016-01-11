@@ -21,6 +21,10 @@ t/exomePostProcessor.t
 t/genomePostProcessor.t
 t/postProcessor.t
 testData/centromeric_repeats.bed
+testData/clip.m.bam
+testData/clip.m.bam.bai
+testData/clip.n.bam
+testData/clip.n.bam.bai
 testData/expected_output_FlagCaVEManVCF.vcf
 testData/expected_output_oldVersion_flagged.vcf
 testData/flag.to.vcf.convert.ini

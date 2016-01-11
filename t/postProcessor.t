@@ -25,7 +25,7 @@ use Data::Dumper;
 use Bio::DB::Sam;
 use Const::Fast qw(const);
 
-use Test::More tests => 17;
+use Test::More tests => 20;
 
 use FindBin qw($Bin);
 my $lib_path = "$Bin/../lib";
@@ -36,6 +36,11 @@ const my $T_BAI => $test_data_path.'test.bam.bai';
 
 const my $PENT_BAM => $test_data_path.'pent.bam';
 const my $PENT_BAI => $test_data_path.'pent.bam.bai';
+
+const my $CLIP_M_BAM => $test_data_path.'clip.m.bam';
+const my $CLIP_M_BAI => $test_data_path.'clip.m.bam.bai';
+const my $CLIP_N_BAM => $test_data_path.'clip.n.bam';
+const my $CLIP_N_BAI => $test_data_path.'clip.n.bam.bai';
 
 my $processor;
 
@@ -477,3 +482,103 @@ subtest 'getPentamerResult' => sub{
 	ok($processor->getPentamerResult == 1,"Pass pentamer check, X:48092088");
 	done_testing();
 };
+
+subtest 'Initialise module (bam clip params)' => sub {
+	my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
+	isa_ok($processor->tumBam(), "Bio::DB::Sam", "Test tumour bam");
+	isa_ok($processor->normBam(), "Bio::DB::Sam", "Test normal bam");
+	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
+	ok($processor->keepSW == 0,"Keep SW off by default");
+  done_testing();
+};
+
+subtest 'Clipped Read tests' => sub {
+	my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
+	my $chr = 1;
+	my $pos = 10437;
+	my $ref = "T";
+	my $mut = "C";
+	$processor->runProcess($chr,$pos,$pos,$ref,$mut);
+	ok($processor->_chromosome eq $chr,"Chromosome correct");
+	ok($processor->_currentPos == $pos,"Current pos updated");
+	ok($processor->_refBase eq $ref,"Ref base changed");
+	ok($processor->_mutBase eq $mut,"Mut base changed");
+		
+	#Manually set counts
+	my $exp_sclp = [1,2,3,4,5,6,7,8,9,10];
+	$processor->_muts->{'sclp'} = $exp_sclp;
+	is_deeply($processor->_muts->{'sclp'}, [1,2,3,4,5,6,7,8,9,10], "softclipcounts");
+	
+	#Check manually set count results
+	#getClipMedianResult
+	my $exp_res = sprintf('%.2f',5.5);	
+	is($processor->getClipMedianResult, $exp_res,"getClipMedianResult");
+	
+	#Reset and use real data
+	$processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
+	$processor->runProcess($chr,$pos,$pos,$ref,$mut);
+	ok($processor->_chromosome eq $chr,"Chromosome correct");
+	ok($processor->_currentPos == $pos,"Current pos updated");
+	ok($processor->_refBase eq $ref,"Ref base changed");
+	ok($processor->_mutBase eq $mut,"Mut base changed");
+	
+	#Check counts have been filled correctly.
+	$exp_sclp = [0,9,78,78,0,83,49,104,38,35,0,20,0,0,0,66,0,0,0];
+	is_deeply($processor->_muts->{'sclp'}, [0,9,78,78,0,83,49,104,38,35,0,20,0,0,0,66,0,0,0], "softclipcounts");
+	
+	#Check real data count results
+	my $exp_res = sprintf('%.2f',9);	
+	is($processor->getClipMedianResult, $exp_res,"getClipMedianResult");
+  done_testing();
+};
+
+subtest 'Alignment score tests' => sub {
+	my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
+	my $chr = 1;
+	my $pos = 10437;
+	my $ref = "T";
+	my $mut = "C";
+	$processor->runProcess($chr,$pos,$pos,$ref,$mut);
+	ok($processor->_chromosome eq $chr,"Chromosome correct");
+	ok($processor->_currentPos == $pos,"Current pos updated");
+	ok($processor->_refBase eq $ref,"Ref base changed");
+	ok($processor->_mutBase eq $mut,"Mut base changed");
+	
+	my $exp_prim = [100,80,50];
+	my $rdlen = [150,150,150];
+	
+	$processor->_muts->{'alnp'} = $exp_prim;
+	$processor->_muts->{'trl'} = $rdlen;
+	is_deeply($processor->_muts->{'alnp'}, [100,80,50], "primary alignment scores");
+	is_deeply($processor->_muts->{'trl'}, [150,150,150], "read lengths");
+	
+	#getAlnScoreMedianReadAdjusted
+	my $exp_res = sprintf('%.2f',0.53333333333333);
+	is($processor->getAlignmentScoreMedianReadAdjusted, $exp_res,"getAlignmentScoreMedianReadAdjusted");
+	#getAlignmentScoreMedian
+	$exp_res = sprintf('%.2f',80);
+	is($processor->getAlignmentScoreMedian, $exp_res,"getAlignmentScoreMedian");
+
+	$processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
+	my $chr = 1;
+	my $pos = 10437;
+	my $ref = "T";
+	my $mut = "C";
+	$processor->runProcess($chr,$pos,$pos,$ref,$mut);
+	ok($processor->_chromosome eq $chr,"Chromosome correct");
+	ok($processor->_currentPos == $pos,"Current pos updated");
+	ok($processor->_refBase eq $ref,"Ref base changed");
+	ok($processor->_mutBase eq $mut,"Mut base changed");
+	is_deeply($processor->_muts->{'alnp'}, [66,102,51,56,110,63,61,44,82,80,123,88,123,76,87,60,118,93,139], "primary alignment scores");
+	is_deeply($processor->_muts->{'trl'}, [151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151], "tumor read lengths");
+	
+	#getAlnScoreMedianReadAdjusted
+	$exp_res = sprintf('%.2f',0.543046358);
+	is($processor->getAlignmentScoreMedianReadAdjusted, $exp_res,"getAlignmentScoreMedianReadAdjusted");
+	#getAlignmentScoreMedian
+	$exp_res = sprintf('%.2f',82);
+	is($processor->getAlignmentScoreMedian, $exp_res,"getAlignmentScoreMedian");
+	
+  done_testing();
+};
+

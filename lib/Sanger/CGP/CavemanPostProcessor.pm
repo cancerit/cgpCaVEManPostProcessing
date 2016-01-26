@@ -31,7 +31,7 @@ use Const::Fast qw(const);
 use Attribute::Abstract;
 use Data::Dumper;
 
-our $VERSION = '1.4.0';
+our $VERSION = '1.4.1';
 
 const my $MATCH_CIG => 'M';
 const my $SKIP_CIG => 'N';
@@ -351,9 +351,9 @@ sub _callbackTumFetch{
 		my $rdName = $algn->qname;
 
 		return if(uc($qbase) ne uc($mutBase));
-		
+
 		my $softclipcount = _get_soft_clip_count_from_cigar($algn->cigar_array);
-		my $primaryalnscore = $algn->get_tag_values('AS'); 		
+		my $primaryalnscore = $algn->get_tag_values('AS');
 
 		#Tum quals
 		push(@{$muts->{'tqs'}},$qscore);
@@ -378,10 +378,10 @@ sub _callbackTumFetch{
 
 		#Mapping quals
 		push(@{$muts->{'tmq'}},$algn->qual);
-		
+
 		#AlnScoresPrm
 		push(@{$muts->{'alnp'}},$primaryalnscore);
-				
+
 		#Softclipping
 		push(@{$muts->{'sclp'}},$softclipcount);
 

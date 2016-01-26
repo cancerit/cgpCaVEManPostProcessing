@@ -840,6 +840,7 @@ sub validateInput {
     print sprintf "VERSION: %s\n", Sanger::CGP::CavemanPostProcessor->VERSION;
     exit 1;
   }
+  delete $opts->{'version'}; # needs to be deleted or breaks tests
 
   die( "Unknown parameter: ".$ARGV[0]) if(scalar(@ARGV) > 0);
   pod2usage("Missing parameters") if(!defined($opts->{'f'}) || !defined($opts->{'o'})
@@ -920,7 +921,8 @@ cgpFlagCaVEMan.pl [-h] -f vcfToFlag.vcf -o flaggedVCF.vcf -c configFile.ini -s h
   General Options:
 
     --help                 (-h)       Brief documentation
-    --version
+
+    --version              (-version) Output the version number and exit
 
     --input                (-i)       The VCF input file to flag.
 

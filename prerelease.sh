@@ -23,6 +23,7 @@
 
 
 set -eu # exit on first error or undefined value in subtitution
+set -o pipefail
 
 # get current directory
 INIT_DIR=`pwd`
@@ -46,11 +47,15 @@ echo '### Running perl tests ###'
 export HARNESS_PERL_SWITCHES=-MDevel::Cover=-db,reports,-ignore,'t/.*\.t'
 rm -rf docs
 mkdir -p docs/reports_text
+set +e
 prove --nocolor -I ./lib | sed 's/^/  /' # indent output of prove
 if [[ $? -ne 0 ]] ; then
-  echo "\n\tERROR: TESTS FAILED\n"
+  echo
+  echo "ERROR: TESTS FAILED"
+  echo
   exit 1
 fi
+set -e
 
 echo '### Generating test/pod coverage reports ###'
 # removed 'condition' from coverage as '||' 'or' doesn't work properly

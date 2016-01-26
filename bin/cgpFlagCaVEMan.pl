@@ -28,6 +28,10 @@ BEGIN {
 
 use strict;
 use warnings FATAL => 'all';
+
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+
 use Carp qw(croak cluck);
 use English qw( -no_match_vars );
 
@@ -588,9 +592,9 @@ sub runFlagger{
 	}elsif($flagName eq 'clippingMedianFlag'){
 		$$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getClipMedianResult());
 	}elsif($flagName eq 'alignmentScoreReadLengthAdjustedFlag'){
-    $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAlignmentScoreMedianReadAdjusted());	
-	}elsif($flagName eq 'alnScoreMedianFlag'){	
-    $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAlignmentScoreMedian());	
+    $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAlignmentScoreMedianReadAdjusted());
+	}elsif($flagName eq 'alnScoreMedianFlag'){
+    $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAlignmentScoreMedian());
 	}elsif($flagName eq 'lowMutBurdenFlag'){
 		#Low mut burden
 		croak('LOW_MUT_BURDEN');
@@ -822,7 +826,8 @@ sub option_builder {
 		'ab|annoBedLoc=s' => \$opts{'ab'},
 		'p|processid=s' => \$opts{'p'},
 		'sp|sampleToIgnoreInUnmatched=s' => \$opts{'sp'},
-		'b|bedFileLoc=s' => \$opts{'b'}
+		'b|bedFileLoc=s' => \$opts{'b'},
+		'version' => \$opts{'version'},
 	);
 	return \%opts;
 }
@@ -830,6 +835,12 @@ sub option_builder {
 sub validateInput {
   my $opts = shift;
   pod2usage(0) if($opts->{'h'});
+
+  if(defined $opts->{'version'}) {
+    print sprintf "VERSION: %s\n", Sanger::CGP::CavemanPostProcessor->VERSION;
+    exit 1;
+  }
+
   die( "Unknown parameter: ".$ARGV[0]) if(scalar(@ARGV) > 0);
   pod2usage("Missing parameters") if(!defined($opts->{'f'}) || !defined($opts->{'o'})
   										|| !defined($opts->{'s'})
@@ -909,6 +920,7 @@ cgpFlagCaVEMan.pl [-h] -f vcfToFlag.vcf -o flaggedVCF.vcf -c configFile.ini -s h
   General Options:
 
     --help                 (-h)       Brief documentation
+    --version
 
     --input                (-i)       The VCF input file to flag.
 

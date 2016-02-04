@@ -940,7 +940,8 @@ cgpFlagCaVEMan.pl [-h] -f vcfToFlag.vcf -o flaggedVCF.vcf -c configFile.ini -s h
 
     --indelBed             (-g)       A bed file containing germline indels to filter on
 
-    --unmatchedVCFLoc      (-umv)     Path to a directory containing the unmatched VCF normal files listed in the config file.
+    --unmatchedVCFLoc      (-umv)     Path to a directory containing the unmatched VCF normal files listed in the
+                                      config file or unmatchedNormal.bed.gz (bed file is used in preference).
 
     --annoBedLoc           (-ab)      Path to bed files containing annotatable regions and coding regions.
 

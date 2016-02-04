@@ -220,6 +220,10 @@ sub main{
 		#Iterate through each VCF variant line
 		while (my $x=$vcf->next_data_array()){
       my $isInUmVCF = undef;
+      #Clear the flags and SNP status before flagging.
+      $$x[6]='.'; #This resets all flags.
+      #This ensures we haven't got any info flags (SNP) in existance...
+      $$x[7]=$vcf->add_info_field($$x[7],'SNP'=>undef,'coding'=>undef,'ASRD'=>undef,'CLPM'=>undef,'ASMD'=>undef);
       #Files are sorted by chr/pos, so we can open the tabix index once per vcf file.
       if($unmatchedVCFFlag==1 && exists($umNormVcf->{$$x[0]})){
 			  $isInUmVCF = getUnmatchedVCFIntersectMatch($$x[0],$$x[1],$umNormVcf->{$$x[0]},$UNMATCHED_VCF_KEY);
@@ -940,7 +944,8 @@ cgpFlagCaVEMan.pl [-h] -f vcfToFlag.vcf -o flaggedVCF.vcf -c configFile.ini -s h
 
     --indelBed             (-g)       A bed file containing germline indels to filter on
 
-    --unmatchedVCFLoc      (-umv)     Path to a directory containing the unmatched VCF normal files listed in the config file.
+    --unmatchedVCFLoc      (-umv)     Path to a directory containing the unmatched VCF normal files listed in the
+                                      config file or unmatchedNormal.bed.gz (bed file is used in preference).
 
     --annoBedLoc           (-ab)      Path to bed files containing annotatable regions and coding regions.
 

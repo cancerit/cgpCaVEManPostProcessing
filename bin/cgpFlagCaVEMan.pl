@@ -220,6 +220,10 @@ sub main{
 		#Iterate through each VCF variant line
 		while (my $x=$vcf->next_data_array()){
       my $isInUmVCF = undef;
+      #Clear the flags and SNP status before flagging.
+      $$x[6]='.'; #This resets all flags.
+      #This ensures we haven't got any info flags (SNP) in existance...
+      $$x[7]=$vcf->add_info_field($$x[7],'SNP'=>undef,'coding'=>undef,'ASRD'=>undef,'CLPM'=>undef,'ASMD'=>undef);
       #Files are sorted by chr/pos, so we can open the tabix index once per vcf file.
       if($unmatchedVCFFlag==1 && exists($umNormVcf->{$$x[0]})){
 			  $isInUmVCF = getUnmatchedVCFIntersectMatch($$x[0],$$x[1],$umNormVcf->{$$x[0]},$UNMATCHED_VCF_KEY);

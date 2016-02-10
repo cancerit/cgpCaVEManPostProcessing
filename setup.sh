@@ -38,7 +38,7 @@ done_message () {
 
 get_distro () {
   if hash curl 2>/dev/null; then
-    curl -sS -o $1.tar.gz -L $2
+    curl -sSL -o $1.tar.gz -C - --retry 10 $2
   else
     wget -nv -O $1.tar.gz $2
   fi

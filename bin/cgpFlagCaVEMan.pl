@@ -80,6 +80,8 @@ const my $HSD_BED_PARAMETER => 'highSeqDepthBed';
 const my $UMNORM_VCF_PARAMETER => 'unmatchedNormalVcf';
 const my $UNMATCHED_VCF_LIST_PARAMETER => 'unmatchedNormalVCFList';
 
+const my @INFO_FLAGS => qw/snpFlag codingFlag alignmentScoreReadLengthAdjustedFlag clippingMedianFlag alnScoreMedianFlag/;
+
 const my $OLD_CAVE_BUG => 'CB';
 
 const my $CONFIG_FLAGLIST => "FLAGLIST";
@@ -619,11 +621,14 @@ sub appendFiltersToHeader{
 			croak("No config description or ID found for flag ".$flagName."\n");
 		}
 		my $desc = $cfg->val($flagName,"description");
+		my $info = $cfg->val($flagName,"info");
 		my $newDesc = getDescriptionWithParams($desc,$configParams);
-		if($flagName ne 'snpFlag' && $flagName ne 'codingFlag'){
+		if($info==0){
 			$vcf->add_header_line({key=>'FILTER', ID=>$cfg->val($flagName,"id"),Description=>$newDesc});
 		}else{
-			$vcf->add_header_line({key=>'INFO', ID=>$cfg->val($flagName,"id"),Type=>"Flag",Number=>0,Description=>$newDesc});
+		  my $val = $cfg->val($flagName,"val");
+		  my $type = $cfg->val($flagName,"type");
+      $vcf->add_header_line({key=>'INFO', ID=>$cfg->val($flagName,"id"),Type=>$type,Number=>$val,Description=>$newDesc});
 		}
 	}
 	if($oldCave){

@@ -355,7 +355,7 @@ sub _normIndelCheck{
 
 sub _mutIndelCheck{
 	my ($self) = @_;
-	if($self->_muts->{'totalTCoverage'} == 0){
+	if(!exists $self->_muts->{'totalTCoverage'} || $self->_muts->{'totalTCoverage'} == 0){
 		return 1;
 	}
 	my $prop = ($self->_muts->{'indelTCount'} / $self->_muts->{'totalTCoverage'}) * 100;

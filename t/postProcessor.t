@@ -1,20 +1,20 @@
 ##########LICENCE##########
 # Copyright (c) 2014 Genome Research Ltd.
-# 
+#
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
-# 
+#
 # This file is part of cgpCaVEManPostProcessing.
-# 
+#
 # cgpCaVEManPostProcessing is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
 # Software Foundation; either version 3 of the License, or (at your option) any
 # later version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 # FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 # details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##########
@@ -503,17 +503,17 @@ subtest 'Clipped Read tests' => sub {
 	ok($processor->_currentPos == $pos,"Current pos updated");
 	ok($processor->_refBase eq $ref,"Ref base changed");
 	ok($processor->_mutBase eq $mut,"Mut base changed");
-		
+
 	#Manually set counts
 	my $exp_sclp = [1,2,3,4,5,6,7,8,9,10];
 	$processor->_muts->{'sclp'} = $exp_sclp;
 	is_deeply($processor->_muts->{'sclp'}, [1,2,3,4,5,6,7,8,9,10], "softclipcounts");
-	
+
 	#Check manually set count results
 	#getClipMedianResult
-	my $exp_res = sprintf('%.2f',5.5);	
+	my $exp_res = sprintf('%.2f',5.5);
 	is($processor->getClipMedianResult, $exp_res,"getClipMedianResult");
-	
+
 	#Reset and use real data
 	$processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
 	$processor->runProcess($chr,$pos,$pos,$ref,$mut);
@@ -521,13 +521,13 @@ subtest 'Clipped Read tests' => sub {
 	ok($processor->_currentPos == $pos,"Current pos updated");
 	ok($processor->_refBase eq $ref,"Ref base changed");
 	ok($processor->_mutBase eq $mut,"Mut base changed");
-	
+
 	#Check counts have been filled correctly.
 	$exp_sclp = [0,9,78,78,0,83,49,104,38,35,0,20,0,0,0,66,0,0,0];
 	is_deeply($processor->_muts->{'sclp'}, [0,9,78,78,0,83,49,104,38,35,0,20,0,0,0,66,0,0,0], "softclipcounts");
-	
+
 	#Check real data count results
-	my $exp_res = sprintf('%.2f',9);	
+	$exp_res = sprintf('%.2f',9);
 	is($processor->getClipMedianResult, $exp_res,"getClipMedianResult");
   done_testing();
 };
@@ -543,15 +543,15 @@ subtest 'Alignment score tests' => sub {
 	ok($processor->_currentPos == $pos,"Current pos updated");
 	ok($processor->_refBase eq $ref,"Ref base changed");
 	ok($processor->_mutBase eq $mut,"Mut base changed");
-	
+
 	my $exp_prim = [100,80,50];
 	my $rdlen = [150,150,150];
-	
+
 	$processor->_muts->{'alnp'} = $exp_prim;
 	$processor->_muts->{'trl'} = $rdlen;
 	is_deeply($processor->_muts->{'alnp'}, [100,80,50], "primary alignment scores");
 	is_deeply($processor->_muts->{'trl'}, [150,150,150], "read lengths");
-	
+
 	#getAlnScoreMedianReadAdjusted
 	my $exp_res = sprintf('%.2f',0.53333333333333);
 	is($processor->getAlignmentScoreMedianReadAdjusted, $exp_res,"getAlignmentScoreMedianReadAdjusted");
@@ -560,10 +560,10 @@ subtest 'Alignment score tests' => sub {
 	is($processor->getAlignmentScoreMedian, $exp_res,"getAlignmentScoreMedian");
 
 	$processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
-	my $chr = 1;
-	my $pos = 10437;
-	my $ref = "T";
-	my $mut = "C";
+	$chr = 1;
+	$pos = 10437;
+	$ref = "T";
+	$mut = "C";
 	$processor->runProcess($chr,$pos,$pos,$ref,$mut);
 	ok($processor->_chromosome eq $chr,"Chromosome correct");
 	ok($processor->_currentPos == $pos,"Current pos updated");
@@ -571,14 +571,14 @@ subtest 'Alignment score tests' => sub {
 	ok($processor->_mutBase eq $mut,"Mut base changed");
 	is_deeply($processor->_muts->{'alnp'}, [66,102,51,56,110,63,61,44,82,80,123,88,123,76,87,60,118,93,139], "primary alignment scores");
 	is_deeply($processor->_muts->{'trl'}, [151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151], "tumor read lengths");
-	
+
 	#getAlnScoreMedianReadAdjusted
 	$exp_res = sprintf('%.2f',0.543046358);
 	is($processor->getAlignmentScoreMedianReadAdjusted, $exp_res,"getAlignmentScoreMedianReadAdjusted");
 	#getAlignmentScoreMedian
 	$exp_res = sprintf('%.2f',82);
 	is($processor->getAlignmentScoreMedian, $exp_res,"getAlignmentScoreMedian");
-	
+
   done_testing();
 };
 

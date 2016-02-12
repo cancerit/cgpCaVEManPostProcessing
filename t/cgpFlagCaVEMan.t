@@ -185,7 +185,23 @@ sub compare{
 	$exp =~ s/InputVCFVer=<(.+)>>/InputVCFVer=<>>/g;
 	$new =~ s/InputVCFVer=<(.+)>>/InputVCFVer=<>>/g;
 	#check they equate.
-	is($new,$exp,"compare");
+	is_deeply(_tab_data_to_object($new), _tab_data_to_object($exp),'compare');
+}
+
+sub _tab_data_to_object {
+  my @lines = split /\n/, shift;
+  my @final;
+  for(@lines) {
+    if($_ =~ m/^#/) {
+      push @final, $_;
+      next;
+    }
+    my @tmp = split /\t/, $_;
+    $tmp[6] = [sort (split /;/,$tmp[6])];
+    $tmp[7] = [sort (split /;/,$tmp[7])];
+    push @final, \@tmp;
+  }
+  return \@final;
 }
 
 sub remove_created_files{

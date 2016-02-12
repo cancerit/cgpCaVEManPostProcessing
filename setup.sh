@@ -66,8 +66,7 @@ cd $INIT_DIR
 unset PERL5LIB
 ARCHNAME=`perl -e 'use Config; print $Config{archname};'`
 PERLROOT=$INST_PATH/lib/perl5
-PERLARCH=$PERLROOT/$ARCHNAME
-export PERL5LIB="$PERLROOT:$PERLARCH"
+export PERL5LIB="$PERLROOT"
 
 #create a location to build dependencies
 SETUP_DIR=$INIT_DIR/install_tmp
@@ -125,22 +124,18 @@ done_message "" "Failed to build bedtools."
 cd $INIT_DIR
 
 echo -n "Installing Perl prerequisites ..."
-if ! ( perl -MExtUtils::MakeMaker -e 1 >/dev/null 2>&1); then
-    echo
-    echo "WARNING: Your Perl installation does not seem to include a complete set of core modules.  Attempting to cope with this, but if installation fails please make sure that at least ExtUtils::MakeMaker is installed.  For most users, the best way to do this is to use your system's package manager: apt, yum, fink, homebrew, or similar."
-fi
 (
   set -x
-  $INIT_DIR/bin/cpanm -v --mirror http://cpan.metacpan.org -notest -l $INST_PATH/ --installdeps . < /dev/null
-  set +x
+  perl $INST_PATH/bin/cpanm -v --mirror http://cpan.metacpan.org -l $INST_PATH/ --installdeps .
 ) >>$INIT_DIR/setup.log 2>&1
 done_message "" "Failed during installation of core dependencies."
+set +x
 
 echo -n "Installing cgpCaVEManPostProcessing ..."
 (
-  perl Makefile.PL INSTALL_BASE=$INST_PATH
-  make
-  make test
+  perl Makefile.PL INSTALL_BASE=$INST_PATH && \
+  make && \
+  make test && \
   make install
 ) >>$INIT_DIR/setup.log 2>&1
 done_message "" "cgpCaVEManPostProcessing install failed."

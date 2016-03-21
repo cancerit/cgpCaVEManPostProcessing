@@ -887,20 +887,23 @@ sub validateInput {
   $opts->{'s'} = uc($opts->{'s'});
   if(defined($opts->{'t'})){
     pod2usage("Unrecognised study type parameter ".$opts->{'t'}.
-  				" known types: (pulldown|exome|genome|genomic|followup|targeted|rna_seq)") if($opts->{'t'} !~ m/^(pulldown|exome|genome|genomic|followup|targeted|targetted|rna_seq)$/i);
+  				" known types: (pulldown|exome|WGS|WXS|AMPLICON|genome|genomic|followup|targeted|targetted|rna_seq|rna-seq|rnaseq)") if($opts->{'t'} !~
+  				                      m/^(pulldown|exome|WGS|WXS|AMPLICON|genome|genomic|followup|targeted|targetted|rna_seq|rna-seq|rnaseq)$/i);
   }else{
     $opts->{'t'} = 'genome';
     print "Using default study type of genome as not option t passed\n" if($opts->{'loud'});
   }
 
-  if(uc($opts->{'t'}) eq 'EXOME'){
+  if(uc($opts->{'t'}) eq 'EXOME' || uc($opts->{'t'}) eq 'WXS'){
   	$opts->{'t'} = 'PULLDOWN';
-  }elsif(uc($opts->{'t'}) eq 'GENOMIC'){
+  }elsif(uc($opts->{'t'}) eq 'GENOMIC' || uc($opts->{'t'}) eq 'WGS'){
   	$opts->{'t'} = 'GENOME';
-  }elsif(uc($opts->{'t'}) eq 'RNA_SEQ'){
+  }elsif(uc($opts->{'t'}) eq 'RNA_SEQ'||uc($opts->{'t'}) eq 'RNA-SEQ'){
   	$opts->{'t'} = 'RNASEQ';
   }elsif(uc($opts->{'t'}) eq 'TARGETED'){
   	$opts->{'t'} = 'TARGETED';
+  }elsif(uc($opts->{'t'}) eq 'AMPLICON'){
+    $opts->{'t'} = 'FOLLOWUP';
   }
   $opts->{'t'} = uc($opts->{'t'});
   if(!defined($opts->{'l'}) || $opts->{'l'} !~ m/^\d+$/g){
@@ -972,7 +975,7 @@ cgpFlagCaVEMan.pl [-h] -f vcfToFlag.vcf -o flaggedVCF.vcf -c configFile.ini -s h
     --flagToVcfConfig             (-v)  Config::Inifiles style config file containing VCF flag code to flag name conversions see
                                          ../config/flag.to.vcf.convert.ini for example
 
-    --studyType            (-t)       Study type, used to decide parameters in file (genome|genomic|pulldown|exome|followup|targeted|RNA_seq).
+    --studyType            (-t)       Study type, used to decide parameters in file (genome|genomic|WGS|pulldown|exome|WXS|followup|AMPLICON|targeted|RNA_seq).
 
   Examples:
 

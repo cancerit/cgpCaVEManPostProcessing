@@ -54,7 +54,7 @@
 ##FILTER=<ID=PT,Description="Mutant alleles all on one direction of read (1rd allowed on opposite strand) and in second half of the read. Second half of read contains the motif GGC[AT]G in sequenced orientation and the mean base quality of all bases after the motif was less than 20">
 ##FILTER=<ID=GI,Description="Position falls within a germline indel using the supplied bed file">
 ##FILTER=<ID=MQ,Description="Mean mapping quality of the mutant allele reads was < 21">
-##FILTER=<ID=SR,Description="Position falls within a simple repeat using the supplied bed file">
+##INFO=<ID=SR,Number=0,Type=Flag,Description="Position falls within a simple repeat using the supplied bed file">
 ##FILTER=<ID=CR,Description="Position falls within a centromeric repeat using the supplied bed file">
 ##FILTER=<ID=PH,Description="Mutant reads were on one strand (permitted proportion on other strand: 0.04), and mean mutant base quality was less than 21">
 ##FILTER=<ID=VUM,Description="Position has >= 3 mutant allele present in at least 1 percent unmatched normal samples in the unmatched VCF.">

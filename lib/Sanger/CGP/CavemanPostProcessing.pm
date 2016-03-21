@@ -19,7 +19,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##########
 
-package Sanger::CGP::CavemanPostProcessor;
+package Sanger::CGP::CavemanPostProcessing;
 
 use strict;
 use Bio::DB::Sam;

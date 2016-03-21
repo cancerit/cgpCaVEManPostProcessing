@@ -21,7 +21,6 @@
 
 use strict;
 use Test::More tests => 13;
-use FindBin;
 use strict;
 use warnings FATAL => 'all';
 use Carp;

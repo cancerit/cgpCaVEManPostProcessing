@@ -2,7 +2,7 @@
 
 LICENCE
 =======
-Copyright (c) 2014,2015 Genome Research Ltd.
+Copyright (c) 2014-2016 Genome Research Ltd.
 
 Author: Cancer Genome Project <cgpit@sanger.ac.uk>
 
@@ -44,7 +44,7 @@ For details of the underlying algorithm please see the [CaVEMan](http://cancerit
 Please install the following first:
 
 * [cgpVcf](https://github.com/cancerit/cgpVcf/releases)
-* [Bio::DB::Sam](http://search.cpan.org/~lds/Bio-SamTools/lib/Bio/DB/Sam.pm)
+* [Bio::DB::HTS](http://http://search.cpan.org/dist/Bio-DB-HTS/)
     * If you have an install of PCAP-core this is already available
 
 Please see these for any child dependencies.

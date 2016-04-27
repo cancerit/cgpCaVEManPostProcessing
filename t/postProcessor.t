@@ -22,7 +22,7 @@
 use strict;
 use Sanger::CGP::CavemanPostProcessor::PostProcessor;
 use Data::Dumper;
-use Bio::DB::Sam;
+use Bio::DB::HTS;
 use Const::Fast qw(const);
 
 use Test::More tests => 20;
@@ -58,8 +58,8 @@ subtest 'Initialise module (no params)' => sub {
 
 subtest 'Initialise module (bam params)' => sub {
 	my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
-	isa_ok($processor->tumBam(), "Bio::DB::Sam", "Test tumour bam");
-	isa_ok($processor->normBam(), "Bio::DB::Sam", "Test normal bam");
+	isa_ok($processor->tumBam(), "Bio::DB::HTS", "Test tumour bam");
+	isa_ok($processor->normBam(), "Bio::DB::HTS", "Test normal bam");
 	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
 	ok($processor->keepSW == 0,"Keep SW off by default");
   done_testing();
@@ -82,8 +82,8 @@ subtest 'Min analysed qual and keep SW getters/setters' => sub{
 
 subtest 'Initialise module (bam params)' => sub {
 	my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
-	isa_ok($processor->tumBam(), "Bio::DB::Sam", "Test tumour bam");
-	isa_ok($processor->normBam(), "Bio::DB::Sam", "Test normal bam");
+	isa_ok($processor->tumBam(), "Bio::DB::HTS", "Test tumour bam");
+	isa_ok($processor->normBam(), "Bio::DB::HTS", "Test normal bam");
 	ok($processor->minDepthQual == 25,"Min depth qual");
 	ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
 	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
@@ -485,8 +485,8 @@ subtest 'getPentamerResult' => sub{
 
 subtest 'Initialise module (bam clip params)' => sub {
 	my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
-	isa_ok($processor->tumBam(), "Bio::DB::Sam", "Test tumour bam");
-	isa_ok($processor->normBam(), "Bio::DB::Sam", "Test normal bam");
+	isa_ok($processor->tumBam(), "Bio::DB::HTS", "Test tumour bam");
+	isa_ok($processor->normBam(), "Bio::DB::HTS", "Test normal bam");
 	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
 	ok($processor->keepSW == 0,"Keep SW off by default");
   done_testing();

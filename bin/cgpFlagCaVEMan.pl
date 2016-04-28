@@ -465,12 +465,10 @@ sub getIntersectMatches{
 sub getUnmatchedVCFIntersectMatch{
 	my ($chr,$pos,$tabix,$flagName) = @_;
 	#Only check for positions we've not already sorted.
-	my $iter = $tabix->query(sprintf '%s:%d-%d', $chr,$pos-1,$pos);
-  if(defined $iter){
-    my $line = $iter->next;
-    return $line;
-  }
-  return undef;
+  # new tabix is 1-based for both coordinates
+  my $iter = $tabix->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
+  my $line = $iter->next; # undef if not found
+  return $line;
 }
 
 sub runFlagger{

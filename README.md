@@ -44,7 +44,7 @@ For details of the underlying algorithm please see the [CaVEMan](http://cancerit
 Please install the following first:
 
 * [cgpVcf](https://github.com/cancerit/cgpVcf/releases)
-* [Bio::DB::HTS](http://http://search.cpan.org/dist/Bio-DB-HTS/)
+* [Bio::DB::HTS](http://search.cpan.org/dist/Bio-DB-HTS)
     * If you have an install of PCAP-core this is already available
 
 Please see these for any child dependencies.

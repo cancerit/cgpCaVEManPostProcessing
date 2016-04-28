@@ -21,11 +21,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##########
 
-
-BEGIN {
-  $SIG{__WARN__} = sub {warn $_[0] unless( $_[0] =~ m/^Subroutine Tabix.* redefined/)};
-};
-
 use strict;
 use warnings FATAL=>'all';
 use autodie;
@@ -33,7 +28,7 @@ use Carp qw(croak cluck);
 use Getopt::Long qw(:config pass_through);
 use Pod::Usage;
 
-use Tabix;
+use Bio::DB::HTS::Tabix;
 
 use Config::IniFiles;
 use File::ShareDir qw(dist_dir);
@@ -186,9 +181,9 @@ sub getUnmatchedVCFIntersectMatch{
 	my ($chr,$pos,$tabix) = @_;
 	#Only check for positions we've not already sorted.
 	return undef unless defined($tabix);
-  my $res = $tabix->query($chr,$pos-1,$pos);
-  if(defined ($res->get())){
-    my $line = $tabix->read($res); #Only one line should match
+	my $iter = $tabix->query(sprintf '%s:%d-%d', $chr,$pos-1,$pos);
+  if(defined $iter){
+    my $line = $iter->next;
     return $line;
   }
   return undef;
@@ -224,7 +219,7 @@ sub buildUnmatchedVCFForSingleBed{
       next if($line =~ m/^\s*#/);
       chomp($line);
       my ($chr,undef) = split(/\t/,$line);
-      $fileList->{$chr} = new Tabix(-data => $bedloc, -index => $umBedTabix);
+      $fileList->{$chr} = Bio::DB::HTS::Tabix->new(filename => $bedloc);
     }
   close($REF);
   return $fileList;
@@ -250,7 +245,7 @@ sub buildUnmatchedVCFForMultiVCF{
           croak("Couldn't find vcf file '$fileName'.");
         }
         if($fileName =~ /^(http|ftp)/) {
-          $umVcfTabix = new Tabix(-data => $fileName);
+          $umVcfTabix = Bio::DB::HTS::Tabix->new(filename => $fileName);
         }
         else {
           #If file exists, add it to the list, otherwise, fail.
@@ -260,15 +255,15 @@ sub buildUnmatchedVCFForMultiVCF{
           }
           my $idx = $fileName.".tbi";
           croak ("Tabix file for unmatchedNormalVCF file $idx does not exist.\n") if(! -e $idx);
-          $umVcfTabix = new Tabix(-data => $fileName, -index => $idx);
+          $umVcfTabix = Bio::DB::HTS::Tabix->new(filename => $fileName);
         }
       }else{
         if($bedloc =~ /^(http|ftp)/) {
-          $umVcfTabix = new Tabix(-data => $bedloc);
+          $umVcfTabix = Bio::DB::HTS::Tabix->new(filename => $bedloc);
         }else{
           my $idx = $bedloc.".tbi";
           croak ("Tabix file for unmatchedNormal bed file $idx does not exist.\n") if(! -e $idx);
-          $umVcfTabix = new Tabix(-data => $bedloc, -index => $idx);
+          $umVcfTabix = Bio::DB::HTS::Tabix->new(filename => $bedloc);
         }
       }
       $fileList->{$chr} = $umVcfTabix if(defined $umVcfTabix);

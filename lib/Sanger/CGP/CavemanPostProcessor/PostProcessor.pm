@@ -21,9 +21,9 @@
 package Sanger::CGP::CavemanPostProcessor::PostProcessor;
 
 use strict;
-use Bio::DB::Sam;
-use Bio::DB::Sam::Constants;
-use Bio::DB::Bam::Alignment;
+use Bio::DB::HTS;
+use Bio::DB::HTS::Constants;
+use Bio::DB::HTS::Alignment;
 use POSIX qw(strftime ceil);
 use List::Util qw (sum);
 use Carp;
@@ -765,8 +765,8 @@ Returns undef if unset.
 
 =item * $object->unmatchedNormalSampleList($list)
 
-Returns an array reference of Bio::DB::Sam objects, one pointed at each of the passed files.
-If $list is passed (as a comma separated string list) this method will create a Bio::DB::Sam object
+Returns an array reference of Bio::DB::HTS objects, one pointed at each of the passed files.
+If $list is passed (as a comma separated string list) this method will create a Bio::DB::HTS object
 for each file in the UNMATCHED normal list. If unset, returns an empty array pointer.
 
 =item * $object->minDepthQual(quality)

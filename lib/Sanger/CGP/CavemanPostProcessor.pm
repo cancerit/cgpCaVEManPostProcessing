@@ -22,9 +22,9 @@
 package Sanger::CGP::CavemanPostProcessor;
 
 use strict;
-use Bio::DB::Sam;
-use Bio::DB::Sam::Constants;
-use Bio::DB::Bam::Alignment;
+use Bio::DB::HTS;
+use Bio::DB::HTS::Constants;
+use Bio::DB::HTS::Alignment;
 use POSIX qw(strftime);
 use Carp;
 use Const::Fast qw(const);
@@ -239,7 +239,7 @@ sub _mutBase{
 sub tumBam{
 	my ($self,$bam) = @_;
 	if(defined($bam)){
-		$self->{'tb'} = Bio::DB::Sam->new(-bam=>$bam);
+		$self->{'tb'} = Bio::DB::HTS->new(-bam=>$bam);
 	}
 	return $self->{'tb'};
 }
@@ -247,7 +247,7 @@ sub tumBam{
 sub normBam{
 	my ($self,$bam) = @_;
 	if(defined($bam)){
-		$self->{'nb'} = Bio::DB::Sam->new(-bam=>$bam);
+		$self->{'nb'} = Bio::DB::HTS->new(-bam=>$bam);
 	}
 	return $self->{'nb'};
 }

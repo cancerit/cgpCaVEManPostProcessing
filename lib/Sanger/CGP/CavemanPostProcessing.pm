@@ -19,12 +19,12 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##########
 
-package Sanger::CGP::CavemanPostProcessor;
+package Sanger::CGP::CavemanPostProcessing;
 
 use strict;
 use Bio::DB::HTS;
 use Bio::DB::HTS::Constants;
-use Bio::DB::HTS::Alignment;
+use Bio::DB::Bam::Alignment;
 use POSIX qw(strftime);
 use Carp;
 use Const::Fast qw(const);

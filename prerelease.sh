@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ##########LICENCE##########
-# Copyright (c) 2014 Genome Research Ltd.
+# Copyright (c) 2014-2016 Genome Research Ltd.
 #
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
 #
@@ -44,18 +44,11 @@ cd $MY_PATH
 
 echo '### Running perl tests ###'
 
-export HARNESS_PERL_SWITCHES=-MDevel::Cover=-db,reports,-ignore,'t/.*\.t'
+export HARNESS_PERL_SWITCHES=-MDevel::Cover=-db,reports,-select='^lib/*\.pm$',-ignore,'^t/'
 rm -rf docs
 mkdir -p docs/reports_text
-set +e
-prove --nocolor -w -I ./lib | sed 's/^/  /' # indent output of prove
-if [[ $? -ne 0 ]] ; then
-  echo
-  echo "ERROR: TESTS FAILED"
-  echo
-  exit 1
-fi
-set -e
+prove -w -I ./lib
+
 echo
 echo '### Generating test/pod coverage reports ###'
 # removed 'condition' from coverage as '||' 'or' doesn't work properly

@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ##########LICENCE##########
-# Copyright (c) 2014 Genome Research Ltd.
+# Copyright (c) 2014-2016 Genome Research Ltd.
 #
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
 #
@@ -21,10 +21,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##########
 
-
-BEGIN {
-  $SIG{__WARN__} = sub {warn $_[0] unless( $_[0] =~ m/^Subroutine Tabix.* redefined/)};
-};
 
 use strict;
 use warnings FATAL => 'all';
@@ -46,7 +42,7 @@ use Sanger::CGP::CavemanPostProcessor::GenomePostProcessor;
 use Pod::Usage;
 use Config::IniFiles;
 use FindBin qw($Bin);
-use Tabix;
+use Bio::DB::HTS::Tabix;
 use Const::Fast qw(const);
 use LWP::Simple;
 use IO::Zlib;
@@ -225,7 +221,8 @@ sub main{
       #Clear the flags and SNP status before flagging.
       $$x[6]='.'; #This resets all flags.
       #This ensures we haven't got any info flags (SNP) in existance...
-      $$x[7]=$vcf->add_info_field($$x[7],'SNP'=>undef,'coding'=>undef,'ASRD'=>undef,'CLPM'=>undef,'ASMD'=>undef);
+      $$x[7]=$vcf->add_info_field($$x[7],'SNP'=>undef,'coding'=>undef,'ASRD'=>undef,
+                                                        'CLPM'=>undef,'ASMD'=>undef,'SR'=>undef);
       #Files are sorted by chr/pos, so we can open the tabix index once per vcf file.
       if($unmatchedVCFFlag==1 && exists($umNormVcf->{$$x[0]})){
 			  $isInUmVCF = getUnmatchedVCFIntersectMatch($$x[0],$$x[1],$umNormVcf->{$$x[0]},$UNMATCHED_VCF_KEY);
@@ -310,7 +307,7 @@ sub buildUnmatchedVCFFileListFromReference{
         next if($line =~ m/^\s*#/);
         chomp($line);
         my ($chr,undef) = split(/\t/,$line);
-        $fileList->{$chr} = new Tabix(-data => $bedloc, -index => $umBedTabix);
+        $fileList->{$chr} = Bio::DB::HTS::Tabix->new(filename => $bedloc);
       }
     close($REF);
 	}
@@ -331,7 +328,7 @@ sub buildUnmatchedVCFFileListFromReference{
             croak("Couldn't find vcf file '$fileName'.");
           }
           if($fileName =~ /^(http|ftp)/) {
-            $umVcfTabix = new Tabix(-data => $fileName);
+            $umVcfTabix = Bio::DB::HTS::Tabix->new(filename => $fileName);
           }
           else {
             #If file exists, add it to the list, otherwise, fail.
@@ -341,15 +338,15 @@ sub buildUnmatchedVCFFileListFromReference{
             }
             my $idx = $fileName.".tbi";
             croak ("Tabix file for unmatchedNormalVCF file $idx does not exist.\n") if(! -e $idx);
-            $umVcfTabix = new Tabix(-data => $fileName, -index => $idx);
+            $umVcfTabix = Bio::DB::HTS::Tabix->new(filename => $fileName);
           }
         }else{
           if($bedloc =~ /^(http|ftp)/) {
-            $umVcfTabix = new Tabix(-data => $bedloc);
+            $umVcfTabix = Bio::DB::HTS::Tabix->new(filename => $bedloc);
           }else{
             my $idx = $bedloc.".tbi";
             croak ("Tabix file for unmatchedNormal bed file $idx does not exist.\n") if(! -e $idx);
-            $umVcfTabix = new Tabix(-data => $bedloc, -index => $idx);
+            $umVcfTabix = Bio::DB::HTS::Tabix->new(filename => $bedloc);
           }
         }
         $fileList->{$chr} = $umVcfTabix if(defined $umVcfTabix);
@@ -468,12 +465,10 @@ sub getIntersectMatches{
 sub getUnmatchedVCFIntersectMatch{
 	my ($chr,$pos,$tabix,$flagName) = @_;
 	#Only check for positions we've not already sorted.
-  my $res = $tabix->query($chr,$pos-1,$pos);
-  if(defined ($res->get())){
-    my $line = $tabix->read($res); #Only one line should match
-    return $line;
-  }
-  return undef;
+  # new tabix is 1-based for both coordinates
+  my $iter = $tabix->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
+  my $line = $iter->next; # undef if not found
+  return $line;
 }
 
 sub runFlagger{

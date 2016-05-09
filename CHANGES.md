@@ -1,3 +1,6 @@
+## 1.6.3
+* Removal of extra reference to Bio::DB::Bam::Alignment
+
 ## 1.6.1
 * Replaced prerequestite test for Bio::DB::Sam with Bio::DB::HTS in setup.sh
 

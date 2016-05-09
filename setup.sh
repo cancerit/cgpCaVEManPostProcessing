@@ -113,7 +113,6 @@ else
   if [ ! -e bedtools ]; then
     get_distro "bedtools2" $SOURCE_BEDTOOLS
   fi
-  set -e
   make -C bedtools2 -j$CPU && \
   cp bedtools2/bin/* $INST_PATH/bin/. && \
   touch $SETUP_DIR/bedtools.success

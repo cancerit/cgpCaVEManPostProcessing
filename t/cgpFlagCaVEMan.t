@@ -90,7 +90,6 @@ sub run_flag{
 			" -g $test_germ_indel_bed -v $test_vcf_convert_config ".
 			"--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
 			"-u $unmatched_vcf -ref $ref";
-warn $cmd;
 	my ($out, $err, $exit) = capture{ system($cmd) };
 	is($exit, 0,'Flagging ran correctly');
 }

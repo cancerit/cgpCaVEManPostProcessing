@@ -456,6 +456,8 @@ sub getIntersectMatches{
 			croak("Problem encountered trying to intersect with $bedFile: \n",$line);
 		}
 		my ($chr,$pos,@unreqd) = split(/\t/,$line);
+warn $chr;
+warn $pos;
 		$intersectFlagStore->{$chr.':'.$pos}->{$flagName} = 1;
 	}
 	close($IN);

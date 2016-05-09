@@ -23,19 +23,6 @@
 
 SOURCE_BEDTOOLS="https://github.com/arq5x/bedtools2/releases/download/v2.21.0/bedtools-2.21.0.tar.gz"
 
-done_message () {
-    if [ $? -eq 0 ]; then
-        echo " done."
-        if [ "x$1" != "x" ]; then
-            echo $1
-        fi
-    else
-        echo " failed.  See setup.log file for error messages." $2
-        echo "    Please check INSTALL file for items that should be installed by a package manager"
-        exit 1
-    fi
-}
-
 get_distro () {
   if hash curl 2>/dev/null; then
     curl -sSL -o $1.tar.gz -C - --retry 10 $2
@@ -101,6 +88,8 @@ if [[ "x$BIODBHTS" == "x" ]] ; then
   exit 1;
 fi
 
+set -e
+
 #add bin path for install tests
 export PATH="$INST_PATH/bin:$PATH"
 
@@ -108,37 +97,31 @@ echo -n "Building bedtools ..."
 if [ -e $SETUP_DIR/bedtools.success ]; then
   echo -n " previously installed ...";
 else
-  cd $SETUP_DIR
-  (
   set -x
+  cd $SETUP_DIR
   if [ ! -e bedtools ]; then
     get_distro "bedtools2" $SOURCE_BEDTOOLS
   fi
-  make -C bedtools2 -j$CPU && \
-  cp bedtools2/bin/* $INST_PATH/bin/. && \
+  make -C bedtools2 -j$CPU
+  cp bedtools2/bin/* $INST_PATH/bin/.
+  set +x
   touch $SETUP_DIR/bedtools.success
-  )>>$INIT_DIR/setup.log 2>&1
 fi
-done_message "" "Failed to build bedtools."
 
 cd $INIT_DIR
 
 echo -n "Installing Perl prerequisites ..."
-(
-  set -x
-  perl $INST_PATH/bin/cpanm -v --mirror http://cpan.metacpan.org -l $INST_PATH/ --installdeps .
-) >>$INIT_DIR/setup.log 2>&1
-done_message "" "Failed during installation of core dependencies."
+set -x
+perl $INST_PATH/bin/cpanm -v --mirror http://cpan.metacpan.org -l $INST_PATH/ --installdeps .
 set +x
 
 echo -n "Installing cgpCaVEManPostProcessing ..."
-(
-  perl Makefile.PL INSTALL_BASE=$INST_PATH && \
-  make && \
-  make test && \
-  make install
-) >>$INIT_DIR/setup.log 2>&1
-done_message "" "cgpCaVEManPostProcessing install failed."
+set -x
+perl Makefile.PL INSTALL_BASE=$INST_PATH && \
+make && \
+make test && \
+make install
+set +x
 
 # cleanup all junk
 rm -rf $SETUP_DIR

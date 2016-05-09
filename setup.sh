@@ -66,7 +66,7 @@ cd $INIT_DIR
 unset PERL5LIB
 ARCHNAME=`perl -e 'use Config; print $Config{archname};'`
 PERLROOT=$INST_PATH/lib/perl5
-export PERL5LIB="$PERLROOT"
+export PERL5LIB="$PERLROOT:$INST_PATH/lib/perl5/x86_64-linux-thread-multi"
 
 #create a location to build dependencies
 SETUP_DIR=$INIT_DIR/install_tmp
@@ -97,7 +97,7 @@ fi
 
 BIODBHTS=`perl -le 'eval "require $ARGV[0]" and print $ARGV[0]->VERSION' Bio::DB::HTS`
 if [[ "x$BIODBHTS" == "x" ]] ; then
-  echo "PREREQUISITE: Please install Bio::DB::HTs before proceeding"
+  echo "PREREQUISITE: Please install Bio::DB::HTS before proceeding"
   exit 1;
 fi
 

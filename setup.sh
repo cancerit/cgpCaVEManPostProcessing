@@ -95,9 +95,9 @@ if [[ "x$CGPVCF" == "x" ]] ; then
   exit 1;
 fi
 
-BIODBSAM=`perl -le 'eval "require $ARGV[0]" and print $ARGV[0]->VERSION' Bio::DB::Sam`
-if [[ "x$BIODBSAM" == "x" ]] ; then
-  echo "PREREQUISITE: Please install Bio::DB::Sam before proceeding"
+BIODBHTS=`perl -le 'eval "require $ARGV[0]" and print $ARGV[0]->VERSION' Bio::DB::HTS`
+if [[ "x$BIODBHTS" == "x" ]] ; then
+  echo "PREREQUISITE: Please install Bio::DB::HTs before proceeding"
   exit 1;
 fi
 

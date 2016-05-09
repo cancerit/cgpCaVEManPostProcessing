@@ -24,7 +24,7 @@ package Sanger::CGP::CavemanPostProcessing;
 use strict;
 use Bio::DB::HTS;
 use Bio::DB::HTS::Constants;
-use Bio::DB::Bam::Alignment;
+use Bio::DB::HTS::Alignment;
 use POSIX qw(strftime);
 use Carp;
 use Const::Fast qw(const);

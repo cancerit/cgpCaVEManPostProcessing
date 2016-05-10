@@ -55,6 +55,8 @@ const my $expected_out_oldVersionVCF => $test_data_path.'expected_output_oldVers
 const my $unmatched_vcf => $test_data_path.'unmatchedVCF/';
 const my $ref => $test_data_path.'genome.fa.fai';
 
+my $perl_exec = "$^X -I ".(join ':', @INC);
+
 const my $id_analysis_proc => 123456;
 
 main(@ARGV);
@@ -71,7 +73,7 @@ sub main{
 }
 
 sub run_flag{
-	my $cmd = "perl $script -i $test_input_file -o $test_out_file -c $test_config".
+	my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
 			" -s human -t genome -m $test_mut_bam -n $test_norm_bam".
 			" -g $test_germ_indel_bed -v $test_vcf_convert_config".
 			" -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc".
@@ -89,7 +91,7 @@ sub run_flag{
 }
 
 sub run_old_flag{
-	my $cmd = "perl $script -i $oldVersionVcf -o $test_out_oldVersionVCF -c $test_config".
+	my $cmd = "$perl_exec $script -i $oldVersionVcf -o $test_out_oldVersionVCF -c $test_config".
 			" -s human -t genome -m $oldVersionMutBam -n $oldVersionNormBam".
 			" -g $test_germ_indel_bed -v $test_vcf_convert_config ".
 			" -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
@@ -99,7 +101,7 @@ sub run_old_flag{
 }
 
 sub checkSupportedButNoFlags{
-	my $cmd = "perl $script -i $test_input_file -o $test_out_file -c $test_config".
+	my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
 			" -s human -t pulldown -m $test_mut_bam -n $test_norm_bam".
 			" -v $test_vcf_convert_config".
 			" -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
@@ -110,7 +112,7 @@ sub checkSupportedButNoFlags{
 }
 
 sub checkUnsupportedOption{
-	my $cmd = "perl $script -i $test_input_file -o $test_out_file -c $test_config".
+	my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
 			" -s human -t pulldown -m $test_mut_bam -n $test_norm_bam".
 			" -v $test_vcf_convert_config".
 			" -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc -x".

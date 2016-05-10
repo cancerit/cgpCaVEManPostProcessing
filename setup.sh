@@ -88,6 +88,16 @@ if [[ "x$BIODBHTS" == "x" ]] ; then
   exit 1;
 fi
 
+CPU=`grep -c ^processor /proc/cpuinfo`
+if [ $? -eq 0 ]; then
+  if [ "$CPU" -gt "6" ]; then
+    CPU=6
+  fi
+else
+  CPU=1
+fi
+echo "Max compilation CPUs set to $CPU"
+
 set -e
 
 #add bin path for install tests

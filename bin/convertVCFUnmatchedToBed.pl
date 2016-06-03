@@ -1,13 +1,13 @@
 #!/usr/bin/perl
 
 ############## LICENSE ##############
-# Copyright (c) 2014-2015 Genome Research Ltd.
+# Copyright (c) 2014-2016 Genome Research Ltd.
 #
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
 #
-# This file is part of ?????????.
+# This file is part of cgpCaVEManPostProcessing.
 #
-# ????????? is free software: you can redistribute it and/or modify it under
+# cgpCaVEManPostProcessing is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
 # Software Foundation; either version 3 of the License, or (at your option) any
 # later version.
@@ -131,7 +131,7 @@ const my @BASES => ('A','C','G','T');
     if($. % 1000000 == 0){
       warn "Processed $. lines of VCF.\n";
     }
-    print $OUT sprintf($BED_LINE_FORMAT,$chr,$pos-1,$pos,$score,$fail) if($fail ne "");
+    printf $OUT $BED_LINE_FORMAT,$chr,$pos-1,$pos,$score,$fail if($fail ne "");
 
   }#End of parsing each line of data in vcf file
   print "Processed a total of $. lines of VCF.\n";
@@ -280,9 +280,9 @@ convertVCFUnmatchedToBed.pl - Convert unmatched vcf panel to bed file, sort, gzi
 convertVCFUnmatchedToBed.pl [options]
 
   Required parameters:
-    -infile                       -f   Folder to output result to.
-    -output                       -o   Location of Log4Perl config file.
-    -vcfUnmatchedMinMutAlleleCvg  -c   Min mutant allele coverage used in flagging
+    -infile                       -f   List of gzipped unmatched vcf files to convert to a single bed file
+    -output                       -o   Output bed file
+    -vcfUnmatchedMinMutAlleleCvg  -c   Min mutant allele coverage used in flagging;
     -vcfUnmatchedMinSamplePct     -p   Min sample percentage to fail um normal check used in flagging
 
   Other:
@@ -295,7 +295,7 @@ convertVCFUnmatchedToBed.pl [options]
 
 =item B<-infile>
 
-List of files to convert into single bed file
+List of gzipped unmatched vcf files to convert to a single bed file
 
 =item B<-output>
 

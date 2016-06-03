@@ -41,6 +41,7 @@ use Carp;
 use Const::Fast;
 use File::Copy qw(move);
 use Digest::MD5 qw(md5_hex);
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError) ;
 use Data::Dumper;
 
 const my $HEAD_FORMAT_1 => "#Unmatched normal panel for CaVEMan";

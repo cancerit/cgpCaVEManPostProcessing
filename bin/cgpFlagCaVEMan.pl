@@ -133,37 +133,46 @@ sub main{
 	my ($opts) = @_;
 	#Get flag list and config for flagger from config.ini file
 	my $umNormVcf;
+	my $tabixList;
 	my ($configParams,$flagList,$centBed,$simpBed,$snpBed,
 				$indelBed,$annoBed,$codingBed,$hsdBed) = setupFromConfig($opts);
 	warn "Performing intersects\n" if($opts->{'loud'});
 		if(grep(/centromericRepeatFlag/,@$flagList)){
+		  my $idx = $centBed.".tbi";
 			#Run intersects for each of the potential flags, will skip if there's no file.
-			warn "Performing centromeric repeat intersect\n" if($opts->{'loud'});
-			getIntersectMatches($opts->{'f'},$centBed,$CENTROMERIC_REPEAT_HIT_KEY);
+			croak ("Tabix file for centromericRepeatFlag file $idx does not exist.\n") if(! -e $idx);
+			$tabixList->{'centromericRepeatFlag'} = Bio::DB::HTS::Tabix->new(filename => $centBed);
 		}
 		if(grep(/simpleRepeatFlag/,@$flagList)){
-			warn "Performing simple repeat intersect\n" if($opts->{'loud'});
-			getIntersectMatches($opts->{'f'},$simpBed,$SIMPLE_REPEAT_HIT_KEY);
+			my $idx = $simpBed.".tbi";
+			croak ("Tabix file for simpleRepeatFlag file $idx does not exist.\n") if(! -e $idx);
+			$tabixList->{'simpleRepeatFlag'} = Bio::DB::HTS::Tabix->new(filename => $simpBed);
 		}
 		if(grep(/snpFlag/,@$flagList)){
-			warn "Performing SNP intersect\n" if($opts->{'loud'});
-			getIntersectMatches($opts->{'f'},$snpBed,$SNP_HIT_KEY);
+      my $idx = $snpBed.".tbi";
+      croak ("Tabix file for snpFlag file $idx does not exist.\n") if(! -e $idx);
+			$tabixList->{'snpFlag'} = Bio::DB::HTS::Tabix->new(filename => $snpBed);
 		}
 		if(grep(/germlineIndelFlag/,@$flagList)){
-			warn "Performing germline indel intersect\n" if($opts->{'loud'});
-			getIntersectMatches($opts->{'f'},$indelBed,$GERMLINE_INDEL_HIT_KEY);
+			my $idx = $indelBed.".tbi";
+			croak ("Tabix file for germlineIndelFlag file $idx does not exist.\n") if(! -e $idx);
+			$tabixList->{'germlineIndelFlag'} = Bio::DB::HTS::Tabix->new(filename => $indelBed);
 		}
 		if(grep(/annotationFlag/,@$flagList)){
-			warn "Performing annotatable intersect\n" if($opts->{'loud'});
-			getIntersectMatches($opts->{'f'},$annoBed,$ANNOTATABLE_HIT_KEY);
+			my $idx = $annoBed.".tbi";
+			croak ("Tabix file for annotationFlag file $idx does not exist.\n") if(! -e $idx);
+			$tabixList->{'annotationFlag'} = Bio::DB::HTS::Tabix->new(filename => $annoBed);
 		}
 		if(grep(/codingFlag/,@$flagList)){
-			warn "Performing coding intersect\n" if($opts->{'loud'});
-			getIntersectMatches($opts->{'f'},$codingBed,$CODING_ANNOTATION_HIT_KEY);
+			my $idx = $codingBed.".tbi";
+			croak ("Tabix file for codingFlag file $idx does not exist.\n") if(! -e $idx);
+			$tabixList->{'codingFlag'} = Bio::DB::HTS::Tabix->new(filename => $codingBed);
 		}
 		if(grep(/hiSeqDepthFlag/,@$flagList)){
 			warn "Performing HSD intersect\n" if($opts->{'loud'});
-			getIntersectMatches($opts->{'f'},$hsdBed,$HIGH_SEQ_DEPTH_HIT_KEY);
+			my $idx = $hsdBed.".tbi";
+			croak ("Tabix file for hiSeqDepthFlag file $idx does not exist.\n") if(! -e $idx);
+			$tabixList->{'hiSeqDepthFlag'} = Bio::DB::HTS::Tabix->new(filename => $hsdBed);
 		}
 		#Setup postprocessing module
 		my $unmatchedVCFFlag = 0;
@@ -227,7 +236,7 @@ sub main{
       if($unmatchedVCFFlag==1 && exists($umNormVcf->{$$x[0]})){
 			  $isInUmVCF = getUnmatchedVCFIntersectMatch($$x[0],$$x[1],$umNormVcf->{$$x[0]},$UNMATCHED_VCF_KEY);
       }
-			my $results = getVCFToAddResultsOfFilters($$x[0],$$x[1],$$x[3],$$x[4],$flagList,$flagger,$cfg,$x,$vcf,$configParams,$isInUmVCF);
+			my $results = getVCFToAddResultsOfFilters($$x[0],$$x[1],$$x[3],$$x[4],$flagList,$flagger,$cfg,$x,$vcf,$configParams,$isInUmVCF,$tabixList);
 			#Add the relevant filters or PASS to the filter section.
 			$$x[6]=$vcf->add_filter($$x[6],%$results);
 			#Validate this line and append this line to the output file;
@@ -245,7 +254,19 @@ sub main{
 		}
 		@lineCache = ();
 	close($VCFOUT);
+
+	close_tabix($tabixList);
 	warn "Done flagging\n" if($opts->{'loud'});
+}
+
+sub close_tabix{
+  my ($tabixList) = @_;
+  foreach my $flagType(keys %$tabixList){
+    if(defined($tabixList->{$flagType})){
+      $tabixList->{$flagType}->close;
+    }
+  }
+  return;
 }
 
 sub check_exists_remote{
@@ -413,7 +434,7 @@ sub _trim_file_path{
 }
 
 sub getVCFToAddResultsOfFilters{
-	my ($chr,$pos,$wt,$mut,$flagList,$flagger,$cfg,$x,$vcf,$configParams,$isInUmVCF) = @_;
+	my ($chr,$pos,$wt,$mut,$flagList,$flagger,$cfg,$x,$vcf,$configParams,$isInUmVCF,$tabixList) = @_;
 	my %resFlags = ();
 	$flagger->runProcess($chr,$pos,$pos,$wt,$mut);
 	if($oldCaveVersion && (!exists($flagger->_muts->{'tqs'}) || scalar(@{$flagger->_muts->{'tqs'}})== 0)){
@@ -425,7 +446,7 @@ sub getVCFToAddResultsOfFilters{
 		#Get the id of this flag.
 		my $flagId = $cfg->val($flagName,"id");
 		#Run this flag
-		my $flagRes = runFlagger($flagger,$flagName,$flagId,$chr,$pos,$mut,$x,$vcf,$configParams,$isInUmVCF);
+		my $flagRes = runFlagger($flagger,$flagName,$flagId,$chr,$pos,$mut,$x,$vcf,$configParams,$isInUmVCF,$tabixList);
 		#Add inverse of the flag result to the resFlags (we return 1 for pass... fails want to be added to filter)
 		if($flagName !~ m/(snp|coding)Flag/){
 			$resFlags{$flagId} = !$flagRes;
@@ -472,7 +493,7 @@ sub getUnmatchedVCFIntersectMatch{
 }
 
 sub runFlagger{
-	my ($flagger,$flagName,$flagId,$chr,$pos,$mut,$x,$vcf,$cfg,$isInUmVCF) = @_;
+	my ($flagger,$flagName,$flagId,$chr,$pos,$mut,$x,$vcf,$cfg,$isInUmVCF,$tabixList) = @_;
 	my $coord = $chr.':'.$pos;
 	if($flagName eq 'depthFlag'){
 		#DEPTH
@@ -492,7 +513,9 @@ sub runFlagger{
 	}elsif($flagName eq 'germlineIndelFlag'){
 		#GERMLINE INDEL
 		#Use intersect to check for indel
-		if(exists($intersectFlagStore->{$coord}->{$GERMLINE_INDEL_HIT_KEY})){
+		my $iter = $tabixList->{$flagName}->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
+    my $line = $iter->next; # undef if not found
+		if(defined($line)){
 			return 0;
 		}
 		return 1;
@@ -504,8 +527,9 @@ sub runFlagger{
 		return $flagger->getDifferingReadPositionResult();
 	}elsif($flagName eq 'simpleRepeatFlag'){
 		#SIMPLE REPEATS
-		#Use intersect to check for simple repeats
-		if(exists($intersectFlagStore->{$coord}->{$SIMPLE_REPEAT_HIT_KEY})){
+		my $iter = $tabixList->{$flagName}->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
+    my $line = $iter->next; # undef if not found
+		if(defined($line)){
 			return 0;
 		}
 		return 1;
@@ -554,15 +578,17 @@ sub runFlagger{
 	}elsif($flagName eq 'centromericRepeatFlag'){
 		#CENTROMERIC REPEATS
 		#Use intersect to check for centromeric repeats
-		if(exists($intersectFlagStore->{$coord}->{$CENTROMERIC_REPEAT_HIT_KEY})){
+		my $iter = $tabixList->{$flagName}->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
+    my $line = $iter->next; # undef if not found
+		if(defined($line)){
 			return 0;
 		}
 		return 1;
 	}elsif($flagName eq 'snpFlag'){
 		#SNPS
-		my $flagRes = 0;
-		if(exists($intersectFlagStore->{$coord}->{$SNP_HIT_KEY}) && defined($intersectFlagStore->{$coord}->{$SNP_HIT_KEY})){
-			#Ensure we mark the DB SNP id field so we can add info later.
+		my $iter = $tabixList->{$flagName}->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
+    my $line = $iter->next; # undef if not found
+		if(defined($line)){
 			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
 		}
 		return -1;
@@ -571,24 +597,27 @@ sub runFlagger{
 		return $flagger->getPhasingResult();
 	}elsif($flagName eq 'annotationFlag'){
 		#ANNOTATION
-		if(exists($intersectFlagStore->{$coord}->{$ANNOTATABLE_HIT_KEY})){
+		my $iter = $tabixList->{$flagName}->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
+    my $line = $iter->next; # undef if not found
+		if(defined($line)){
 			return 1;
 		}
 		return 0;
 	}elsif($flagName eq 'hiSeqDepthFlag'){
 		#HIGH SEQ DEPTH
-		if(exists($intersectFlagStore->{$coord}->{$HIGH_SEQ_DEPTH_HIT_KEY})){
+		my $iter = $tabixList->{$flagName}->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
+    my $line = $iter->next; # undef if not found
+		if(defined($line)){
 			return 0;
 		}
 		return 1;
 	}elsif($flagName eq 'codingFlag'){
 		#CODING
-		my $flagRes = 0;
-		if(exists($intersectFlagStore->{$coord}->{$CODING_ANNOTATION_HIT_KEY})){
-			#Ensure we mark the Coding Flag id field so we can add info later.
+		my $iter = $tabixList->{$flagName}->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
+    my $line = $iter->next; # undef if not found
+		if(defined($line)){
 			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
 		}
-
 		return -1;
 	}elsif($flagName eq 'clippingMedianFlag'){
 		$$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getClipMedianResult());
@@ -942,7 +971,7 @@ cgpFlagCaVEMan.pl [-h] -f vcfToFlag.vcf -o flaggedVCF.vcf -c configFile.ini -s h
     --normBam              (-n)       Normal bam file
 
     --bedFileLoc           (-b)       Path to a folder containing the centromeric, snp, hi sequence depth,
-                                      and simple repeat sorted bed files (if required) i.e. the non annotation bed files.
+                                      and simple repeat sorted (gzipped and tabixed) bed files (if required) i.e. the non annotation bed files.
                                       Names of files will be taken from the config file.
 
     --indelBed             (-g)       A bed file containing germline indels to filter on

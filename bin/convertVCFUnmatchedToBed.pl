@@ -260,8 +260,8 @@ sub setup_options {
 					'p|vcfUnmatchedMinSamplePct=f' => \$opts{'p'},
 					) or pod2usage(2);
 
-	pod2usage(-verbose => 2) if(defined $opts{'h'});
-  pod2usage(-verbose => 1) if(defined $opts{'m'});
+	pod2usage(-verbose => 1) if(defined $opts{'h'});
+  pod2usage(-verbose => 2) if(defined $opts{'m'});
 
   pod2usage(-message => "Option 'f|infile' List of vcf files to convert required.", -verbose => 0) if(!defined $opts{'file'});
   pod2usage(-message => "Option 'o|output' Output location required.", -verbose => 0) if(!defined $opts{'out'});

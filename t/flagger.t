@@ -35,7 +35,7 @@ const my $CONFIG => $test_data_path."flag.vcf.config.new.ini";
 const my $FLAG_CFG => $test_data_path."flag.to.vcf.convert.ini";
 const my $SPECIES => 'HUMAN';
 const my $TYPE => 'WGS';
-const my $GERMLINE_INDEL => $test_data_path.'germline_indel.bed';
+const my $GERMLINE_INDEL => $test_data_path.'germline_indel.bed.gz';
 const my $BED_LOC => $test_data_path;
 
 const my $T_BAM => $test_data_path.'test.bam';

@@ -38,7 +38,6 @@ WriteMakefile(
                      'Test::Fatal' => 0.013,
                      'Devel::Cover' => 1.09,
                      'Pod::Coverage' => 0.23,
-                     'IO::Uncompress::Gunzip'=> 2.069,
                    }
 );
 

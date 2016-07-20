@@ -111,7 +111,8 @@ sub checkSupportedButNoFlags{
 			" --index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
 			"-u $unmatched_vcf -ref $ref";
 	my ($out, $err, $exit) = capture{ system($cmd) };
-	like($err, qr/No flagList found in .+ for section HUMAN_PULLDOWN FLAGLIST. No flagging will be done./, 'Correctly runs with warnings as no flags available (check message).');
+	warn "********$err\n";
+	like($err, qr/No flagList found in .+ for section HUMAN_WXS FLAGLIST. No flagging will be done./, 'Correctly runs with warnings as no flags available (check message).');
 	is($exit, 0, 'Correctly runs with warnings as no flags available (check exitcode).');
 }
 

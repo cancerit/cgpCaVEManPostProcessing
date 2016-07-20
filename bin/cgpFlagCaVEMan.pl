@@ -758,9 +758,9 @@ sub setupFromConfig{
 
 sub initFlagModuleForSpeciesType{
 	my ($params,$type) = @_;
-	if(lc($type) eq lc("pulldown") || lc($type) eq lc("followup")){
+	if(lc($type) eq lc("pulldown") || lc($type) eq lc("followup") || $type eq "WXS"){
 		return Sanger::CGP::CavemanPostProcessor::ExomePostProcessor->new(%$params);
-	}elsif(lc($type) eq lc("genome") || lc($type) eq lc("RNASEQ")){
+	}elsif($type eq "WGS" || $type eq "RNASEQ"){
 		return Sanger::CGP::CavemanPostProcessor::GenomePostProcessor->new(%$params);
 	}else{
 		croak("No flagging module for type: $type\n");
@@ -913,20 +913,20 @@ sub validateInput {
   				" known types: (pulldown|exome|WGS|WXS|AMPLICON|genome|genomic|followup|targeted|targetted|rna_seq|rna-seq|rnaseq)") if($opts->{'t'} !~
   				                      m/^(pulldown|exome|WGS|WXS|AMPLICON|genome|genomic|followup|targeted|targetted|rna_seq|rna-seq|rnaseq)$/i);
   }else{
-    $opts->{'t'} = 'genome';
-    print "Using default study type of genome as not option t passed\n" if($opts->{'loud'});
+    $opts->{'t'} = 'WGS';
+    print "Using default study type of WGS as not option t passed\n" if($opts->{'loud'});
   }
 
-  if(uc($opts->{'t'}) eq 'EXOME' || uc($opts->{'t'}) eq 'WXS'){
-  	$opts->{'t'} = 'PULLDOWN';
-  }elsif(uc($opts->{'t'}) eq 'GENOMIC' || uc($opts->{'t'}) eq 'WGS'){
-  	$opts->{'t'} = 'GENOME';
+  if(uc($opts->{'t'}) eq 'EXOME' || uc($opts->{'t'}) eq 'PULLDOWN' || uc($opts->{'t'}) eq 'WXS'){
+  	$opts->{'t'} = 'WXS';
+  }elsif(uc($opts->{'t'}) eq 'GENOMIC' || uc($opts->{'t'}) eq 'WGS' || uc($opts->{'t'}) eq 'GENOME'){
+  	$opts->{'t'} = 'WGS';
   }elsif(uc($opts->{'t'}) eq 'RNA_SEQ'||uc($opts->{'t'}) eq 'RNA-SEQ'){
   	$opts->{'t'} = 'RNASEQ';
   }elsif(uc($opts->{'t'}) eq 'TARGETED'){
   	$opts->{'t'} = 'TARGETED';
-  }elsif(uc($opts->{'t'}) eq 'AMPLICON'){
-    $opts->{'t'} = 'FOLLOWUP';
+  }elsif(uc($opts->{'t'}) eq 'AMPLICON' || uc($opts->{'t'}) eq 'FOLLOWUP'){
+    $opts->{'t'} = 'AMPLICON';
   }
   $opts->{'t'} = uc($opts->{'t'});
   if(!defined($opts->{'l'}) || $opts->{'l'} !~ m/^\d+$/g){

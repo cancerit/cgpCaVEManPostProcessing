@@ -126,7 +126,7 @@ perl $INST_PATH/bin/cpanm -v --mirror http://cpan.metacpan.org -l $INST_PATH/ --
 set +x
 
 echo -n "Installing cgpCaVEManPostProcessing ..."
-set -x
+set -xe
 perl Makefile.PL INSTALL_BASE=$INST_PATH && \
 make && \
 make test && \

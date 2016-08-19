@@ -1,3 +1,6 @@
+## 1.6.6
+* Add Amplicon to list of recognised types in cgpFlagCaVEMan.pl
+
 ## 1.6.5
 * Correct bug where sequencing type names in script and config differ
 

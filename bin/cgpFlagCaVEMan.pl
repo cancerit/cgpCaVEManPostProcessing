@@ -729,7 +729,7 @@ sub setupFromConfig{
 
 sub initFlagModuleForSpeciesType{
 	my ($params,$type) = @_;
-	if(lc($type) eq lc("pulldown") || lc($type) eq lc("followup") || $type eq "WXS"){
+	if(lc($type) eq lc("pulldown") || lc($type) eq lc("followup") || $type eq "WXS" || $type eq "AMPLICON"){
 		return Sanger::CGP::CavemanPostProcessor::ExomePostProcessor->new(%$params);
 	}elsif($type eq "WGS" || $type eq "RNASEQ"){
 		return Sanger::CGP::CavemanPostProcessor::GenomePostProcessor->new(%$params);

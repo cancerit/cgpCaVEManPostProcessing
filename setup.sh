@@ -127,9 +127,9 @@ set +x
 
 echo -n "Installing cgpCaVEManPostProcessing ..."
 set -xe
-perl Makefile.PL INSTALL_BASE=$INST_PATH && \
-make && \
-make test && \
+perl Makefile.PL INSTALL_BASE=$INST_PATH
+make
+make test
 make install
 set +x
 

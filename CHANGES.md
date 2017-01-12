@@ -1,3 +1,6 @@
+## 1.6.7
+* Add targeted to list of recognised types in cgpFlagCaVEMan.pl
+
 ## 1.6.6
 * Add Amplicon to list of recognised types in cgpFlagCaVEMan.pl
 

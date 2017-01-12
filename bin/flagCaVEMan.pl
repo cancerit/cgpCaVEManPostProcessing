@@ -45,14 +45,16 @@ use Sanger::CGP::CavemanPostProcessing::Flagger;
 
 const my @PERMITTED_AMPLICON_TYPES => qw/followup amplicon/;
 const my @PERMITTED_RNA_TYPES => qw/rnaseq rna_seq rna-seq rna/;
-const my @PERMITTED_WXS_TYPES => qw/pulldown exome exomic wxs targeted targetted/;
+const my @PERMITTED_WXS_TYPES => qw/pulldown exome exomic wxs/;
+const my @PERMITTED_TARGETED_TYPES => qw/targeted targetted/;
 const my @PERMITTED_WGS_TYPES => qw/genome wgs genomic/;
-const my @PERMITTED_SEQ_TYPES => (@PERMITTED_WGS_TYPES, @PERMITTED_WXS_TYPES, @PERMITTED_AMPLICON_TYPES, @PERMITTED_RNA_TYPES);
+const my @PERMITTED_SEQ_TYPES => (@PERMITTED_WGS_TYPES, @PERMITTED_WXS_TYPES, @PERMITTED_AMPLICON_TYPES, @PERMITTED_RNA_TYPES, @PERMITTED_TARGETED_TYPES);
 
 const my $WGS_TYPE => 'WGS';
 const my $WXS_TYPE => 'WXS';
 const my $AMPLICON_TYPE => 'AMPLICON';
 const my $RNASEQ_TYPE => 'RNASEQ';
+const my $TARGETED_TYPE => 'TARGETED';
 const my $DEFAULT_LINE_CACHE => 2000;
 const my $FLAG_TO_VCF_CONFIG => '%s/flag.to.vcf.convert.ini';
 const my $FLAG_CONFIG => '%s/human/flag.vcf.config.ini';
@@ -406,6 +408,8 @@ sub validateInput {
   	$opts->{'t'} = $RNASEQ_TYPE;#'RNASEQ';
   }elsif(grep {/$type/} @PERMITTED_AMPLICON_TYPES){
   	$opts->{'t'} = $AMPLICON_TYPE;#'TARGETED';
+  }elsif(grep {/$type/} @PERMITTED_TARGETED_TYPES){
+  	$opts->{'t'} = $TARGETED_TYPE;#'TARGETED';
   }else{
     croak($opts->{'t'}.": unrecognised sequencing type.");
   }

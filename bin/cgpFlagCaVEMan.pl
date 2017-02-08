@@ -76,7 +76,7 @@ const my $HSD_BED_PARAMETER => 'highSeqDepthBed';
 const my $UMNORM_VCF_PARAMETER => 'unmatchedNormalVcf';
 const my $UNMATCHED_VCF_LIST_PARAMETER => 'unmatchedNormalVCFList';
 
-const my @INFO_FLAGS => qw/snpFlag codingFlag alignmentScoreReadLengthAdjustedFlag clippingMedianFlag alnScoreMedianFlag/;
+const my @INFO_FLAGS => qw/snpFlag codingFlag alignmentScoreReadLengthAdjustedFlag clippingMedianFlag alnScoreMedianFlag medianRdPosFlag meanRdPosFlag/;
 
 const my $OLD_CAVE_BUG => 'CB';
 
@@ -446,6 +446,7 @@ sub getVCFToAddResultsOfFilters{
 		#Get the id of this flag.
 		my $flagId = $cfg->val($flagName,"id");
 		#Run this flag
+		
 		my $flagRes = runFlagger($flagger,$flagName,$flagId,$chr,$pos,$mut,$x,$vcf,$configParams,$isInUmVCF,$tabixList);
 		#Add inverse of the flag result to the resFlags (we return 1 for pass... fails want to be added to filter)
 		if($flagName !~ m/(snp|coding)Flag/){
@@ -633,6 +634,20 @@ sub runFlagger{
 		return $flagger->getSingleEndResult();
 	}elsif($flagName eq 'matchedNormalProportion'){
 		return $flagger->getMatchedNormalProportionResult();
+	}elsif($flagName eq 'meanRdPosFlag'){
+			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getMeanRdPos());
+	}elsif($flagName eq 'medianRdPosFlag'){
+			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getMedianRdPos());
+	}elsif($flagName eq 'medianBaseQuality'){
+			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getMedianBaseQuality());
+	}elsif($flagName eq 'meanBaseQuality'){
+			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getMeanBaseQuality());
+	}elsif($flagName eq 'meanMapQuality'){
+			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getMeanMapQuality());
+	}elsif($flagName eq 'medianMapQuality'){
+			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getMedianMapQuality());
+	}elsif($flagName eq 'altHitCount'){
+			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAltHitCount());
 	}else{
 		croak("Unrecognised flag name $flagName\n");
 	}
@@ -760,7 +775,10 @@ sub initFlagModuleForSpeciesType{
 	my ($params,$type) = @_;
 	if(lc($type) eq lc("pulldown") || lc($type) eq lc("followup") || $type eq "WXS" || $type eq "AMPLICON" || $type eq "TARGETED"){
 		return Sanger::CGP::CavemanPostProcessor::ExomePostProcessor->new(%$params);
-	}elsif($type eq "WGS" || $type eq "RNASEQ"){
+	}
+	elsif($type eq "WGS" || $type eq "RNASEQ"){
+		return Sanger::CGP::CavemanPostProcessor::GenomePostProcessor->new(%$params);
+	}elsif($type eq "SWC"){
 		return Sanger::CGP::CavemanPostProcessor::GenomePostProcessor->new(%$params);
 	}else{
 		croak("No flagging module for type: $type\n");
@@ -910,8 +928,8 @@ sub validateInput {
   $opts->{'s'} = uc($opts->{'s'});
   if(defined($opts->{'t'})){
     pod2usage("Unrecognised study type parameter ".$opts->{'t'}.
-  				" known types: (pulldown|exome|WGS|WXS|AMPLICON|genome|genomic|followup|targeted|targetted|rna_seq|rna-seq|rnaseq)") if($opts->{'t'} !~
-  				                      m/^(pulldown|exome|WGS|WXS|AMPLICON|genome|genomic|followup|targeted|targetted|rna_seq|rna-seq|rnaseq)$/i);
+  				" known types: (pulldown|exome|WGS|WXS|AMPLICON|genome|genomic|followup|targeted|targetted|rna_seq|rna-seq|rnaseq|SWC)") if($opts->{'t'} !~
+  				                      m/^(pulldown|exome|WGS|WXS|AMPLICON|genome|genomic|followup|targeted|targetted|rna_seq|rna-seq|rnaseq|SWC)$/i);
   }else{
     $opts->{'t'} = 'WGS';
     print "Using default study type of WGS as not option t passed\n" if($opts->{'loud'});
@@ -927,6 +945,8 @@ sub validateInput {
   	$opts->{'t'} = 'TARGETED';
   }elsif(uc($opts->{'t'}) eq 'AMPLICON' || uc($opts->{'t'}) eq 'FOLLOWUP'){
     $opts->{'t'} = 'AMPLICON';
+  }elsif(uc($opts->{'t'}) eq 'SWC' ){
+    $opts->{'t'} = 'SWC';
   }
   $opts->{'t'} = uc($opts->{'t'});
   if(!defined($opts->{'l'}) || $opts->{'l'} !~ m/^\d+$/g){

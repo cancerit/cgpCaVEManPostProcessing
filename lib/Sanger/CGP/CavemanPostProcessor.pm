@@ -26,6 +26,7 @@ use Bio::DB::HTS;
 use Bio::DB::HTS::Constants;
 use Bio::DB::HTS::Alignment;
 use POSIX qw(strftime);
+use List::Util qw(max min);
 use Carp;
 use Const::Fast qw(const);
 use Attribute::Abstract;
@@ -356,6 +357,13 @@ sub _callbackTumFetch{
 
 		my $softclipcount = _get_soft_clip_count_from_cigar($algn->cigar_array);
 		my $primaryalnscore = $algn->get_tag_values('AS');
+		my $alternativehits = $algn->get_tag_values('XA');
+		#Tum allele pos in read
+		my $enddist = min($rdPos,($ln-$rdPos));
+		#Tum alternative hits in the genome
+		$muts->{'alth'}+= 1 if(defined($alternativehits));
+		#Tum dist from end
+		push(@{$muts->{'ted'}},$enddist);
 
 		#Tum quals
 		push(@{$muts->{'tqs'}},$qscore);

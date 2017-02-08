@@ -50,6 +50,7 @@ const my $MIN_AVG_PHASING_BASE_QUAL => 21;
 const my $MIN_DEPTH_QUAL => 25;
 const my $MIN_NORM_MUT_ALLELE_BASE_QUAL => 15;
 const my $MIN_RD_POS_DEPTH => 8;
+const my $ALT_HIT_COUNT => 0;
 
 sub _init{
 	my ($self,$inputs) = @_;
@@ -94,6 +95,14 @@ sub clearResults{
 	$self->{'clipmed'} = undef;
 	$self->{'alnmedrd'} = undef;
 	$self->{'algnmed'} = undef;
+	$self->{'mdrp'} = undef;
+	$self->{'merp'} = undef;
+	$self->{'mdbq'} = undef;
+	$self->{'mebq'} = undef;
+	$self->{'mdmq'} = undef;
+	$self->{'memq'} = undef;
+	$self->{'althcount'}= $ALT_HIT_COUNT;
+	
 	return 1;
 }
 
@@ -255,6 +264,7 @@ sub minRdPosDepth{
 	}
 	return $self->{'minRdPsDpth'};
 }
+
 
 #-----------------------------
 #	Post processing tests
@@ -629,6 +639,10 @@ sub median{
 	return (sum( ( sort { $a <=> $b } @_ )[ int( $#_/2 ), ceil( $#_/2 ) ] )/2);
 }
 
+sub mean{
+ return (@_ ? sum(@_) / @_ : 0);
+}
+
 sub _checkMedianClipping{
 	my ($self) = @_;
 	return sprintf('%.2f',median(@{$self->_muts->{'sclp'}}));
@@ -651,6 +665,7 @@ sub getClipMedianResult{
 	return $self->{'clipmed'};
 }
 
+
 sub getAlignmentScoreMedianReadAdjusted{
   my ($self) = @_;
 	if(!defined($self->{'alnmedrd'})){
@@ -670,6 +685,92 @@ sub getAlignmentScoreMedian{
 sub _calcPrimAlignmentScoreMedian{
   my ($self) = @_;
 	return sprintf('%.2f',median(@{$self->_muts->{'alnp'}}));
+}
+
+sub _calMeanRdPos {
+	my($self) = @_;
+	return sprintf('%2.f',mean(@{$self->_muts->{'ted'}}));
+}
+
+sub getMeanRdPos {
+	my($self) = @_;
+	if(!defined($self->{'merp'})){
+		$self->{'merp'}=$self->_calMeanRdPos();
+	}
+	return $self->{'merp'};
+}
+
+sub _calMedianRdPos {
+	my($self) = @_;
+	return sprintf('%2.f',median(@{$self->_muts->{'ted'}}));
+}
+
+sub getMedianRdPos {
+	my($self) = @_;
+	if(!defined($self->{'mdrp'})){
+		$self->{'mdrp'}=$self->_calMedianRdPos();
+	}
+	return $self->{'mdrp'};
+}
+
+sub _calMedianBaseQuality {
+	my($self) = @_;
+	return sprintf('%2.f',median(@{$self->_muts->{'tqs'}}));
+}
+
+sub getMedianBaseQuality {
+	my($self) = @_;
+	if(!defined($self->{'mebq'})){
+		$self->{'mebq'}=$self->_calMedianBaseQuality();
+	}
+	return $self->{'mebq'};
+}
+
+sub _calMeanBaseQuality {
+	my($self) = @_;
+	return sprintf('%2.f',mean(@{$self->_muts->{'tqs'}}));
+}
+
+sub getMeanBaseQuality {
+	my($self) = @_;
+	if(!defined($self->{'mdbq'})){
+		$self->{'mdbq'}=$self->_calMeanBaseQuality();
+	}
+	return $self->{'mdbq'};
+}
+
+sub _calMedianMapQuality {
+	my($self) = @_;
+	return sprintf('%2.f',median(@{$self->_muts->{'tmq'}}));
+}
+
+sub getMedianMapQuality {
+	my($self) = @_;
+	if(!defined($self->{'memq'})){
+		$self->{'memq'}=$self->_calMedianMapQuality();
+	}
+	return $self->{'memq'};
+}
+
+sub _calMeanMapQuality {
+	my($self) = @_;
+	return sprintf('%2.f',mean(@{$self->_muts->{'tmq'}}));
+}
+
+sub getMeanMapQuality {
+	my($self) = @_;
+	if(!defined($self->{'mdmq'})){
+		$self->{'mdmq'}=$self->_calMeanMapQuality();
+	}
+	return $self->{'mdmq'};
+}
+
+sub getAltHitCount {
+	my($self) = @_;
+	if($self->{'althcount'} == 0 ){
+		$self->{'althcount'}=$self->_muts->{'alth'};
+	}
+	return $self->{'althcount'};
 }
 
 #----------

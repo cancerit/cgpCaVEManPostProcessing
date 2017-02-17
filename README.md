@@ -1,8 +1,47 @@
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.18404.svg)](http://dx.doi.org/10.5281/zenodo.18404)
 
+cgpCaVEManPostProcessing
+=================
+
+cgpCaVEManPostProcessing is used to apply filtering on raw VCF calls generated using [CaVEMan](http://cancerit.github.io/CaVEMan/).
+
+For details of the underlying algorithm please see the [CaVEMan](http://cancerit.github.io/CaVEMan/) site.
+
+---
+
+###Dependencies/Install
+Please install the following first:
+
+* [cgpVcf](https://github.com/cancerit/cgpVcf/releases)
+* [Bio::DB::HTS](http://search.cpan.org/dist/Bio-DB-HTS)
+    * If you have an install of PCAP-core this is already available
+
+Please see these for any child dependencies.
+
+`setup.sh` will install bedtools for you.
+
+Once complete please run:
+
+./setup.sh /some/install/location
+
+---
+
+##Creating a release
+####Preparation
+* Commit/push all relevant changes.
+* Pull a clean version of the repo and use this for the following steps.
+
+####Cutting the release
+1. Update `perl/lib/Sanger/CGP/CavemanPostProcessor.pm` to the correct version.
+2. Run `./prerelease.sh`
+3. Check all tests and coverage reports are acceptable.
+4. Commit the updated docs tree and updated module/version.
+5. Push commits.
+6. Use the GitHub tools to draft a release.
+
 LICENCE
 =======
-Copyright (c) 2014-2016 Genome Research Ltd.
+Copyright (c) 2014-2017 Genome Research Ltd.
 
 Author: Cancer Genome Project <cgpit@sanger.ac.uk>
 
@@ -30,40 +69,3 @@ reads ‘Copyright (c) 2005, 2007, 2008, 2009, 2011, 2012’ and a copyright
 statement that reads ‘Copyright (c) 2005-2012’ should be interpreted as being
 identical to a statement that reads ‘Copyright (c) 2005, 2006, 2007, 2008,
 2009, 2010, 2011, 2012’."
-
-cgpCaVEManPostProcessing
-=================
-
-cgpCaVEManPostProcessing is used to apply filtering on raw VCF calls generated using [CaVEMan](http://cancerit.github.io/CaVEMan/).
-
-For details of the underlying algorithm please see the [CaVEMan](http://cancerit.github.io/CaVEMan/) site.
-
----
-
-###Dependencies/Install
-Please install the following first:
-
-* [cgpVcf](https://github.com/cancerit/cgpVcf/releases)
-* [Bio::DB::HTS](http://search.cpan.org/dist/Bio-DB-HTS)
-    * If you have an install of PCAP-core this is already available
-
-Please see these for any child dependencies.
-
-Once complete please run:
-
-./setup.sh /some/install/location
-
----
-
-##Creating a release
-####Preparation
-* Commit/push all relevant changes.
-* Pull a clean version of the repo and use this for the following steps.
-
-####Cutting the release
-1. Update `perl/lib/Sanger/CGP/CavemanPostProcessor.pm` to the correct version.
-2. Run `./prerelease.sh`
-3. Check all tests and coverage reports are acceptable.
-4. Commit the updated docs tree and updated module/version.
-5. Push commits.
-6. Use the GitHub tools to draft a release.

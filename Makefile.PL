@@ -38,6 +38,9 @@ WriteMakefile(
                      'Test::Fatal' => 0.013,
                      'Devel::Cover' => 1.09,
                      'Pod::Coverage' => 0.23,
+                     'Config::IniFiles' => 2.83,
+                     'File::ShareDir' => 1.102,
+                     'LWP::Simple' => 6.00,
                    }
 );
 

@@ -195,8 +195,9 @@ sub main{
 		$vcf->parse_header();
 		#$vcf->format_header();
 		#Get the CaVEMan version from the header so we know if we need the SWBad flag included.
-		my $caveVer = getCavemanVersionFromVCF($vcf);
-		$oldCaveVersion = isOldVersionOfCaVEMan($caveVer);
+    my $caveVer = 'NA';
+		$caveVer = getCavemanVersionFromVCF($vcf) if($opts->{'t'} ne 'SWC');
+		$oldCaveVersion = isOldVersionOfCaVEMan($caveVer) if($opts->{'t'} ne 'SWC');
 		#load flagtoVCF config ini
 		my $cfg = Config::IniFiles->new( -file => $opts->{'v'} );
 

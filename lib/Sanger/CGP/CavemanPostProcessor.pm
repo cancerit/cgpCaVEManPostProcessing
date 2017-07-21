@@ -32,7 +32,7 @@ use Attribute::Abstract;
 use Data::Dumper;
 use base 'Exporter';
 
-our $VERSION = '1.6.7';
+our $VERSION = '1.6.9';
 our @EXPORT = qw($VERSION);
 
 const my $MATCH_CIG => 'M';

@@ -231,7 +231,7 @@ sub main{
 			#Add the relevant filters or PASS to the filter section.
 			$$x[6]=$vcf->add_filter($$x[6],%$results);
 			#Validate this line and append this line to the output file;
-			push(@lineCache,$vcf->format_line($x));
+			push(@lineCache,correct_flag_sort($vcf->format_line($x)));
 			if(scalar(@lineCache)>=$opts->{'l'}){
 				foreach my $line(@lineCache){
 					print $VCFOUT $line;
@@ -246,6 +246,15 @@ sub main{
 		@lineCache = ();
 	close($VCFOUT);
 	warn "Done flagging\n" if($opts->{'loud'});
+}
+
+sub correct_flag_sort{
+	my ($line) = @_;
+	my @all_fields = split /\t/, $line;
+	my @flags = split /;/,$all_fields[6];
+	$all_fields[6] = join ";" , sort {$a cmp $b} @flags;
+	$line = join "\t", @all_fields;
+	return $line;
 }
 
 sub check_exists_remote{

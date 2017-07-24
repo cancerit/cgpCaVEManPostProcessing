@@ -266,6 +266,7 @@ sub close_tabix{
     }
   }
   return;
+}
 
 sub correct_flag_sort{
 	my ($line) = @_;

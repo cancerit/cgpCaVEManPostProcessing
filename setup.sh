@@ -23,6 +23,13 @@
 
 SOURCE_BEDTOOLS="https://github.com/arq5x/bedtools2/releases/download/v2.21.0/bedtools-2.21.0.tar.gz"
 
+EXP_BTV="2.21.0"
+
+version_gt () {
+  test $(printf '%s\n' $@ | sort -V | head -n 1) == "$1";
+}
+
+
 get_distro () {
   if hash curl 2>/dev/null; then
     curl -sSL -o $1.tar.gz -C - --retry 10 $2
@@ -104,19 +111,39 @@ set -e
 #add bin path for install tests
 export PATH="$INST_PATH/bin:$PATH"
 
+BTV=`bedtools --version | cut -d v -f 2`
 echo -n "Building bedtools ..."
 if [ -e $SETUP_DIR/bedtools.success ]; then
   echo -n " previously installed ...";
 else
-  set -x
-  cd $SETUP_DIR
-  if [ ! -e bedtools ]; then
-    get_distro "bedtools2" $SOURCE_BEDTOOLS
+  if [[ "x$BTV" == "x" ]] ; then
+    echo "PREREQUISITE: bedtools version >= $EXP_BTV. Installing... "
+    set -x
+    cd $SETUP_DIR
+    if [ ! -e bedtools ]; then
+      get_distro "bedtools2" $SOURCE_BEDTOOLS
+    fi
+    make -C bedtools2 -j$CPU
+    cp bedtools2/bin/* $INST_PATH/bin/.
+    set +x
+    touch $SETUP_DIR/bedtools.success
+  else
+    if version_gt $BTV $EXP_BTV; then
+      echo "  bedtools version is good ($BTV)"
+      touch $SETUP_DIR/bedtools.success
+    else
+      echo "PREREQUISITE: bedtools version >= $EXP_BTV but found version $BTV). Installing ..."
+      set -x
+      cd $SETUP_DIR
+      if [ ! -e bedtools ]; then
+        get_distro "bedtools2" $SOURCE_BEDTOOLS
+      fi
+      make -C bedtools2 -j$CPU
+      cp bedtools2/bin/* $INST_PATH/bin/.
+      set +x
+      touch $SETUP_DIR/bedtools.success
+    fi
   fi
-  make -C bedtools2 -j$CPU
-  cp bedtools2/bin/* $INST_PATH/bin/.
-  set +x
-  touch $SETUP_DIR/bedtools.success
 fi
 
 cd $INIT_DIR

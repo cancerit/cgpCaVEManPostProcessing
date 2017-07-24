@@ -9,15 +9,7 @@ env:
   apt:
    packages:
      - build-essential # everything
-     #- autoconf # biobambam
-     #- libtool # biobambam
-     #- zlib1g-dev # many
-     #- libcurl4-openssl-dev # many
-     #- libncurses5-dev # samtools
-     #- unzip # kentools/pcap
-     #- time
-     #- curl
-
+     
 install: true
 
 language: perl

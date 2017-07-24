@@ -12,6 +12,9 @@ addons:
       - autoconf # biobambam
       - libtool # biobambam
       - zlib1g-dev # many
+      - nettle-dev # cgpBigWig
+      - libncurses5-dev # samtools
+      - unzip # kentools/pcap
       - libcurl4-openssl-dev # many
 
 install: true

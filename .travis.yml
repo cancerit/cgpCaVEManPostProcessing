@@ -33,11 +33,18 @@ script:
   - cd PCAP-core
   - ./setup.sh $HOME/install
   - cd ../
+<<<<<<< HEAD
   - git clone --depth 1 --single-branch --branch dev https://github.com/cancerit/cgpVcf.git
   - cd cgpVcf
   - ./setup.sh $HOME/install
   - cd ../
   - ls -la
+=======
+  - git clone --depth 1 --single-branch --branch dev https://github.com/cancerit/cgpCaVEManWrapper.git
+  - cd cgpCaVEManWrapper
+  - ./setup.sh $HOME/install
+  - cd ../
+>>>>>>> 95f0ddcf74205e91f56b211017b3f82ab744a104
   - ./setup.sh $HOME/install
 
 dist: trusty

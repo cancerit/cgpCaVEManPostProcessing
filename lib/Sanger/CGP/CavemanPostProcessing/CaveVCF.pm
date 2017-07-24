@@ -66,7 +66,11 @@ sub _open_output{
 sub output_vcf_lines{
   my ($self,$lines) = @_;
   foreach my $line(@$lines){
-    print {$self->output_vcf} $line or croak("Error trying to write VCF line '$line' to output file: $!");
+		my @all_fields = split /\t/, $line;
+		my @flags = split /;/,$all_fields[6];
+		$all_fields[6] = join ";" , sort {$a cmp $b} @flags;
+		$line = join "\t", @all_fields;
+    print {$self->output_vcf} $line or croak("Error trying to write VCF line '".$line."' to output file: $!");
   }
   return;
 }

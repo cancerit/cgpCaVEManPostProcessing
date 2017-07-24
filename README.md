@@ -7,9 +7,9 @@ cgpCaVEManPostProcessing is used to apply filtering on raw VCF calls generated u
 
 For details of the underlying algorithm please see the [CaVEMan](http://cancerit.github.io/CaVEMan/) site.
 
-[![Build Status](https://travis-ci.org/cancerit/cgpcgpCaVEManPostProcessing.svg?branch=master)](https://travis-ci.org/cancerit/cgpCaVEManPostProcessing) : master
-
-[![Build Status](https://travis-ci.org/cancerit/cgpcgpCaVEManPostProcessing.svg?branch=dev)](https://travis-ci.org/cancerit/cgpCaVEManPostProcessing) : dev
+| Master | Dev |
+|---|---|
+| [![Build Status](https://travis-ci.org/cancerit/cgpcgpCaVEManPostProcessing.svg?branch=master)](https://travis-ci.org/cancerit/cgpCaVEManPostProcessing)  | [![Build Status](https://travis-ci.org/cancerit/cgpcgpCaVEManPostProcessing.svg?branch=dev)](https://travis-ci.org/cancerit/cgpCaVEManPostProcessing) |
 
 ---
 

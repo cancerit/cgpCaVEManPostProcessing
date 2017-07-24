@@ -1,3 +1,6 @@
+## 1.6.9
+* Correct sorting of flags when output to vcf file
+
 ## 1.6.7
 * Add targeted to list of recognised types in cgpFlagCaVEMan.pl
 

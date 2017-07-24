@@ -1,3 +1,6 @@
+## 1.7.0
+* Added travis CI testing
+
 ## 1.6.9
 * Correct sorting of flags when output to vcf file
 

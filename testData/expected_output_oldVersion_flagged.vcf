@@ -64,7 +64,7 @@
 ##INFO=<ID=CLPM,Number=1,Type=Float,Description="A soft flag median number of soft clipped bases in variant supporting reads">
 ##INFO=<ID=ASMD,Number=1,Type=Float,Description="A soft flag median alignement score of reads showing the variant allele">
 ##FILTER=<ID=CB,Description="Bug in older versions of CaVEMan means this position cannot be flagged">
-##vcfProcessLog_20130404.1=<InputVCF=<test.oldversion.vcf>,InputVCFSource=<FlagCaVEManVCF.pl>,InputVCFVer=<(18689:18774M)>,InputVCFParam=<sp=.,h=.,g=germline_indel.bed,f=test.oldversion.vcf,t=WGS,loud=.,n=oldversion.wt.bam,m=oldversion.wt.bam,v=flag.to.vcf.convert.ini,s=HUMAN,l=2000,ab=testData,p=123456,c=flag.vcf.config.tmp.ini,b=testData,idx=.,o=test.oldversion.flagged.vcf,umv=unmatchedVCF,ref=genome.fa.fai>>
+##vcfProcessLog_20130404.1=<InputVCF=<test.oldversion.vcf>,InputVCFSource=<FlagCaVEManVCF.pl>,InputVCFVer=<(18689:18774M)>,InputVCFParam=<sp=.,h=.,g=germline_indel.bed.gz,f=test.oldversion.vcf,t=WGS,loud=.,n=oldversion.wt.bam,m=oldversion.wt.bam,v=flag.to.vcf.convert.ini,s=HUMAN,l=2000,ab=testData,p=123456,c=flag.vcf.config.tmp.ini,b=testData,idx=.,o=test.oldversion.flagged.vcf,umv=unmatchedVCF,ref=genome.fa.fai>>
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NORMAL	TUMOUR
 7	131833427	601251715	T	C	.	CB	DP=59;MP=1.0e+00;GP=1.6e-08;TG=TT/CC;TP=9.9e-01;SG=TT/CT;SP=1.1e-02	GT:AA:CA:GA:TA:PM	0/0:0:0:0:33:0.0e+00	1/1:0:15:0:11:5.8e-01
 7	137407167	601251762	C	G	.	SE;MQ;MNP	DP=92;MP=1.0e+00;GP=1.3e-09;TG=CC/CG;TP=1.0e+00;SG=CC/CC;SP=1.3e-04;ASRD=0.00;CLPM=2.00;ASMD=0.00	GT:AA:CA:GA:TA:PM	0/0:0:52:1:0:1.9e-02	0/1:0:34:5:0:1.3e-01

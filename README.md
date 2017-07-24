@@ -9,7 +9,7 @@ For details of the underlying algorithm please see the [CaVEMan](http://cancerit
 
 | Master | Dev |
 |---|---|
-| [![Build Status](https://travis-ci.org/cancerit/cgpcgpCaVEManPostProcessing.svg?branch=master)](https://travis-ci.org/cancerit/cgpCaVEManPostProcessing)  | [![Build Status](https://travis-ci.org/cancerit/cgpcgpCaVEManPostProcessing.svg?branch=dev)](https://travis-ci.org/cancerit/cgpCaVEManPostProcessing) |
+| [![Build Status](https://travis-ci.org/cancerit/cgpCaVEManPostProcessing.svg?branch=master)](https://travis-ci.org/cancerit/cgpCaVEManPostProcessing)  | [![Build Status](https://travis-ci.org/cancerit/cgpCaVEManPostProcessing.svg?branch=dev)](https://travis-ci.org/cancerit/cgpCaVEManPostProcessing) |
 
 ---
 

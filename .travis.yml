@@ -1,0 +1,38 @@
+notifications:
+  slack: wtsi-cgpit:ptUMR1tkNyZJYd9TpGoss8WR
+  email: false
+
+env:
+ - CC=gcc
+
+ addons:
+  apt:
+   packages:
+     - build-essential # everything
+     #- autoconf # biobambam
+     #- libtool # biobambam
+     #- zlib1g-dev # many
+     #- libcurl4-openssl-dev # many
+     #- libncurses5-dev # samtools
+     #- unzip # kentools/pcap
+     #- time
+     #- curl
+
+install: true
+
+language: perl
+
+perl:
+ - "5.22"
+
+ script:
+  - git clone --depth 1 --single-branch --branch dev https://github.com/cancerit/cgpCaVEManWrapper.git
+  - cd cgpCaVEManWrapper
+  - ./setup.sh $HOME/cgpCaVEManWrapper-opt
+  - export PATH=$HOME/cgpCaVEManWrapper-opt/bin:$PATH
+  - export PERL5LIB=$HOME/cgpCaVEManWrapper-opt/lib/perl5:$PERL5LIB
+  - cd ../
+  - ./setup.sh $HOME/cgpCaVEManPostProcessing-opt
+
+ dist: trusty
+ sudo: false

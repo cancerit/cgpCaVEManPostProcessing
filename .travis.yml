@@ -9,6 +9,10 @@ addons:
   apt:
     packages:
       - build-essential # everything
+      - autoconf # biobambam
+      - libtool # biobambam
+      - zlib1g-dev # many
+      - libcurl4-openssl-dev # many
 
 install: true
 
@@ -18,10 +22,18 @@ perl:
   - "5.22"
 
 script:
+  - git clone --depth 1 --single-branch --branch develop https://github.com/cancerit/cgpBigWig.git
+  - cd cgpBigWig
+  - ./setup.sh $HOME/PCAP-opt
+  - cd ../
+  - git clone --depth 1 --single-branch --branch develop https://github.com/cancerit/PCAP-core.git
+  - cd PCAP-core
+  - ./setup.sh $HOME/PCAP-opt
+  - cd ../
   - git clone --depth 1 --single-branch --branch dev https://github.com/cancerit/cgpCaVEManWrapper.git
   - cd cgpCaVEManWrapper
   - ./setup.sh $HOME/cgpCaVEManWrapper-opt
-  - export PATH=$HOME/cgpCaVEManWrapper-opt/bin:$PATH
+  - export PATH=$HOME/cgpCaVEManWrapper-opt/bin:$HOME/PCAP-opt/bin:$PATH
   - export PERL5LIB=$HOME/cgpCaVEManWrapper-opt/lib/perl5:$PERL5LIB
   - cd ../
   - ./setup.sh $HOME/cgpCaVEManPostProcessing-opt

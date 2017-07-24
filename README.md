@@ -12,7 +12,7 @@ For details of the underlying algorithm please see the [CaVEMan](http://cancerit
 
 ---
 
-###Dependencies/Install
+### Dependencies/Install
 Please install the following first:
 
 * [cgpVcf](https://github.com/cancerit/cgpVcf/releases)
@@ -29,12 +29,12 @@ Once complete please run:
 
 ---
 
-##Creating a release
-####Preparation
+## Creating a release
+#### Preparation
 * Commit/push all relevant changes.
 * Pull a clean version of the repo and use this for the following steps.
 
-####Cutting the release
+#### Cutting the release
 1. Update `perl/lib/Sanger/CGP/CavemanPostProcessor.pm` to the correct version.
 2. Run `./prerelease.sh`
 3. Check all tests and coverage reports are acceptable.

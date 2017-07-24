@@ -7,9 +7,13 @@ cgpCaVEManPostProcessing is used to apply filtering on raw VCF calls generated u
 
 For details of the underlying algorithm please see the [CaVEMan](http://cancerit.github.io/CaVEMan/) site.
 
+| Master | Dev |
+|---|---|
+| [![Build Status](https://travis-ci.org/cancerit/cgpcgpCaVEManPostProcessing.svg?branch=master)](https://travis-ci.org/cancerit/cgpCaVEManPostProcessing)  | [![Build Status](https://travis-ci.org/cancerit/cgpcgpCaVEManPostProcessing.svg?branch=dev)](https://travis-ci.org/cancerit/cgpCaVEManPostProcessing) |
+
 ---
 
-###Dependencies/Install
+### Dependencies/Install
 Please install the following first:
 
 * [cgpVcf](https://github.com/cancerit/cgpVcf/releases)
@@ -26,12 +30,12 @@ Once complete please run:
 
 ---
 
-##Creating a release
-####Preparation
+## Creating a release
+#### Preparation
 * Commit/push all relevant changes.
 * Pull a clean version of the repo and use this for the following steps.
 
-####Cutting the release
+#### Cutting the release
 1. Update `perl/lib/Sanger/CGP/CavemanPostProcessor.pm` to the correct version.
 2. Run `./prerelease.sh`
 3. Check all tests and coverage reports are acceptable.

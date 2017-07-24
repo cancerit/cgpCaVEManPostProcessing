@@ -153,11 +153,6 @@ set -x
 perl $INST_PATH/bin/cpanm -v --mirror http://cpan.metacpan.org -l $INST_PATH/ --installdeps .
 set +x
 
-echo "********"
-echo $PERL5LIB
-echo "********"
-echo $PATH
-
 echo -n "Installing cgpCaVEManPostProcessing ..."
 set -xe
 perl Makefile.PL INSTALL_BASE=$INST_PATH

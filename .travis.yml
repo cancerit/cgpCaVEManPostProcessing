@@ -3,21 +3,21 @@ notifications:
   email: false
 
 env:
- - CC=gcc
+  - CC=gcc
 
- addons:
+addons:
   apt:
-   packages:
-     - build-essential # everything
-     
+    packages:
+      - build-essential # everything
+
 install: true
 
 language: perl
 
 perl:
- - "5.22"
+  - "5.22"
 
- script:
+script:
   - git clone --depth 1 --single-branch --branch dev https://github.com/cancerit/cgpCaVEManWrapper.git
   - cd cgpCaVEManWrapper
   - ./setup.sh $HOME/cgpCaVEManWrapper-opt
@@ -26,5 +26,5 @@ perl:
   - cd ../
   - ./setup.sh $HOME/cgpCaVEManPostProcessing-opt
 
- dist: trusty
- sudo: false
+dist: trusty
+sudo: false

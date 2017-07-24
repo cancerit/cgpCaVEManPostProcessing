@@ -33,6 +33,15 @@ get_distro () {
   tar --strip-components 1 -C $1 -zxf $1.tar.gz
 }
 
+get_file () {
+# output, source
+  if hash curl 2>/dev/null; then
+    curl -sS -o $1 -L $2
+  else
+    wget -nv -O $1 $2
+  fi
+}
+
 if [ "$#" -ne "1" ] ; then
   echo "Please provide an installation path  such as /opt/ICGC"
   exit 0
@@ -53,7 +62,8 @@ cd $INIT_DIR
 unset PERL5LIB
 ARCHNAME=`perl -e 'use Config; print $Config{archname};'`
 PERLROOT=$INST_PATH/lib/perl5
-export PERL5LIB="$PERLROOT:$INST_PATH/lib/perl5/x86_64-linux-thread-multi"
+export PERL5LIB="$PERLROOT"
+export PATH="$INST_PATH/bin:$PATH"
 
 #create a location to build dependencies
 SETUP_DIR=$INIT_DIR/install_tmp
@@ -124,6 +134,11 @@ echo -n "Installing Perl prerequisites ..."
 set -x
 perl $INST_PATH/bin/cpanm -v --mirror http://cpan.metacpan.org -l $INST_PATH/ --installdeps .
 set +x
+
+echo "********"
+echo $PERL5LIB
+echo "********"
+echo $PATH
 
 echo -n "Installing cgpCaVEManPostProcessing ..."
 set -xe

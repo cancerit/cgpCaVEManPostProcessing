@@ -39,6 +39,7 @@ script:
   - cd ../
   - ls -la
   - ./setup.sh $HOME/install
+  - perl -I $HOME/install/lib/perl5 -c /home/travis/build/cancerit/cgpCaVEManPostProcessing/bin/cgpFlagCaVEMan.pl
 
 dist: trusty
 sudo: false

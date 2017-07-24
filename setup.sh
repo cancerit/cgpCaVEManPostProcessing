@@ -33,15 +33,6 @@ get_distro () {
   tar --strip-components 1 -C $1 -zxf $1.tar.gz
 }
 
-get_file () {
-# output, source
-  if hash curl 2>/dev/null; then
-    curl -sS -o $1 -L $2
-  else
-    wget -nv -O $1 $2
-  fi
-}
-
 if [ "$#" -ne "1" ] ; then
   echo "Please provide an installation path  such as /opt/ICGC"
   exit 0

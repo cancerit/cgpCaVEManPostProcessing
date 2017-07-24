@@ -35,7 +35,6 @@ use Data::Dumper;
 
 use Vcf;
 use Getopt::Long qw(:config pass_through);
-use DB_File;
 use Sanger::CGP::CavemanPostProcessor;
 use Sanger::CGP::CavemanPostProcessor::ExomePostProcessor;
 use Sanger::CGP::CavemanPostProcessor::GenomePostProcessor;

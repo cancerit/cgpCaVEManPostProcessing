@@ -112,8 +112,8 @@ sub checkSupportedButNoFlags{
 			"-u $unmatched_vcf -ref $ref";
 	my ($out, $err, $exit) = capture{ system($cmd) };
 	warn "********$err\n";
-	like($err, qr/No flagList found in .+ for section HUMAN_WXS FLAGLIST. No flagging will be done./, 'Correctly runs with warnings as no flags available (check message).');
-	is($exit, 0, 'Correctly runs with warnings as no flags available (check exitcode).');
+	like($err, qr/No flagList found in .+ for section HUMAN_WXS FLAGLIST. No flagging will be done./, 'Correctly exits as no flags available (check message).');
+	isnt($exit, 0, 'Correctly runs with warnings as no flags available (check exitcode).');
 }
 
 sub checkUnsupportedOption{

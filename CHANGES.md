@@ -1,3 +1,6 @@
+## 1.7.2
+*   Updating species config files to ensure they always point to gz files
+
 ## 1.7.1
 *   Convert warning to error where no flags were included in list
 *   Added species and build specific config files

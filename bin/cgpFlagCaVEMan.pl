@@ -764,7 +764,7 @@ sub getConfigParams{
 	$paramSectName = $sppTypeCombo." ".$CONFIG_FLAGLIST;
 	my @flagList = $cfg->val($paramSectName,$FLAG_PARAMETER);
 	if(!@flagList){
-		cluck("No flagList found in ".$opts->{'c'}." for section $paramSectName. No flagging will be done.");
+		croak("No flagList found in ".$opts->{'c'}." for section $paramSectName. No flagging will be done.");
 		@flagList = ();
 		return ($sectParams,\@flagList,$bedFileParams);
 	}

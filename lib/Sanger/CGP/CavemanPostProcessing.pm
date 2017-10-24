@@ -47,6 +47,8 @@ const my $MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
 
 my $muts;
 my $norms;
+my $muts_rds;
+my $norms_rds;
 my $currentPos;
 my $refBase;
 my $mutBase;
@@ -87,6 +89,8 @@ sub runProcess{
 	my ($self,$chr,$start,$stop,$refBase,$mutBase) = @_;
 	$muts = undef;
 	$norms = undef;
+	$muts_rds = {};
+	$norms_rds = {};
 	$self->clearResults();
 	$self->_chromosome($chr);
 	$self->_currentPos($start);

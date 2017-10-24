@@ -1,5 +1,5 @@
 ##########LICENCE##########
-# Copyright (c) 2014-2016 Genome Research Ltd.
+# Copyright (c) 2014-2017 Genome Research Ltd.
 #
 # Author: Cancer Genome Project cgpit@sanger.ac.uk
 #
@@ -47,6 +47,8 @@ const my $MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
 
 my $muts;
 my $norms;
+my $muts_rds;
+my $norms_rds;
 my $currentPos;
 my $refBase;
 my $mutBase;
@@ -87,6 +89,8 @@ sub runProcess{
 	my ($self,$chr,$start,$stop,$refBase,$mutBase) = @_;
 	$muts = undef;
 	$norms = undef;
+	$muts_rds = {};
+	$norms_rds = {};
 	$self->clearResults();
 	$self->_chromosome($chr);
 	$self->_currentPos($start);
@@ -294,6 +298,16 @@ sub _callbackTumFetch{
 		my $indelRdCount = 0;
 		my $nom = $algn->qname;
 		my $start = $algn->start;
+
+		#Read base
+		my $qbase = $splt[$rdPosIndexOfInterest-1];
+
+		if(exists($muts_rds->{$nom}){
+			next if($muts_rds->{$nom} == $qbase);
+		}else{
+			$muts_rds->{$nom} = $qbase;
+		}
+
 		#Read strand
 		my $str = 1;
 		if($algn->reversed){
@@ -473,6 +487,13 @@ sub _callbackMatchedNormFetch{
 		my $indelRdCount = 0;
 		my $nom = $algn->qname;
 		return unless ($algn->proper_pair == 1);
+		my $qbase = $splt[$rdPosIndexOfInterest-1];
+
+		if(exists($norms_rds->{$nom}){
+			next if($norms_rds->{$nom} == $qbase);
+		}else{
+			$norms_rds->{$nom} = $qbase;
+		}
 
 		if(!defined($muts->{'totalNCoverage'})){
 			$muts->{'totalNCoverage'} = 0;

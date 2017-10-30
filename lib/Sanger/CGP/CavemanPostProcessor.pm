@@ -1,21 +1,21 @@
-##########LICENCE##########
-# Copyright (c) 2014-2017 Genome Research Ltd.
-#
-# Author: Cancer Genome Project cgpit@sanger.ac.uk
-#
-# This file is part of cgpCaVEManPostProcessing.
-#
-# cgpCaVEManPostProcessing is free software: you can redistribute it and/or modify it under
-# the terms of the GNU Affero General Public License as published by the Free
-# Software Foundation; either version 3 of the License, or (at your option) any
-# later version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
-# details.
-#
-# You should have received a copy of the GNU Affero General Public License
+##########LICENCE########## 
+# Copyright (c) 2014-2017 Genome Research Ltd. 
+# 
+#Author: Cancer Genome Project cgpit@sanger.ac.uk 
+# 
+# This file is part ofcgpCaVEManPostProcessing. 
+# 
+# cgpCaVEManPostProcessing is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU Affero General Public License as published by the Free 
+# Software Foundation; either version 3 of the License, or (at your option) any 
+# later version. 
+# 
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
+# details. 
+# 
+# You should have received a copy of the GNU Affero General Public License 
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##########
 
@@ -302,8 +302,8 @@ sub _callbackTumFetch{
 		#Read base
 		my $qbase = $splt[$rdPosIndexOfInterest-1];
 
-		if(exists($muts_rds->{$nom}){
-			next if($muts_rds->{$nom} == $qbase);
+		if(exists($muts_rds->{$nom})){
+			return if($muts_rds->{$nom} eq $qbase);
 		}else{
 			$muts_rds->{$nom} = $qbase;
 		}
@@ -325,9 +325,6 @@ sub _callbackTumFetch{
 		if($algn->cigar_str =~ m/[ID]/){
 			$muts->{'indelTCount'} += 1;
 		}
-
-		#Read base
-		my $qbase = $splt[$rdPosIndexOfInterest-1];
 
 		#Base quality
 		my $qscore = $algn->qscore->[$rdPosIndexOfInterest-1];
@@ -487,10 +484,11 @@ sub _callbackMatchedNormFetch{
 		my $indelRdCount = 0;
 		my $nom = $algn->qname;
 		return unless ($algn->proper_pair == 1);
-		my $qbase = $splt[$rdPosIndexOfInterest-1];
+		
+		my $qbase = $splt[$rdPosIndexOfInterest-1];		
 
-		if(exists($norms_rds->{$nom}){
-			next if($norms_rds->{$nom} == $qbase);
+		if(exists($norms_rds->{$nom})){
+			return if($norms_rds->{$nom} eq $qbase);
 		}else{
 			$norms_rds->{$nom} = $qbase;
 		}
@@ -500,8 +498,6 @@ sub _callbackMatchedNormFetch{
 		}
 		$muts->{'totalNCoverage'} += 1;
 		my $xt = $algn->aux_get('XT');
-		#Read base
-		my $qbase = $splt[$rdPosIndexOfInterest-1];
 
 		#Read strand
 		my $str = 1;

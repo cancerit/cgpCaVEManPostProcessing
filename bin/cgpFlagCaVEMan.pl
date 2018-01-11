@@ -42,6 +42,8 @@ use Pod::Usage;
 use Config::IniFiles;
 use FindBin qw($Bin);
 use Bio::DB::HTS::Tabix;
+use File::Path qw(make_path);
+use File::Basename;
 use Const::Fast qw(const);
 use LWP::Simple;
 use IO::Zlib;
@@ -89,6 +91,7 @@ const my $UNMATCHED_FORMAT_VCF => 'VCF';
 const my $UNMATCHED_FORMAT_BED=> 'BED';
 
 my $index = undef;
+my $flagopts = undef;
 my $intersectFlagStore;
 my $unmatchedForOutput;
 my $unmatchedFH;
@@ -189,7 +192,15 @@ sub main{
 	#Open VCF input file
 	my $vcf = Vcf->new(file=>$opts->{'f'}, version=>'4.1');
 	warn "Starting flagging\n" if($opts->{'loud'});
-	#Open output VCF file
+
+	# Get full path of output file.
+	my ($fname,$dirs,$suffix) = fileparse($opts->{'o'});
+	# If the directory doesn't exist. Create it.
+	if(! -e $dirs){
+		make_path($dirs) or croak("Error trying to create output directory '$dirs'");
+	}
+
+	# Open output VCF file
 	open($VCFOUT , '>', $opts->{'o'}) || croak("Error trying to open VCF output file ".$opts->{'o'}.": $!");
 		$vcf->parse_header();
 		#$vcf->format_header();
@@ -789,12 +800,18 @@ sub getConfigParams{
 		$sectParams->{$paramName} = $cfg->val($paramSectName,$paramName);
 	}
 	#Get the flaglist group
-	$paramSectName = $sppTypeCombo." ".$CONFIG_FLAGLIST;
-	my @flagList = $cfg->val($paramSectName,$FLAG_PARAMETER);
-	if(!@flagList){
-		croak("No flagList found in ".$opts->{'c'}." for section $paramSectName. No flagging will be done.");
-		@flagList = ();
-		return ($sectParams,\@flagList,$bedFileParams);
+	my @flagList;
+	if(! defined($flagopts)){
+		#Get the flaglist group
+		$paramSectName = $sppTypeCombo." ".$CONFIG_FLAGLIST;
+		@flagList = $cfg->val($paramSectName,$FLAG_PARAMETER);
+		if(!@flagList){
+			croak("No flagList found in ".$opts->{'c'}." for section $paramSectName. No flagging will be done.");
+			@flagList = ();
+			return ($sectParams,\@flagList,$bedFileParams);
+		}
+	}else{
+		@flagList = @$flagopts;
 	}
 	if(!defined($sectParams)){
 		croak("No config found in ".$opts->{'c'}." for section $paramSectName");
@@ -868,6 +885,7 @@ sub option_builder {
 		'p|processid=s' => \$opts{'p'},
 		'sp|sampleToIgnoreInUnmatched=s' => \$opts{'sp'},
 		'b|bedFileLoc=s' => \$opts{'b'},
+		'f|flags=s' => \@{$opts{'flags'}},
 		'version' => \$opts{'version'},
 	);
 	return \%opts;
@@ -902,6 +920,11 @@ sub validateInput {
   unless(-e $opts->{'m'} && -r $opts->{'m'}){
   	pod2usage("Non existant or unreadable tumour sample bam file: ".$opts->{'m'}."\n");
   }
+
+	if(defined($opts->{'flags'}) && scalar(@{$opts->{'flags'}})>0){
+		@$flagopts =  split(/,/,join(',',@{$opts->{'flags'}}));
+	}
+	delete $opts->{'flags'};
 
   get_config_files($opts);
 

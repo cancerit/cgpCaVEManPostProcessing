@@ -30,11 +30,13 @@ Please install the following first:
 
 Please see these for any child dependencies.
 
-`setup.sh` will install bedtools for you.
-
 Once complete please run:
 
+```
 ./setup.sh /some/install/location
+```
+
+`setup.sh` will also install bedtools for you.
 
 ## Creating a release
 

@@ -1,21 +1,21 @@
-##########LICENCE########## 
-# Copyright (c) 2014-2017 Genome Research Ltd. 
-# 
-#Author: Cancer Genome Project cgpit@sanger.ac.uk 
-# 
-# This file is part ofcgpCaVEManPostProcessing. 
-# 
-# cgpCaVEManPostProcessing is free software: you can redistribute it and/or modify it under 
-# the terms of the GNU Affero General Public License as published by the Free 
-# Software Foundation; either version 3 of the License, or (at your option) any 
-# later version. 
-# 
-# This program is distributed in the hope that it will be useful, but WITHOUT 
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
-# FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more 
-# details. 
-# 
-# You should have received a copy of the GNU Affero General Public License 
+##########LICENCE##########
+# Copyright (c) 2014-2018 Genome Research Ltd.
+#
+#Author: Cancer Genome Project cgpit@sanger.ac.uk
+#
+# This file is part ofcgpCaVEManPostProcessing.
+#
+# cgpCaVEManPostProcessing is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Affero General Public License as published by the Free
+# Software Foundation; either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##########LICENCE##########
 
@@ -72,8 +72,8 @@ sub _init_base{
 	if(!defined($inputs->{'tumBam'}) || !defined($inputs->{'normBam'})){
 		croak("tumBam and normBam are required for initialisation.\n");
 	}
-	$self->tumBam($inputs->{'tumBam'});
-	$self->normBam($inputs->{'normBam'});
+	$self->tumBam($inputs->{'tumBam'}, $inputs->{'ref'});
+	$self->normBam($inputs->{'normBam'}, $inputs->{'ref'});
 	$self->keepSW($inputs->{'keepSW'});
 	$self->minAnalysedQual($inputs->{'minAnalysedQual'});
 	return $self;
@@ -241,17 +241,17 @@ sub _mutBase{
 }
 
 sub tumBam{
-	my ($self,$bam) = @_;
+	my ($self,$bam,$fasta) = @_;
 	if(defined($bam)){
-		$self->{'tb'} = Bio::DB::HTS->new(-bam=>$bam);
+		$self->{'tb'} = Bio::DB::HTS->new(-bam=>$bam, -fasta=>$fasta);
 	}
 	return $self->{'tb'};
 }
 
 sub normBam{
-	my ($self,$bam) = @_;
+	my ($self,$bam,$fasta) = @_;
 	if(defined($bam)){
-		$self->{'nb'} = Bio::DB::HTS->new(-bam=>$bam);
+		$self->{'nb'} = Bio::DB::HTS->new(-bam=>$bam, -fasta=>$fasta);
 	}
 	return $self->{'nb'};
 }
@@ -484,8 +484,8 @@ sub _callbackMatchedNormFetch{
 		my $indelRdCount = 0;
 		my $nom = $algn->qname;
 		return unless ($algn->proper_pair == 1);
-		
-		my $qbase = $splt[$rdPosIndexOfInterest-1];		
+
+		my $qbase = $splt[$rdPosIndexOfInterest-1];
 
 		if(exists($norms_rds->{$nom})){
 			return if($norms_rds->{$nom} eq $qbase);

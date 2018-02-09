@@ -769,9 +769,13 @@ sub setupFromConfig{
 		my $err = join("",@errs);
 		croak("Errors encountered setting up locations from config files:\n".$err."\n");
 	}
-	#Add bam files to config
+	#Add bam/cram files to config
 	$configParams->{'tumBam'} = $opts->{'m'};
 	$configParams->{'normBam'} = $opts->{'n'};
+	#Add ref so cram works too
+	my $tmp_ref = $opts->{'ref'};
+	$tmp_ref =~ s/\.fai$//;
+	$configParams->{'ref'} = $tmp_ref;
 	return ($configParams,$flagList,$centBed,$simpBed,$snpBed,$indelBed,$annoBed,$codingBed,$hsdBed);
 }
 
@@ -1020,6 +1024,7 @@ cgpFlagCaVEMan.pl [-h] -f vcfToFlag.vcf -o flaggedVCF.vcf -c configFile.ini -s h
     --annoBedLoc           (-ab)      Path to bed files containing annotatable regions and coding regions.
 
     --reference            (-ref)     Reference index (fai) file corresponding to the mapping of the data being processed.
+		                                    (must have corresponding fasta file co-located)
 
     --index                (-idx)     Index of the job (to override LSB_JOBINDEX as used on LSF farms)
 

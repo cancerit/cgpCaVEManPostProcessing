@@ -1,3 +1,12 @@
+# CHANGES
+
+## NEXT - major release
+*   Overlapping reads now handled
+*   Updates to licenese headers and contact information
+*   Support for csi and crai indexes
+*   README cleanup
+*   Ability to exclude contigs from analysis
+
 ## 1.7.2
 *   Updating species config files to ensure they always point to gz files
 

@@ -1,9 +1,9 @@
 #!/usr/bin/perl
 
 ##########LICENCE##########
-# Copyright (c) 2014-2017 Genome Research Ltd.
+# Copyright (c) 2014-2018 Genome Research Ltd.
 #
-# Author: Cancer Genome Project cgpit@sanger.ac.uk
+# Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
 # This file is part of cgpCaVEManPostProcessing.
 #
@@ -42,6 +42,8 @@ use Pod::Usage;
 use Config::IniFiles;
 use FindBin qw($Bin);
 use Bio::DB::HTS::Tabix;
+use File::Path qw(make_path);
+use File::Basename;
 use Const::Fast qw(const);
 use LWP::Simple;
 use IO::Zlib;
@@ -49,7 +51,7 @@ use IO::Zlib;
 use File::ShareDir qw(dist_dir);
 
 const my $FLAG_TO_VCF_CONFIG => '%s/flag.to.vcf.convert.ini';
-const my $FLAG_CONFIG => '%s/human/flag.vcf.config.ini';
+const my $FLAG_CONFIG => '%s/%s/%s/flag.vcf.config.ini';
 const my $DEFAULT_LINE_CACHE => 2000;
 const my $OLD_CAVE_FLAG_BUG_FLAG => 'CB';
 const my $OLD_CAVE_FLAG_BUG_DESC => 'Bug in older versions of CaVEMan means this position cannot be flagged';
@@ -89,6 +91,7 @@ const my $UNMATCHED_FORMAT_VCF => 'VCF';
 const my $UNMATCHED_FORMAT_BED=> 'BED';
 
 my $index = undef;
+my $flagopts = undef;
 my $intersectFlagStore;
 my $unmatchedForOutput;
 my $unmatchedFH;
@@ -189,7 +192,15 @@ sub main{
 	#Open VCF input file
 	my $vcf = Vcf->new(file=>$opts->{'f'}, version=>'4.1');
 	warn "Starting flagging\n" if($opts->{'loud'});
-	#Open output VCF file
+
+	# Get full path of output file.
+	my ($fname,$dirs,$suffix) = fileparse($opts->{'o'});
+	# If the directory doesn't exist. Create it.
+	if(! -e $dirs){
+		make_path($dirs) or croak("Error trying to create output directory '$dirs'");
+	}
+
+	# Open output VCF file
 	open($VCFOUT , '>', $opts->{'o'}) || croak("Error trying to open VCF output file ".$opts->{'o'}.": $!");
 		$vcf->parse_header();
 		#$vcf->format_header();
@@ -758,9 +769,13 @@ sub setupFromConfig{
 		my $err = join("",@errs);
 		croak("Errors encountered setting up locations from config files:\n".$err."\n");
 	}
-	#Add bam files to config
+	#Add bam/cram files to config
 	$configParams->{'tumBam'} = $opts->{'m'};
 	$configParams->{'normBam'} = $opts->{'n'};
+	#Add ref so cram works too
+	my $tmp_ref = $opts->{'ref'};
+	$tmp_ref =~ s/\.fai$//;
+	$configParams->{'ref'} = $tmp_ref;
 	return ($configParams,$flagList,$centBed,$simpBed,$snpBed,$indelBed,$annoBed,$codingBed,$hsdBed);
 }
 
@@ -789,12 +804,18 @@ sub getConfigParams{
 		$sectParams->{$paramName} = $cfg->val($paramSectName,$paramName);
 	}
 	#Get the flaglist group
-	$paramSectName = $sppTypeCombo." ".$CONFIG_FLAGLIST;
-	my @flagList = $cfg->val($paramSectName,$FLAG_PARAMETER);
-	if(!@flagList){
-		croak("No flagList found in ".$opts->{'c'}." for section $paramSectName. No flagging will be done.");
-		@flagList = ();
-		return ($sectParams,\@flagList,$bedFileParams);
+	my @flagList;
+	if(! defined($flagopts)){
+		#Get the flaglist group
+		$paramSectName = $sppTypeCombo." ".$CONFIG_FLAGLIST;
+		@flagList = $cfg->val($paramSectName,$FLAG_PARAMETER);
+		if(!@flagList){
+			croak("No flagList found in ".$opts->{'c'}." for section $paramSectName. No flagging will be done.");
+			@flagList = ();
+			return ($sectParams,\@flagList,$bedFileParams);
+		}
+	}else{
+		@flagList = @$flagopts;
 	}
 	if(!defined($sectParams)){
 		croak("No config found in ".$opts->{'c'}." for section $paramSectName");
@@ -820,7 +841,11 @@ sub get_config_files {
 
   my $data_path = $Bin.'/../config/';
 
+	print "No developer environment found, checking for config files passed at commandline\n" if($options->{'loud'});
+
   $data_path = dist_dir('cgpCaVEManPostProcessing') unless(-e $data_path);
+
+	print "Using $data_path as share directory if files not pathed ad commandline\n" if($options->{'loud'});
 
   if($options->{'v'} && (! -e $options->{'v'} || ! -r $options->{'v'})){
   	pod2usage("Error with flagToVcfConfig input check permissions.".$options->{'v'}."\n");
@@ -835,8 +860,8 @@ sub get_config_files {
     pod2usage("Flag config file does not exist or has incorrect permissions: ".$options->{'c'}."\n");
   }
   elsif(!$options->{'c'}){
-    $options->{'c'} = sprintf $FLAG_CONFIG, $data_path;
-    print "Defaulting to use $options->{c} as config file.\n" if($options->{'loud'});
+    $options->{'c'} = sprintf $FLAG_CONFIG, $data_path, $options->{'s'}, $options->{'sa'};
+    print "Attempting to use $options->{c} as config file.\n" if($options->{'loud'});
   	pod2usage("Default config file $options->{c} not found.") unless(-e $options->{'c'} && -r $options->{'c'});
   }
 
@@ -854,6 +879,7 @@ sub option_builder {
 		'o|outFile=s' => \$opts{'o'},
 		'c|flagConfig=s' => \$opts{'c'},
 		's|species=s' => \$opts{'s'},
+		'sa|species-assembly' => \$opts{'sa'},
 		't|studyType=s' => \$opts{'t'},
 		'm|tumBam=s' => \$opts{'m'},
 		'n|normBam=s' => \$opts{'n'},
@@ -868,6 +894,7 @@ sub option_builder {
 		'p|processid=s' => \$opts{'p'},
 		'sp|sampleToIgnoreInUnmatched=s' => \$opts{'sp'},
 		'b|bedFileLoc=s' => \$opts{'b'},
+		'f|flags=s' => \@{$opts{'flags'}},
 		'version' => \$opts{'version'},
 	);
 	return \%opts;
@@ -902,6 +929,11 @@ sub validateInput {
   unless(-e $opts->{'m'} && -r $opts->{'m'}){
   	pod2usage("Non existant or unreadable tumour sample bam file: ".$opts->{'m'}."\n");
   }
+
+	if(defined($opts->{'flags'}) && scalar(@{$opts->{'flags'}})>0){
+		@$flagopts =  split(/,/,join(',',@{$opts->{'flags'}}));
+	}
+	delete $opts->{'flags'};
 
   get_config_files($opts);
 
@@ -974,6 +1006,8 @@ cgpFlagCaVEMan.pl [-h] -f vcfToFlag.vcf -o flaggedVCF.vcf -c configFile.ini -s h
 
     --species              (-s)       Species associated with this vcf file to use.
 
+		--species-assembly     (-sa)      Species assembly for (output in VCF)
+
     --tumBam               (-m)       Tumour bam file
 
     --normBam              (-n)       Normal bam file
@@ -990,6 +1024,7 @@ cgpFlagCaVEMan.pl [-h] -f vcfToFlag.vcf -o flaggedVCF.vcf -c configFile.ini -s h
     --annoBedLoc           (-ab)      Path to bed files containing annotatable regions and coding regions.
 
     --reference            (-ref)     Reference index (fai) file corresponding to the mapping of the data being processed.
+		                                    (must have corresponding fasta file co-located)
 
     --index                (-idx)     Index of the job (to override LSB_JOBINDEX as used on LSF farms)
 

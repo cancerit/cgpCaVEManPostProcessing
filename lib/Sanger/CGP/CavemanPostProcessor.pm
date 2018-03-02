@@ -1,9 +1,9 @@
 ##########LICENCE##########
-# Copyright (c) 2014-2017 Genome Research Ltd.
+# Copyright (c) 2014-2018 Genome Research Ltd.
 #
-# Author: Cancer Genome Project cgpit@sanger.ac.uk
+#Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
-# This file is part of cgpCaVEManPostProcessing.
+# This file is part ofcgpCaVEManPostProcessing.
 #
 # cgpCaVEManPostProcessing is free software: you can redistribute it and/or modify it under
 # the terms of the GNU Affero General Public License as published by the Free
@@ -72,8 +72,8 @@ sub _init_base{
 	if(!defined($inputs->{'tumBam'}) || !defined($inputs->{'normBam'})){
 		croak("tumBam and normBam are required for initialisation.\n");
 	}
-	$self->tumBam($inputs->{'tumBam'});
-	$self->normBam($inputs->{'normBam'});
+	$self->tumBam($inputs->{'tumBam'}, $inputs->{'ref'});
+	$self->normBam($inputs->{'normBam'}, $inputs->{'ref'});
 	$self->keepSW($inputs->{'keepSW'});
 	$self->minAnalysedQual($inputs->{'minAnalysedQual'});
 	return $self;
@@ -241,17 +241,17 @@ sub _mutBase{
 }
 
 sub tumBam{
-	my ($self,$bam) = @_;
+	my ($self,$bam,$fasta) = @_;
 	if(defined($bam)){
-		$self->{'tb'} = Bio::DB::HTS->new(-bam=>$bam);
+		$self->{'tb'} = Bio::DB::HTS->new(-bam=>$bam, -fasta=>$fasta);
 	}
 	return $self->{'tb'};
 }
 
 sub normBam{
-	my ($self,$bam) = @_;
+	my ($self,$bam,$fasta) = @_;
 	if(defined($bam)){
-		$self->{'nb'} = Bio::DB::HTS->new(-bam=>$bam);
+		$self->{'nb'} = Bio::DB::HTS->new(-bam=>$bam, -fasta=>$fasta);
 	}
 	return $self->{'nb'};
 }
@@ -302,8 +302,8 @@ sub _callbackTumFetch{
 		#Read base
 		my $qbase = $splt[$rdPosIndexOfInterest-1];
 
-		if(exists($muts_rds->{$nom}){
-			next if($muts_rds->{$nom} == $qbase);
+		if(exists($muts_rds->{$nom})){
+			return if($muts_rds->{$nom} eq $qbase);
 		}else{
 			$muts_rds->{$nom} = $qbase;
 		}
@@ -325,9 +325,6 @@ sub _callbackTumFetch{
 		if($algn->cigar_str =~ m/[ID]/){
 			$muts->{'indelTCount'} += 1;
 		}
-
-		#Read base
-		my $qbase = $splt[$rdPosIndexOfInterest-1];
 
 		#Base quality
 		my $qscore = $algn->qscore->[$rdPosIndexOfInterest-1];
@@ -487,10 +484,11 @@ sub _callbackMatchedNormFetch{
 		my $indelRdCount = 0;
 		my $nom = $algn->qname;
 		return unless ($algn->proper_pair == 1);
+
 		my $qbase = $splt[$rdPosIndexOfInterest-1];
 
-		if(exists($norms_rds->{$nom}){
-			next if($norms_rds->{$nom} == $qbase);
+		if(exists($norms_rds->{$nom})){
+			return if($norms_rds->{$nom} eq $qbase);
 		}else{
 			$norms_rds->{$nom} = $qbase;
 		}
@@ -500,8 +498,6 @@ sub _callbackMatchedNormFetch{
 		}
 		$muts->{'totalNCoverage'} += 1;
 		my $xt = $algn->aux_get('XT');
-		#Read base
-		my $qbase = $splt[$rdPosIndexOfInterest-1];
 
 		#Read strand
 		my $str = 1;

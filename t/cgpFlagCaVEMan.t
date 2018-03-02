@@ -1,7 +1,7 @@
 ##########LICENCE##########
-# Copyright (c) 2014 Genome Research Ltd.
+# Copyright (c) 2014-2018 Genome Research Ltd.
 #
-# Author: Cancer Genome Project cgpit@sanger.ac.uk
+# Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
 # This file is part of cgpCaVEManPostProcessing.
 #
@@ -20,7 +20,7 @@
 ##########LICENCE##########
 
 use strict;
-use Test::More tests => 13;
+use Test::More tests => 28;
 use strict;
 use warnings FATAL => 'all';
 use Carp;
@@ -33,8 +33,12 @@ my $test_data_path = "$Bin/../testData/";
 
 my $index = 1;
 my $test_out_file = $test_data_path.'actual_output_flagVCF.vcf';
+my $test_new_dir = $test_data_path.'new/';
+my $test_out_file_new_dir = $test_new_dir.'actual_output_flagVCF.vcf';
 my $test_input_file = $test_data_path.'input_FlagCaVEManVCF.vcf';
 my $expect_output = $test_data_path.'expected_output_FlagCaVEManVCF.vcf';
+my $expect_output_oneflag = $test_data_path.'expected_output_one_cmdline_FlagCaVEManVCF.vcf';
+my $expect_output_multiflag = $test_data_path.'expected_output_multi_cmdline_FlagCaVEManVCF.vcf';
 my $test_mut_bam = $test_data_path.'testflagmt.bam';
 my $test_norm_bam = $test_data_path.'testflagwt.bam';
 my $test_germ_indel_bed = $test_data_path.'germline_indel.bed.gz';
@@ -63,6 +67,17 @@ sub main{
 	setup_config();
 	run_flag();
 	compare($test_out_file, $expect_output,$index);
+	#Test create output directory not existing
+	run_flag_output_dir();
+	compare($test_out_file_new_dir, $expect_output,$index);
+	unlink($test_out_file_new_dir.'.1');
+	rmdir($test_new_dir) or croak("Error trying to rmdir $test_new_dir");
+	# Test flaglist at cmdline single
+	run_flag_one_cmdline_flag();
+	compare($test_out_file, $expect_output_oneflag ,$index);
+	# Test flaglist at cmdline multi
+	run_flag_multi_cmdline_flag();
+	compare($test_out_file, $expect_output_multiflag ,$index);
 	checkSupportedButNoFlags();
 	checkUnsupportedOption();
 	run_old_flag();
@@ -84,6 +99,46 @@ sub setup_config{
 	close($OUT);
 }
 
+sub run_flag_one_cmdline_flag{
+	my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
+			" -s human -t genome -m $test_mut_bam -n $test_norm_bam".
+			" -g $test_germ_indel_bed -v $test_vcf_convert_config ".
+			"--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
+			"-u $unmatched_vcf -ref $ref -f matchedNormalProportion";
+	my ($out, $err, $exit) = capture{ system($cmd) };
+	if($exit!=0){
+		warn Dumper($err);
+	}
+	is($exit, 0,'Flagging with single ran correctly');
+}
+
+sub run_flag_multi_cmdline_flag{
+	my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
+			" -s human -t genome -m $test_mut_bam -n $test_norm_bam".
+			" -g $test_germ_indel_bed -v $test_vcf_convert_config ".
+			"--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
+			"-u $unmatched_vcf -ref $ref -f matchedNormalProportion -f singleEndFlag";
+	my ($out, $err, $exit) = capture{ system($cmd) };
+	if($exit!=0){
+		warn Dumper($err);
+	}
+	is($exit, 0,'Flagging with single ran correctly');
+}
+
+sub run_flag_output_dir{
+	my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file_new_dir -c $test_config".
+			" -s human -t genome -m $test_mut_bam -n $test_norm_bam".
+			" -g $test_germ_indel_bed -v $test_vcf_convert_config ".
+			"--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
+			"-u $unmatched_vcf -ref $ref";
+	my ($out, $err, $exit) = capture{ system($cmd) };
+	if($exit!=0){
+		warn Dumper($err);
+	}
+	is($exit, 0,'Flagging with output dir ran correctly');
+}
+
+
 sub run_flag{
 	my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
 			" -s human -t genome -m $test_mut_bam -n $test_norm_bam".
@@ -91,6 +146,9 @@ sub run_flag{
 			"--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
 			"-u $unmatched_vcf -ref $ref";
 	my ($out, $err, $exit) = capture{ system($cmd) };
+	if($exit!=0){
+		warn Dumper($err);
+	}
 	is($exit, 0,'Flagging ran correctly');
 }
 

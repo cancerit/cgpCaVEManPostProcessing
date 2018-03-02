@@ -61,7 +61,7 @@
 ##INFO=<ID=ASRD,Number=1,Type=Float,Description="A soft flag median (read length adjusted) alignment score of reads showing the variant allele">
 ##INFO=<ID=CLPM,Number=1,Type=Float,Description="A soft flag median number of soft clipped bases in variant supporting reads">
 ##INFO=<ID=ASMD,Number=1,Type=Float,Description="A soft flag median alignement score of reads showing the variant allele">
-##vcfProcessLog_20120916.1=<InputVCF=<input_FlagCaVEManVCF.vcf.1>,InputVCFSource=<FlagCaVEManVCF.pl>,InputVCFVer=<(17053:17054M)>,InputVCFParam=<h=.,g=germline_indel.bed.gz,f=input_FlagCaVEManVCF.vcf.1,t=WGS,loud=.,n=testflagwt.bam,m=testflagmt.bam,v=flag.to.vcf.convert.ini,s=HUMAN,l=2000,c=flag.vcf.config.tmp.ini,idx=1,o=actual_output_flagVCF.vcf.1,sp=.,b=testData,ab=testData,p=123456,umv=unmatchedVCF,ref=genome.fa.fai>>
+##vcfProcessLog_20120916.1=<InputVCF=<input_FlagCaVEManVCF.vcf.1>,InputVCFSource=<FlagCaVEManVCF.pl>,InputVCFVer=<(17053:17054M)>,InputVCFParam=<h=.,g=germline_indel.bed.gz,f=input_FlagCaVEManVCF.vcf.1,t=WGS,loud=.,n=testflagwt.bam,m=testflagmt.bam,v=flag.to.vcf.convert.ini,s=HUMAN,l=2000,c=flag.vcf.config.tmp.ini,idx=1,o=actual_output_flagVCF.vcf.1,sp=.,b=testData,ab=testData,p=123456,umv=unmatchedVCF,ref=genome.fa.fai,sa=.>>
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NORMAL	TUMOUR
 15	22095504	ID_36061	G	A	.	PT	DP=22;MP=8.4e-01;GP=1.5e-01;TG=GG/AG;TP=8.1e-01;SG=AG/GG;SP=7.8e-02;ASRD=0.00;CLPM=0.00;ASMD=0.00	GT:AA:CA:GA:TA:PM	0|0:0:0:9:0:0.0e+00	0|1:4:0:9:0:3.1e-01
 17	3989655	ID_27766	G	C	.	SE;DTH	DP=57;MP=8.2e-01;GP=2.7e-06;TG=GG/CG;TP=8.2e-01;SG=GG/GG;SP=1.8e-01;ASRD=0.00;CLPM=0.00;ASMD=0.00	GT:AA:CA:GA:TA:PM	0|0:0:0:29:0:0.0e+00	0|1:0:4:24:0:1.4e-01

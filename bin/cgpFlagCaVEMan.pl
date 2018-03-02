@@ -879,7 +879,7 @@ sub validateInput {
 
   if(defined $opts->{'version'}) {
     print sprintf "VERSION: %s\n", Sanger::CGP::CavemanPostProcessor->VERSION;
-    exit 1;
+    exit 0;
   }
   delete $opts->{'version'}; # needs to be deleted or breaks tests
 

@@ -1,9 +1,9 @@
 #! /usr/bin/perl
 
 ##########LICENCE##########
-# Copyright (c) 2014-2016 Genome Research Ltd.
+# Copyright (c) 2014-2018 Genome Research Ltd.
 #
-# Author: Cancer Genome Project cgpit@sanger.ac.uk
+# Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
 # This file is part of cgpCaVEManPostProcessing.
 #
@@ -57,7 +57,7 @@ const my $RNASEQ_TYPE => 'RNASEQ';
 const my $TARGETED_TYPE => 'TARGETED';
 const my $DEFAULT_LINE_CACHE => 2000;
 const my $FLAG_TO_VCF_CONFIG => '%s/flag.to.vcf.convert.ini';
-const my $FLAG_CONFIG => '%s/human/flag.vcf.config.ini';
+const my $FLAG_CONFIG => '%s/%s/%s/flag.vcf.config.ini';
 const my $FLAG_TYPE => 'Flag';
 
 const my $VCF_UM_FLAG_NAME => 'unmatchedNormalVcfFlag';
@@ -330,6 +330,7 @@ sub option_builder {
 		'o|outFile=s' => \$opts{'o'},
 		'c|flagConfig=s' => \$opts{'c'},
 		's|species=s' => \$opts{'s'},
+    'sa|species-assembly' => \$opts{'sa'},
 		't|studyType=s' => \$opts{'t'},
 		'm|tumBam=s' => \$opts{'m'},
 		'n|normBam=s' => \$opts{'n'},
@@ -355,7 +356,7 @@ sub validateInput {
 
   if(defined $opts->{'version'}) {
     print sprintf "VERSION: %s\n", $VERSION;
-    exit 1;
+    exit 0;
   }
   delete $opts->{'version'}; # needs to be deleted or breaks tests
 
@@ -442,7 +443,11 @@ sub get_config_files {
 
   my $data_path = $Bin.'/../config/';
 
+  print "No developer environment found, checking for config files passed at commandline\n" if($options->{'loud'});
+
   $data_path = dist_dir('cgpCaVEManPostProcessing') unless(-e $data_path);
+
+	print "Using $data_path as share directory if files not pathed ad commandline\n" if($options->{'loud'});
 
   if($options->{'v'} && (! -e $options->{'v'} || ! -r $options->{'v'})){
   	pod2usage("Error with flagToVcfConfig input check permissions.".$options->{'v'}."\n");
@@ -457,8 +462,8 @@ sub get_config_files {
     pod2usage("Flag config file does not exist or has incorrect permissions: ".$options->{'c'}."\n");
   }
   elsif(!$options->{'c'}){
-    $options->{'c'} = sprintf $FLAG_CONFIG, $data_path;
-    print "Defaulting to use $options->{c} as config file.\n" if($options->{'loud'});
+    $options->{'c'} = sprintf $FLAG_CONFIG, $data_path, $options->{'s'}, $options->{'sa'};
+    print "Attempting to use default $options->{c} as config file.\n" if($options->{'loud'});
   	pod2usage("Default config file $options->{c} not found.") unless(-e $options->{'c'} && -r $options->{'c'});
   }
 
@@ -486,6 +491,8 @@ flagCaVEMan.pl [-h] -f vcfToFlag.vcf -o flaggedVCF.vcf -c configFile.ini -s huma
     --outFile              (-o)       The VCF output file to write
 
     --species              (-s)       Species associated with this vcf file to use
+
+    -species-assembly      (-sa)      Species assembly for (output in VCF)
 
     --tumBam               (-m)       Tumour hts (bam/cram file
 

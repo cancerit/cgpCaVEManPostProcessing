@@ -1,6 +1,6 @@
 # CHANGES
 
-## NEXT - major release
+## 1.8.0
 
 *   Overlapping reads now handled
 *   Updates to licenese headers and contact information

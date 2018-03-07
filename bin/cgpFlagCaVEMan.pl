@@ -879,7 +879,7 @@ sub option_builder {
 		'o|outFile=s' => \$opts{'o'},
 		'c|flagConfig=s' => \$opts{'c'},
 		's|species=s' => \$opts{'s'},
-		'sa|species-assembly' => \$opts{'sa'},
+		'sa|species-assembly=s' => \$opts{'sa'},
 		't|studyType=s' => \$opts{'t'},
 		'm|tumBam=s' => \$opts{'m'},
 		'n|normBam=s' => \$opts{'n'},

@@ -1,5 +1,9 @@
 # CHANGES
 
+## 1.8.1
+
+* `cgpFlagCaVEMan.pl` option `-sa` did not capture value
+
 ## 1.8.0
 
 *   Overlapping reads now handled

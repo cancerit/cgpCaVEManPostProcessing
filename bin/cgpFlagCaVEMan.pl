@@ -507,7 +507,8 @@ sub getUnmatchedVCFIntersectMatch{
 	#Only check for positions we've not already sorted.
   # new tabix is 1-based for both coordinates
   my $iter = $tabix->query_full($chr,$pos,$pos);
-  my $line = $iter->next; # undef if not found
+	my $line = undef;
+	$line = $iter->next if(defined($iter)); # undef if not found
   return $line;
 }
 
@@ -533,7 +534,8 @@ sub runFlagger{
 		#GERMLINE INDEL
 		#Use intersect to check for indel
 		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    my $line = $iter->next; # undef if not found
+		my $line = undef;
+    $line = $iter->next if(defined($iter)); # undef if not found
 		if(defined($line)){
 			return 0;
 		}
@@ -547,7 +549,8 @@ sub runFlagger{
 	}elsif($flagName eq 'simpleRepeatFlag'){
 		#SIMPLE REPEATS
 		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    my $line = $iter->next; # undef if not found
+    my $line = undef;
+		$line = $iter->next if(defined($iter)); # undef if not found
 		if(defined($line)){
 			return 0;
 		}
@@ -598,7 +601,8 @@ sub runFlagger{
 		#CENTROMERIC REPEATS
 		#Use intersect to check for centromeric repeats
 		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    my $line = $iter->next; # undef if not found
+    my $line = undef;
+		$line = $iter->next if(defined($iter)); # undef if not found
 		if(defined($line)){
 			return 0;
 		}
@@ -606,7 +610,8 @@ sub runFlagger{
 	}elsif($flagName eq 'snpFlag'){
 		#SNPS
 		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    my $line = $iter->next; # undef if not found
+    my $line = undef;
+		$line = $iter->next if(defined($iter)); # undef if not found
 		if(defined($line)){
 			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
 		}
@@ -617,7 +622,8 @@ sub runFlagger{
 	}elsif($flagName eq 'annotationFlag'){
 		#ANNOTATION
 		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    my $line = $iter->next; # undef if not found
+    my $line = undef;
+		$line = $iter->next if(defined($iter)); # undef if not found
 		if(defined($line)){
 			return 1;
 		}
@@ -625,7 +631,8 @@ sub runFlagger{
 	}elsif($flagName eq 'hiSeqDepthFlag'){
 		#HIGH SEQ DEPTH
 		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    my $line = $iter->next; # undef if not found
+    my $line = undef;
+		$line = $iter->next if(defined($iter)); # undef if not found
 		if(defined($line)){
 			return 0;
 		}
@@ -633,7 +640,8 @@ sub runFlagger{
 	}elsif($flagName eq 'codingFlag'){
 		#CODING
 		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    my $line = $iter->next; # undef if not found
+    my $line = undef;
+		$line = $iter->next if(defined($iter)); # undef if not found
 		if(defined($line)){
 			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
 		}

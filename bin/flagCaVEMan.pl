@@ -184,7 +184,7 @@ sub getUnmatchedVCFIntersectMatch{
 	#Only check for positions we've not already sorted.
 	return undef unless defined($tabix);
   # new tabix is 1-based for both coordinates
-  my $iter = $tabix->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
+  my $iter = $tabix->query_full($chr,$pos,$pos);
   my $line = $iter->next; # undef if none
   return $line;
 }

@@ -1,5 +1,9 @@
 # CHANGES
 
+## 1.8.2
+
+* Update Tabix `query` to `query_full` in order to cope with GRCh38 contig names (requires `Bio::DB::HTS` v2.10 to be installed by PCAP).
+
 ## 1.8.1
 
 * `cgpFlagCaVEMan.pl` option `-sa` did not capture value

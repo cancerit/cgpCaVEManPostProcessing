@@ -16,6 +16,10 @@
 *   README cleanup
 *   Ability to exclude contigs from analysis
 
+## 1.7.3
+
+* Change tabix->query to tabix->query_full
+
 ## 1.7.2
 
 *   Updating species config files to ensure they always point to gz files

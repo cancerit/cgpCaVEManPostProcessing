@@ -1,6 +1,6 @@
 # CHANGES
 
-## 1.7.2
+## 1.7.3
 
 * Change tabix->query to tabix->query_full
 

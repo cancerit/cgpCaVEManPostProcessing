@@ -495,8 +495,9 @@ sub getUnmatchedVCFIntersectMatch{
 	my ($chr,$pos,$tabix,$flagName) = @_;
 	#Only check for positions we've not already sorted.
   # new tabix is 1-based for both coordinates
-  my $iter = $tabix->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
-  my $line = $iter->next; # undef if not found
+  my $iter = $tabix->query_full($chr,$pos,$pos);
+	my $line  = undef;
+  $line = $iter->next if(defined($iter)); # undef if not found
   return $line;
 }
 
@@ -521,8 +522,9 @@ sub runFlagger{
 	}elsif($flagName eq 'germlineIndelFlag'){
 		#GERMLINE INDEL
 		#Use intersect to check for indel
-		my $iter = $tabixList->{$flagName}->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
-    my $line = $iter->next; # undef if not found
+		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
+    my $line = undef;
+		$line = $iter->next if(defined($iter)); # undef if not found
 		if(defined($line)){
 			return 0;
 		}
@@ -535,8 +537,9 @@ sub runFlagger{
 		return $flagger->getDifferingReadPositionResult();
 	}elsif($flagName eq 'simpleRepeatFlag'){
 		#SIMPLE REPEATS
-		my $iter = $tabixList->{$flagName}->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
-    my $line = $iter->next; # undef if not found
+		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
+		my $line = undef;
+		$line = $iter->next if(defined($iter)); # undef if not found
 		if(defined($line)){
 			return 0;
 		}
@@ -586,16 +589,18 @@ sub runFlagger{
 	}elsif($flagName eq 'centromericRepeatFlag'){
 		#CENTROMERIC REPEATS
 		#Use intersect to check for centromeric repeats
-		my $iter = $tabixList->{$flagName}->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
-    my $line = $iter->next; # undef if not found
+		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
+		my $line = undef;
+		$line = $iter->next if(defined($iter)); # undef if not found
 		if(defined($line)){
 			return 0;
 		}
 		return 1;
 	}elsif($flagName eq 'snpFlag'){
 		#SNPS
-		my $iter = $tabixList->{$flagName}->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
-    my $line = $iter->next; # undef if not found
+		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
+		my $line = undef;
+		$line = $iter->next if(defined($iter)); # undef if not found
 		if(defined($line)){
 			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
 		}
@@ -605,24 +610,27 @@ sub runFlagger{
 		return $flagger->getPhasingResult();
 	}elsif($flagName eq 'annotationFlag'){
 		#ANNOTATION
-		my $iter = $tabixList->{$flagName}->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
-    my $line = $iter->next; # undef if not found
+		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
+		my $line = undef;
+		$line = $iter->next if(defined($iter));
 		if(defined($line)){
 			return 1;
 		}
 		return 0;
 	}elsif($flagName eq 'hiSeqDepthFlag'){
 		#HIGH SEQ DEPTH
-		my $iter = $tabixList->{$flagName}->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
-    my $line = $iter->next; # undef if not found
+		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
+		my $line = undef;
+		$line = $iter->next if(defined($iter)); # undef if not found
 		if(defined($line)){
 			return 0;
 		}
 		return 1;
 	}elsif($flagName eq 'codingFlag'){
 		#CODING
-		my $iter = $tabixList->{$flagName}->query(sprintf '%s:%d-%d', $chr,$pos,$pos);
-    my $line = $iter->next; # undef if not found
+		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
+		my $line = undef;
+    $line = $iter->next if(defined($iter)); # undef if not found
 		if(defined($line)){
 			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
 		}

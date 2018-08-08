@@ -1,5 +1,9 @@
 # CHANGES
 
+## 1.8.4
+
+* added 3 soft flags (CLPM, ASMD and ASRD) to all species builds and design_types (except RNAseq)
+
 ## 1.8.2
 
 * Update Tabix `query` to `query_full` in order to cope with GRCh38 contig names (requires `Bio::DB::HTS` v2.10 to be installed by PCAP).

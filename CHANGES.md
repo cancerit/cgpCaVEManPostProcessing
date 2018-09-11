@@ -1,5 +1,9 @@
 # CHANGES
 
+## 1.8.5
+
+* Added TARGETED to GRCh38 human config ini
+
 ## 1.8.4
 
 * added 3 soft flags (CLPM, ASMD and ASRD) to all species builds and design_types (except RNAseq)

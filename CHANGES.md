@@ -1,5 +1,10 @@
 # CHANGES
 
+## 1.8.6
+
+* Code modified for overlapping reads. Where reads overlap but carry the same base on each,
+* they will be assigned alternately to each strand so as to ensure an even spread of strandedness.
+
 ## 1.8.5
 
 * Added TARGETED to GRCh38 human config ini

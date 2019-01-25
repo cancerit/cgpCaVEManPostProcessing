@@ -523,7 +523,7 @@ subtest 'Clipped Read tests' => sub {
 	ok($processor->_mutBase eq $mut,"Mut base changed");
 
 	#Check counts have been filled correctly.
-	$exp_sclp = [0,9,78,0,83,49,104,38,0,20,0,0,0,66,0,0,0];
+	$exp_sclp = [0,9,78,0,83,49,104,66,38,0,20,0,0,0,0,0,0];
 	is_deeply($processor->_muts->{'sclp'}, $exp_sclp, "softclipcounts");
 
 	#Check real data count results
@@ -569,8 +569,8 @@ subtest 'Alignment score tests' => sub {
 	ok($processor->_currentPos == $pos,"Current pos updated");
 	ok($processor->_refBase eq $ref,"Ref base changed");
 	ok($processor->_mutBase eq $mut,"Mut base changed");
-  my $exp_als = [66,102,51,110,63,61,44,82,123,88,123,76,87,60,118,93,139];
-  my $exp_rln = [151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151];
+    my $exp_als = [66,102,56,110,63,61,44,60,82,123,88,123,76,87,118,93,139];
+    my $exp_rln = [151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151];
 	is_deeply($processor->_muts->{'alnp'}, $exp_als, "primary alignment scores");
 	is_deeply($processor->_muts->{'trl'}, $exp_rln, "tumor read lengths");
 

@@ -304,6 +304,9 @@ sub _callbackTumFetch{
 			$str = -1;
 		}
 		return unless ($algn->proper_pair == 1);
+    # Ensure that we keep 
+    return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
+    return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
 
 		$muts->{'totalTCoverage'} += 1;
 		if($str == 1){
@@ -477,6 +480,9 @@ sub _callbackMatchedNormFetch{
 		my $indelRdCount = 0;
 		my $nom = $algn->qname;
 		return unless ($algn->proper_pair == 1);
+    # Ensure that we keep 
+    return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
+    return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
 
 		if(!defined($muts->{'totalNCoverage'})){
 			$muts->{'totalNCoverage'} = 0;

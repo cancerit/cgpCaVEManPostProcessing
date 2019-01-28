@@ -1,5 +1,19 @@
 # CHANGES
 
+## 1.8.6
+
+* Code modified for overlapping reads. Where reads overlap but carry the same base on each,
+* they will be assigned alternately to each strand so as to ensure an even spread of strandedness.
+  
+### Behaviour change
+
+**Where the proper pair filter flag is used, this code now checks that the paired-end orientation is also used.**
+**This will mean that mate-pair orientation (F/F or R/R) will be rejected**
+**If you wish to use mate-pair data, please use previous version**
+
+* Where a proper pair filter is used, now check for the correct paired-end orientation of F/R.
+* If this is not met the read is ignored.
+
 ## 1.8.5
 
 * Added TARGETED to GRCh38 human config ini

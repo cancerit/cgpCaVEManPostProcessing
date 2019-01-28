@@ -32,7 +32,7 @@ use Attribute::Abstract;
 use Data::Dumper;
 use base 'Exporter';
 
-our $VERSION = '1.8.5';
+our $VERSION = '1.8.6';
 our @EXPORT = qw($VERSION);
 
 const my $MATCH_CIG => 'M';
@@ -54,6 +54,11 @@ my $refBase;
 my $mutBase;
 my $keepSW = 0;
 my $minAnalysedQual = 11;
+my $tum_readnames;
+my $norm_readnames;
+my $tum_readnames_arr;
+my $norm_readnames_arr;
+
 
 sub new {
 	my ($proto) = shift;
@@ -96,8 +101,15 @@ sub runProcess{
 	$self->_currentPos($start);
 	$self->_refBase($refBase);
 	$self->_mutBase($mutBase);
+    $tum_readnames = undef;
+    $tum_readnames_arr = undef;
 	$self->{'tb'}->fetch($chr.':'.$start.'-'.$stop,\&_callbackTumFetch);
+    process_hashed_reads(\&populate_muts, $tum_readnames, $tum_readnames_arr);
+    $norm_readnames = undef;
+    $norm_readnames_arr = undef;
 	$self->{'nb'}->fetch($chr.':'.$start.'-'.$stop,\&_callbackMatchedNormFetch);
+    process_hashed_reads(\&populate_norms, $norm_readnames, $norm_readnames_arr);
+
 	return 1;
 }
 
@@ -274,6 +286,67 @@ sub _norms{
 	return $norms;
 }
 
+sub process_hashed_reads{
+    my ($code, $hashed_reads, $readname_arr) = @_;
+    #Calculate other stuff
+    my $indelRdCount = 0;
+
+    my $loc_counts;
+    $loc_counts->{1}->{A} = 0;
+    $loc_counts->{1}->{C} = 0;
+    $loc_counts->{1}->{G} = 0;
+    $loc_counts->{1}->{T} = 0;
+    $loc_counts->{-1}->{A} = 0;
+    $loc_counts->{-1}->{C} = 0;
+    $loc_counts->{-1}->{G} = 0;
+    $loc_counts->{-1}->{T} = 0;
+
+    foreach my $readnom( @$readname_arr){
+        if(exists $hashed_reads->{$readnom}->{1} && exists $hashed_reads->{$readnom}->{-1}){
+            if($hashed_reads->{$readnom}->{1}->{qbase} ne $hashed_reads->{$readnom}->{-1}->{qbase}){
+                $loc_counts->{1}->{qbase}++;
+                $loc_counts->{1}->{qbase}++;
+            }
+        }elsif(exists $hashed_reads->{$readnom}->{1}){ # + strand populated only
+            $loc_counts->{1}->{qbase}++;
+
+        }else{ # + strand populated only
+            $loc_counts->{-1}->{qbase}++;
+        }
+    } # End of iteration through each readname for an initial count
+
+    foreach my $readnom(@$readname_arr){
+        my $read_to_use;
+        my $read_to_use_2 = undef;
+        if(exists $hashed_reads->{$readnom}->{1} && exists $hashed_reads->{$readnom}->{-1}){
+            if($hashed_reads->{$readnom}->{1}->{qbase} eq $hashed_reads->{$readnom}->{-1}->{qbase}){
+                my $base = $hashed_reads->{$readnom}->{1}->{qbase};
+                if($loc_counts->{-1}->{$base} < $loc_counts->{1}->{$base}){
+                    $read_to_use = $hashed_reads->{$readnom}->{-1};
+                    $loc_counts->{-1}->{$base}++;
+                }else{
+                    $read_to_use = $hashed_reads->{$readnom}->{1};
+                    $loc_counts->{1}->{$base}++;
+                }
+            }else{
+                $read_to_use = $hashed_reads->{$readnom}->{1};
+                $read_to_use_2 = $hashed_reads->{$readnom}->{-1};
+            }
+        }elsif(exists $hashed_reads->{$readnom}->{1}){ # + strand populated only
+            $read_to_use = $hashed_reads->{$readnom}->{1};
+        }else{ # + strand populated only
+            $read_to_use = $hashed_reads->{$readnom}->{-1};
+        }
+
+        &$code($read_to_use);
+        if(defined $read_to_use_2){
+            &$code($read_to_use_2);
+        }
+        delete $hashed_reads->{$readnom};
+    } # End of iteration through each readname for an initial count
+
+}
+
 sub _callbackTumFetch{
 	my ($algn) = @_;
 	my $flagValue = $algn->flag;
@@ -286,121 +359,116 @@ sub _callbackTumFetch{
 	return if((int($flagValue) & 1024) != 0);
 	return if((int($flagValue) & 2048) != 0); #Exclude supplementary alignments
 	#Quick check that were covering the base with this read (skips/indels are ignored)
+
+    #Calculate other stuff
+    my $totalPCovg = 0;
+    my $totalNCovg = 0;
+    my $indelRdCount = 0;
+
 	if(_isCurrentPosCoveredFromAlignment($algn) == 1){
-		#Get the correct read position.
+        return unless ($algn->proper_pair == 1);
+        # Ensure that we keep 
+        return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
+        return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
+        my $this_read;
+        #Get the correct read position.
 		my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($algn);
-		#print $rdPosIndexOfInterest,"\n";
-		#print $algn->qseq,"\n";
-		my @splt = split(//,$algn->qseq);
-  		#Calculate other stuff
-		my $totalPCovg = 0;
-		my $totalNCovg = 0;
-		my $indelRdCount = 0;
-		my $nom = $algn->qname;
-		my $start = $algn->start;
+        my @splt = split(//,$algn->qseq);
 
-		#Read base
-		my $qbase = $splt[$rdPosIndexOfInterest-1];
+        my $rdname = $algn->qname;
 
-		if(exists($muts_rds->{$nom})){
-			return if($muts_rds->{$nom} eq $qbase);
-		}else{
-			$muts_rds->{$nom} = $qbase;
-		}
-
-		#Read strand
+        #Read strand
 		my $str = 1;
 		if($algn->reversed){
 			$str = -1;
 		}
-		return unless ($algn->proper_pair == 1);
 
-		$muts->{'totalTCoverage'} += 1;
-		if($str == 1){
-			$muts->{'totalTCoveragePos'} += 1;
-		}else{
-			$muts->{'totalTCoverageNeg'} += 1;
-		}
-		my $xt = $algn->aux_get('XT');
-		if($algn->cigar_str =~ m/[ID]/){
-			$muts->{'indelTCount'} += 1;
-		}
+        #Read base
+        $this_read->{str} = $str;
+        $this_read->{qbase} = $splt[$rdPosIndexOfInterest-1];
+        $this_read->{matchesindel} = ($algn->cigar_str =~ m/[ID]/);
+        $this_read->{qscore} = $algn->qscore->[$rdPosIndexOfInterest-1];
+        $this_read->{xt} = $algn->aux_get('XT');
+        $this_read->{ln} = $algn->l_qseq;
+        $this_read->{rdPos} = $rdPosIndexOfInterest;
+        $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
+        $this_read->{primaryalnscore} = $algn->get_tag_values('AS');
+        $this_read->{qual} = $algn->qual;
+        $this_read->{start} = $algn->start;
+        $this_read->{rdName} = $rdname;
 
-		#Base quality
-		my $qscore = $algn->qscore->[$rdPosIndexOfInterest-1];
+        if(! grep( /^$rdname$/, @$tum_readnames_arr) ){
+            push(@$tum_readnames_arr, $rdname);
+        }
+        $tum_readnames->{$rdname}->{$str} = $this_read;
 
-		push(@{$muts->{'completeMutStrands'}},$str);
+    } # End of if this is a covered position   
 
-		push(@{$muts->{'allTumBases'}},$qbase);
-
-		push(@{$muts->{'allTumBaseQuals'}},$qscore);
-
-		push(@{$muts->{'allTumStrands'}},$str);
-
-		#return if(uc($qbase) ne uc($mutBase));
-
-		return if ($keepSW == 0 && defined($xt) && $xt eq 'M');
-
-		return if($qscore < $minAnalysedQual);
-
-		my $rdPos = $rdPosIndexOfInterest;
-		my $ln = $algn->l_qseq;
-
-		$muts->{'tumcvg'} += 1;
-
-		#return if(uc($qbase) ne uc($mutBase));
-
-		if($str == 1){
-			$totalPCovg++;
-		}else{
-			$totalNCovg++;
-			$rdPos = ($ln - $rdPos) + 1;
-		}
-
-		$muts->{'pcvg'} += $totalPCovg;
-
-		$muts->{'ncvg'} += $totalNCovg;
-
-		my $rdName = $algn->qname;
-
-		return if(uc($qbase) ne uc($mutBase));
-
-		my $softclipcount = _get_soft_clip_count_from_cigar($algn->cigar_array);
-		my $primaryalnscore = $algn->get_tag_values('AS');
-
-		#Tum quals
-		push(@{$muts->{'tqs'}},$qscore);
-
-		#Tum Rd Pos
-		push(@{$muts->{'trp'}},$rdPos);
-
-		#Tum rd length
-		push(@{$muts->{'trl'}},$ln);
-
-		#Tum XT tags
-		push(@{$muts->{'txt'}},$xt);
-
-		#Tum rd start
-		push(@{$muts->{'trdst'}},$start);
-
-		#Strands
-		push(@{$muts->{'tstr'}},$str);
-
-		#RdNames
-		push(@{$muts->{'trn'}},$rdName);
-
-		#Mapping quals
-		push(@{$muts->{'tmq'}},$algn->qual);
-
-		#AlnScoresPrm
-		push(@{$muts->{'alnp'}},$primaryalnscore);
-
-		#Softclipping
-		push(@{$muts->{'sclp'}},$softclipcount);
-
-		#print Dumper($a);
-	}
 	return 1;
+}
+
+sub populate_muts{
+    my ($read) = @_;
+    $muts->{'totalTCoverage'} += 1;
+    if($read->{str} == 1){
+        $muts->{'totalTCoveragePos'} += 1;
+    }else{
+        $muts->{'totalTCoverageNeg'} += 1;
+    }
+    if($read->{xt}){
+        $muts->{'indelTCount'} += 1;
+    }
+	push(@{$muts->{'completeMutStrands'}},$read->{str});
+    push(@{$muts->{'allTumBases'}},$read->{qbase});
+    push(@{$muts->{'allTumBaseQuals'}},$read->{qscore});
+    push(@{$muts->{'allTumStrands'}},$read->{str});
+
+    return if ($keepSW == 0 && defined($read->{xt}) && $read->{xt} eq 'M');
+
+	return if($read->{qscore} < $minAnalysedQual);
+
+    $muts->{'tumcvg'} += 1;
+
+    if($read->{str} == 1){
+		$muts->{'pcvg'} += 1;
+	}else{
+		$muts->{'ncvg'} += 1;
+		$read->{rdPos} = ($read->{ln} - $read->{rdPos}) + 1;
+	}
+
+	return if(uc($read->{qbase}) ne uc($mutBase));
+
+    #Tum quals
+    push(@{$muts->{'tqs'}},$read->{qscore});
+
+    #Tum Rd Pos
+    push(@{$muts->{'trp'}},$read->{rdPos});
+
+    #Tum rd length
+    push(@{$muts->{'trl'}},$read->{ln});
+
+    #Tum XT tags
+    push(@{$muts->{'txt'}},$read->{xt});
+
+    #Tum rd start
+    push(@{$muts->{'trdst'}},$read->{start});
+
+    #Strands
+    push(@{$muts->{'tstr'}},$read->{str});
+
+    #RdNames
+    push(@{$muts->{'trn'}},$read->{rdName});
+
+    #Mapping quals
+    push(@{$muts->{'tmq'}},$read->{qual});
+
+    #AlnScoresPrm
+    push(@{$muts->{'alnp'}},$read->{primaryalnscore});
+
+    #Softclipping
+    push(@{$muts->{'sclp'}},$read->{softclipcount});
+
+    return;
 }
 
 sub _get_soft_clip_count_from_cigar{
@@ -460,8 +528,72 @@ sub _isCurrentPosCoveredFromAlignment{
 	return 0;
 }
 
+sub populate_norms{
+    my ($read) = @_;
+    if(!defined($muts->{'totalNCoverage'})){
+        $muts->{'totalNCoverage'} = 0;
+    }
+    $muts->{'totalNCoverage'} += 1;
+
+    if(!defined($muts->{'allNormBases'})){
+        $muts->{'allNormBases'} = [];
+    }
+    push(@{$muts->{'allNormBases'}},$read->{qbase});
+
+    if(!defined($muts->{'allNormBaseQuals'})){
+        $muts->{'allNormBaseQuals'} = [];
+    }
+    push(@{$muts->{'allNormBaseQuals'}},$read->{qscore});
+
+    if(!defined($muts->{'allNormStrands'})){
+        $muts->{'allNormStrands'} = [];
+    }
+    push(@{$muts->{'allNormStrands'}},$read->{str});
+
+    return if ($keepSW == 0 && defined($read->{xt}) && $read->{xt} eq 'M');
+
+	return if($read->{qscore} < $minAnalysedQual);
+
+    if(!defined($muts->{'normcvg'})){
+        $muts->{'normcvg'} = 0;
+    }
+    $muts->{'normcvg'} += 1;
+ 
+    if($read->{str} == +1){
+        $muts->{'npcvg'} += 1;
+    }else{
+        $muts->{'nncvg'} += 1;
+        $read->{rdPos} = ($read->{ln} - $read->{rdPos}) + 1;
+    }
+		
+	return if(uc($read->{qbase}) ne uc($mutBase));
+
+    #Tum quals
+    if(!defined($muts->{'nqs'})){
+        my @empty = ();
+        $muts->{'nqs'} = \@empty;
+    }
+    push(@{$muts->{'nqs'}},$read->{qscore});
+
+    #Tum Rd Pos
+    if(!defined($muts->{'nrp'})){
+        my @empty = ();
+        $muts->{'nrp'} = \@empty;
+    }
+    push(@{$muts->{'nrp'}},$read->{rdPos});
+
+    #Tum rd length
+    if(!defined($muts->{'nrl'})){
+        my @empty = ();
+        $muts->{'nrl'} = \@empty;
+    }
+    push(@{$muts->{'nrl'}},$read->{ln});
+
+    return;
+}
+
 sub _callbackMatchedNormFetch{
-		my ($algn) = @_;
+	my ($algn) = @_;
 	my $flagValue = $algn->flag;
 	#Check read and mate are mapped.
 	return if((int($flagValue) & 8) != 0);
@@ -472,113 +604,51 @@ sub _callbackMatchedNormFetch{
 	return if((int($flagValue) & 1024) != 0);
 	return if((int($flagValue) & 2048) != 0); #Exclude supplementary alignments
 	#Quick check that were covering the base with this read (skips/indels are ignored)
-	if(_isCurrentPosCoveredFromAlignment($algn) == 1){
+	
+    #Calculate other stuff
+    my $totalPCovg = 0;
+    my $totalNCovg = 0;
+    my $indelRdCount = 0;
+    
+    if(_isCurrentPosCoveredFromAlignment($algn) == 1){
+        return unless ($algn->proper_pair == 1);
+        # Ensure that we keep 
+        return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
+        return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
+        my $this_read;
 		#Get the correct read position.
 		my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($algn,$currentPos);
-		#print $rdPosIndexOfInterest,"\n";
-		#print $algn->qseq,"\n";
 		my @splt = split(//,$algn->qseq);
-  		#Calculate other stuff
-		my $totalPCovg = 0;
-		my $totalNCovg = 0;
-		my $indelRdCount = 0;
-		my $nom = $algn->qname;
-		return unless ($algn->proper_pair == 1);
 
-		my $qbase = $splt[$rdPosIndexOfInterest-1];
+        my $rdname = $algn->qname;
 
-		if(exists($norms_rds->{$nom})){
-			return if($norms_rds->{$nom} eq $qbase);
-		}else{
-			$norms_rds->{$nom} = $qbase;
-		}
-
-		if(!defined($muts->{'totalNCoverage'})){
-			$muts->{'totalNCoverage'} = 0;
-		}
-		$muts->{'totalNCoverage'} += 1;
-		my $xt = $algn->aux_get('XT');
-
-		#Read strand
+        #Read strand
 		my $str = 1;
 		if($algn->reversed){
 			$str = -1;
 		}
-		#Base quality
-		my $qscore = $algn->qscore->[$rdPosIndexOfInterest-1];
 
-		if(!defined($muts->{'allNormBases'})){
-			$muts->{'allNormBases'} = [];
-		}
-		push(@{$muts->{'allNormBases'}},$qbase);
+        #Read population
+        $this_read->{str} = $str;
+        $this_read->{qbase} = $splt[$rdPosIndexOfInterest-1];
+        $this_read->{matchesindel} = ($algn->cigar_str =~ m/[ID]/);
+        $this_read->{qscore} = $algn->qscore->[$rdPosIndexOfInterest-1];
+        $this_read->{xt} = $algn->aux_get('XT');
+        $this_read->{ln} = $algn->l_qseq;
+        $this_read->{rdPos} = $rdPosIndexOfInterest;
+        $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
+        $this_read->{primaryalnscore} = $algn->get_tag_values('AS');
+        $this_read->{qual} = $algn->qual;
+        $this_read->{start} = $algn->start;
+        $this_read->{rdName} = $rdname;
 
-		if(!defined($muts->{'allNormBaseQuals'})){
-			$muts->{'allNormBaseQuals'} = [];
-		}
-		push(@{$muts->{'allNormBaseQuals'}},$qscore);
+        if(! grep( /^$rdname$/, @$norm_readnames_arr ) ){
+            push(@$norm_readnames_arr, $rdname);
+        }
 
-		if(!defined($muts->{'allNormStrands'})){
-			$muts->{'allNormStrands'} = [];
-		}
-		push(@{$muts->{'allNormStrands'}},$str);
+        $norm_readnames->{$rdname}->{$str} = $this_read;
 
-		return if ($keepSW == 0 && defined $xt && $xt eq 'M');
-
-		return if($qscore < $minAnalysedQual);
-
-		if(!defined($muts->{'normcvg'})){
-			$muts->{'normcvg'} = 0;
-		}
-		$muts->{'normcvg'} += 1;
-
-
-		#return if(uc($qbase) ne uc($mutBase));
-
-		my $rdPos = $rdPosIndexOfInterest;
-
-		my $ln = length($algn->qseq);
-
-		if($str == +1){
-			$totalPCovg++;
-		}else{
-			$totalNCovg++;
-			$rdPos = ($ln - $rdPos) + 1;
-		}
-		my $rdName = $algn->qname;
-		return if(uc($qbase) ne uc($mutBase));
-		#Tum quals
-		if(!defined($muts->{'nqs'})){
-			my @empty = ();
-			$muts->{'nqs'} = \@empty;
-		}
-		push(@{$muts->{'nqs'}},$qscore);
-
-		#Tum Rd Pos
-		if(!defined($muts->{'nrp'})){
-			my @empty = ();
-			$muts->{'nrp'} = \@empty;
-		}
-		push(@{$muts->{'nrp'}},$rdPos);
-
-		#Tum rd length
-		if(!defined($muts->{'nrl'})){
-			my @empty = ();
-			$muts->{'nrl'} = \@empty;
-		}
-		push(@{$muts->{'nrl'}},$ln);
-
-		if(!defined($muts->{'npcvg'})){
-			$muts->{'npcvg'} = 0;
-		}
-		$muts->{'npcvg'} += $totalPCovg;
-
-		if(!defined($muts->{'nncvg'} )){
-			$muts->{'nncvg'} = 0;
-		}
-		$muts->{'nncvg'} += $totalNCovg;
-
-
-	}
+	} # End of if this is a position covered by this alignment
 	return 1;
 }
 
@@ -591,6 +661,8 @@ sub DESTROY{
 	$minAnalysedQual = 11;
 	$muts = undef;
 	$norms = undef;
+    $tum_readnames = undef;
+    $norm_readnames = undef;
 	#warn "Base::DESTROY\n";
 }
 

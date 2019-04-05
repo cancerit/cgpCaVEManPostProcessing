@@ -1,5 +1,9 @@
 # CHANGES
 
+## 1.8.7
+
+* Reduce memory overhead when using BED as unmatched normal panel input
+
 ## 1.8.6
 
 * Code modified for overlapping reads. Where reads overlap but carry the same base on each,

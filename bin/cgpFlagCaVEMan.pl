@@ -341,13 +341,14 @@ sub buildUnmatchedVCFFileListFromReference{
     #Check the tabix file exists.
     my $umBedTabix = $bedloc.".tbi";
     croak("Unmatched bedfile $umBedTabix") if (! -e $umBedTabix);
+		my $umBedTbi = Bio::DB::HTS::Tabix->new(filename => $bedloc);
 	  open($REF, '<', $refFai) or croak("Error opening reference index $refFai: $!");
       while(<$REF>){
         my $line = $_;
         next if($line =~ m/^\s*#/);
         chomp($line);
         my ($chr,undef) = split(/\t/,$line);
-        $fileList->{$chr} = Bio::DB::HTS::Tabix->new(filename => $bedloc);
+        $fileList->{$chr} = $umBedTbi;
       }
     close($REF);
 	}

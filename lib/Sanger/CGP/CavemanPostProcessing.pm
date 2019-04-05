@@ -1,5 +1,5 @@
 ##########LICENCE##########
-# Copyright (c) 2014-2018 Genome Research Ltd.
+# Copyright (c) 2014-2019 Genome Research Ltd.
 #
 # Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
@@ -32,7 +32,7 @@ use Attribute::Abstract;
 use Data::Dumper;
 use base 'Exporter';
 
-our $VERSION = '1.8.6';
+our $VERSION = '1.8.7';
 our @EXPORT = qw($VERSION);
 
 const my $MATCH_CIG => 'M';
@@ -304,7 +304,7 @@ sub _callbackTumFetch{
 			$str = -1;
 		}
 		return unless ($algn->proper_pair == 1);
-    # Ensure that we keep 
+    # Ensure that we keep
     return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
     return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
 
@@ -480,7 +480,7 @@ sub _callbackMatchedNormFetch{
 		my $indelRdCount = 0;
 		my $nom = $algn->qname;
 		return unless ($algn->proper_pair == 1);
-    # Ensure that we keep 
+    # Ensure that we keep
     return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
     return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
 

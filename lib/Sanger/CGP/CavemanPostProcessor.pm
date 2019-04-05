@@ -1,5 +1,5 @@
 ##########LICENCE##########
-# Copyright (c) 2014-2018 Genome Research Ltd.
+# Copyright (c) 2014-2019 Genome Research Ltd.
 #
 #Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
@@ -32,7 +32,7 @@ use Attribute::Abstract;
 use Data::Dumper;
 use base 'Exporter';
 
-our $VERSION = '1.8.6';
+our $VERSION = '1.8.7';
 our @EXPORT = qw($VERSION);
 
 const my $MATCH_CIG => 'M';
@@ -367,7 +367,7 @@ sub _callbackTumFetch{
 
 	if(_isCurrentPosCoveredFromAlignment($algn) == 1){
         return unless ($algn->proper_pair == 1);
-        # Ensure that we keep 
+        # Ensure that we keep
         return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
         return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
         my $this_read;
@@ -402,7 +402,7 @@ sub _callbackTumFetch{
         }
         $tum_readnames->{$rdname}->{$str} = $this_read;
 
-    } # End of if this is a covered position   
+    } # End of if this is a covered position
 
 	return 1;
 }
@@ -558,14 +558,14 @@ sub populate_norms{
         $muts->{'normcvg'} = 0;
     }
     $muts->{'normcvg'} += 1;
- 
+
     if($read->{str} == +1){
         $muts->{'npcvg'} += 1;
     }else{
         $muts->{'nncvg'} += 1;
         $read->{rdPos} = ($read->{ln} - $read->{rdPos}) + 1;
     }
-		
+
 	return if(uc($read->{qbase}) ne uc($mutBase));
 
     #Tum quals
@@ -604,15 +604,15 @@ sub _callbackMatchedNormFetch{
 	return if((int($flagValue) & 1024) != 0);
 	return if((int($flagValue) & 2048) != 0); #Exclude supplementary alignments
 	#Quick check that were covering the base with this read (skips/indels are ignored)
-	
+
     #Calculate other stuff
     my $totalPCovg = 0;
     my $totalNCovg = 0;
     my $indelRdCount = 0;
-    
+
     if(_isCurrentPosCoveredFromAlignment($algn) == 1){
         return unless ($algn->proper_pair == 1);
-        # Ensure that we keep 
+        # Ensure that we keep
         return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
         return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
         my $this_read;

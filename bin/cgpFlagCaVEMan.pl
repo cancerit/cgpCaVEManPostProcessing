@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ##########LICENCE##########
-# Copyright (c) 2014-2018 Genome Research Ltd.
+# Copyright (c) 2014-2019 Genome Research Ltd.
 #
 # Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
@@ -572,8 +572,8 @@ sub runFlagger{
         my $sampleHitCount = 0;
         my $totalSampleCnt = 0;
         foreach my $sampData(@samples){
-          next if($sampData eq ".");
           $totalSampleCnt++;
+          next if($sampData eq q{0:.:.:.:.} || $sampData eq q{-} || $sampData eq q{.});
           #GT:GF:CF:TF:AF	0|0:41:0:0:0
           my ($gentype,@data) = split(':',$sampData);
           my $totalCvg = 0;

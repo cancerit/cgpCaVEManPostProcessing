@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ############## LICENSE ##############
-# Copyright (c) 2014-2018 Genome Research Ltd.
+# Copyright (c) 2014-2019 Genome Research Ltd.
 #
 # Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
@@ -106,7 +106,7 @@ const my @BASES => ('A','C','G','T');
 
     for my $i(9..$max_col) {
       $sample_count++;
-      next if($x[$i] =~m/^[.\-]$/);
+      next if($x[$i] eq '0:.:.:.:.' || $x[$i] =~m/^[.\-]$/);
       my @gts = split /:/, $x[$i];
       for my $j(1..$max_allele) {
         next if($base_list[$j-1] eq $refb);

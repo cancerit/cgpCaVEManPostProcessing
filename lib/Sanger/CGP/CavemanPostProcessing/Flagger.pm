@@ -655,8 +655,8 @@ sub getVCFUnmatchedFlag{
   my $sampleHitCount = 0;
   my $totalSampleCnt = 0;
   foreach my $sampData(@samples){
-    next if($sampData eq ".");
     $totalSampleCnt++;
+    next if($sampData eq q{0:.:.:.:.} || $sampData eq q{-} || $sampData eq q{.});
     #GT:GF:CF:TF:AF	0|0:41:0:0:0
     my ($gentype,@data) = split(':',$sampData);
     my $totalCvg = 0;

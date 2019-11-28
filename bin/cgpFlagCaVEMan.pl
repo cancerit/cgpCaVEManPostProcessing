@@ -283,7 +283,6 @@ sub main{
 		@lineCache = ();
 	close($VCFOUT);
 
-	close_tabix($tabixList);
 	warn "Done flagging\n" if($opts->{'loud'});
 }
 

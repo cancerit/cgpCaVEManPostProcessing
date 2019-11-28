@@ -41,6 +41,8 @@ WriteMakefile(
                      'Config::IniFiles' => 2.83,
                      'File::ShareDir' => 1.102,
                      'LWP::Simple' => 6.00,
+                     'Set::IntervalTree' => 0.12,
+                     'PerlIO::gzip' => 0.20,
                    }
 );
 

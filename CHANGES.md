@@ -1,5 +1,9 @@
 # CHANGES
 
+## 1.8.9
+
+* Speedups in callback methods
+
 ## 1.8.7
 
 * Reduce memory overhead when using BED as unmatched normal panel input

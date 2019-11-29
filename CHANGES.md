@@ -3,6 +3,7 @@
 ## 1.8.9
 
 * Speedups in callback methods
+* Addition of IntervalTree use instead of tabix
 
 ## 1.8.7
 

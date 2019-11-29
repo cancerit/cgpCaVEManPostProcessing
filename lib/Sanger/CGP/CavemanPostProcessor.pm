@@ -32,7 +32,7 @@ use Attribute::Abstract;
 use Data::Dumper;
 use base 'Exporter';
 
-our $VERSION = '1.8.8';
+our $VERSION = '1.8.9';
 our @EXPORT = qw($VERSION);
 
 const my $MATCH_CIG => 'M';
@@ -58,6 +58,8 @@ my $tum_readnames;
 my $norm_readnames;
 my $tum_readnames_arr;
 my $norm_readnames_arr;
+my $tum_readnames_hash;
+my $norm_readnames_hash;
 
 
 sub new {
@@ -103,10 +105,12 @@ sub runProcess{
 	$self->_mutBase($mutBase);
     $tum_readnames = undef;
     $tum_readnames_arr = undef;
+    $tum_readnames_hash = undef;
 	$self->{'tb'}->fetch($chr.':'.$start.'-'.$stop,\&_callbackTumFetch);
     process_hashed_reads(\&populate_muts, $tum_readnames, $tum_readnames_arr);
     $norm_readnames = undef;
     $norm_readnames_arr = undef;
+    $norm_readnames_hash = undef;
 	$self->{'nb'}->fetch($chr.':'.$start.'-'.$stop,\&_callbackMatchedNormFetch);
     process_hashed_reads(\&populate_norms, $norm_readnames, $norm_readnames_arr);
 
@@ -351,15 +355,11 @@ sub _callbackTumFetch{
 	my ($algn) = @_;
 	my $flagValue = $algn->flag;
 	#Check read and mate are mapped. If not return.
-	return if((int($flagValue) & 8) != 0);
-	return if((int($flagValue) & 4) != 0);
-	#Check for duplicate status
-	return if((int($flagValue) & 256) != 0);
-	return if((int($flagValue) & 512) != 0);
-	return if((int($flagValue) & 1024) != 0);
-	return if((int($flagValue) & 2048) != 0); #Exclude supplementary alignments
-	#Quick check that were covering the base with this read (skips/indels are ignored)
-
+    return if((int($flagValue) & 2) != 2); # Proper pair
+    return if((int($flagValue) & 3852) != 0);
+    # Ensure that we keep
+    return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
+    return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
     #Calculate other stuff
     my $totalPCovg = 0;
     my $totalNCovg = 0;
@@ -391,14 +391,18 @@ sub _callbackTumFetch{
         $this_read->{xt} = $algn->aux_get('XT');
         $this_read->{ln} = $algn->l_qseq;
         $this_read->{rdPos} = $rdPosIndexOfInterest;
-        $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
+        $this_read->{softclipcount} = 0;
+        if ($algn->cigar_str =~ m/$SOFT_CLIP_CIG/){
+           $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
+        }
         $this_read->{primaryalnscore} = $algn->get_tag_values('AS');
         $this_read->{qual} = $algn->qual;
         $this_read->{start} = $algn->start;
         $this_read->{rdName} = $rdname;
 
-        if(! grep( /^$rdname$/, @$tum_readnames_arr) ){
+        if(!exists $tum_readnames_hash->{$rdname}){
             push(@$tum_readnames_arr, $rdname);
+            $tum_readnames_hash->{$rdname} = 0;
         }
         $tum_readnames->{$rdname}->{$str} = $this_read;
 
@@ -596,13 +600,11 @@ sub _callbackMatchedNormFetch{
 	my ($algn) = @_;
 	my $flagValue = $algn->flag;
 	#Check read and mate are mapped.
-	return if((int($flagValue) & 8) != 0);
-	return if((int($flagValue) & 4) != 0);
-	#Check for duplicate status
-	return if((int($flagValue) & 256) != 0);
-	return if((int($flagValue) & 512) != 0);
-	return if((int($flagValue) & 1024) != 0);
-	return if((int($flagValue) & 2048) != 0); #Exclude supplementary alignments
+    return if((int($flagValue) & 2) != 2); # Proper pair check
+	return if((int($flagValue) & 3852) != 0);
+    # Ensure that we keep
+    return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
+    return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
 	#Quick check that were covering the base with this read (skips/indels are ignored)
 
     #Calculate other stuff
@@ -636,14 +638,18 @@ sub _callbackMatchedNormFetch{
         $this_read->{xt} = $algn->aux_get('XT');
         $this_read->{ln} = $algn->l_qseq;
         $this_read->{rdPos} = $rdPosIndexOfInterest;
-        $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
+        $this_read->{softclipcount} = 0;
+        if ($algn->cigar_str =~ m/$SOFT_CLIP_CIG/){
+           $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
+        }
         $this_read->{primaryalnscore} = $algn->get_tag_values('AS');
         $this_read->{qual} = $algn->qual;
         $this_read->{start} = $algn->start;
         $this_read->{rdName} = $rdname;
 
-        if(! grep( /^$rdname$/, @$norm_readnames_arr ) ){
+        if(!exists $norm_readnames_hash->{$rdname}){
             push(@$norm_readnames_arr, $rdname);
+            $norm_readnames_hash->{$rdname} = 0;
         }
 
         $norm_readnames->{$rdname}->{$str} = $this_read;

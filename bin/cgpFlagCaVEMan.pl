@@ -41,6 +41,8 @@ use Sanger::CGP::CavemanPostProcessor::GenomePostProcessor;
 use Pod::Usage;
 use Config::IniFiles;
 use FindBin qw($Bin);
+use Set::IntervalTree;
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Bio::DB::HTS::Tabix;
 use File::Path qw(make_path);
 use File::Basename;
@@ -131,6 +133,22 @@ if($EVAL_ERROR){
 #					          #
 #####################
 
+sub _tabix_to_interval_tree {
+  my $bed = shift;
+  my %tree;
+  my $z = IO::Uncompress::Gunzip->new($bed, MultiStream => 1) or die "gunzip failed: $GunzipError\n";
+  my $value = 1;
+  while(my $line = <$z>) {
+    next if ($line =~ m/^#/);
+    chomp $line;
+    my ($chr, $s, $e) = split /\t/, $line;
+    $tree{$chr} = Set::IntervalTree->new() unless(exists $tree{$chr});
+    $tree{$chr}->insert(\$value, $s, $e);
+  }
+  close $z;
+  return \%tree;
+}
+
 sub main{
 	my ($opts) = @_;
 	#Get flag list and config for flagger from config.ini file
@@ -143,12 +161,12 @@ sub main{
 		  my $idx = $centBed.".tbi";
 			#Run intersects for each of the potential flags, will skip if there's no file.
 			croak ("Tabix file for centromericRepeatFlag file $idx does not exist.\n") if(! -e $idx);
-			$tabixList->{'centromericRepeatFlag'} = Bio::DB::HTS::Tabix->new(filename => $centBed);
+            $tabixList->{'centromericRepeatFlag'} = _tabix_to_interval_tree($centBed);
 		}
 		if(grep(/simpleRepeatFlag/,@$flagList)){
 			my $idx = $simpBed.".tbi";
 			croak ("Tabix file for simpleRepeatFlag file $idx does not exist.\n") if(! -e $idx);
-			$tabixList->{'simpleRepeatFlag'} = Bio::DB::HTS::Tabix->new(filename => $simpBed);
+            $tabixList->{'simpleRepeatFlag'} = _tabix_to_interval_tree($simpBed);
 		}
 		if(grep(/snpFlag/,@$flagList)){
       my $idx = $snpBed.".tbi";
@@ -158,23 +176,23 @@ sub main{
 		if(grep(/germlineIndelFlag/,@$flagList)){
 			my $idx = $indelBed.".tbi";
 			croak ("Tabix file for germlineIndelFlag file $idx does not exist.\n") if(! -e $idx);
-			$tabixList->{'germlineIndelFlag'} = Bio::DB::HTS::Tabix->new(filename => $indelBed);
+			$tabixList->{'germlineIndelFlag'} = _tabix_to_interval_tree($indelBed);
 		}
 		if(grep(/annotationFlag/,@$flagList)){
 			my $idx = $annoBed.".tbi";
 			croak ("Tabix file for annotationFlag file $idx does not exist.\n") if(! -e $idx);
-			$tabixList->{'annotationFlag'} = Bio::DB::HTS::Tabix->new(filename => $annoBed);
+			$tabixList->{'annotationFlag'} = _tabix_to_interval_tree($annoBed);
 		}
 		if(grep(/codingFlag/,@$flagList)){
 			my $idx = $codingBed.".tbi";
 			croak ("Tabix file for codingFlag file $idx does not exist.\n") if(! -e $idx);
-			$tabixList->{'codingFlag'} = Bio::DB::HTS::Tabix->new(filename => $codingBed);
+			$tabixList->{'codingFlag'} = _tabix_to_interval_tree($codingBed);
 		}
 		if(grep(/hiSeqDepthFlag/,@$flagList)){
 			warn "Performing HSD intersect\n" if($opts->{'loud'});
 			my $idx = $hsdBed.".tbi";
 			croak ("Tabix file for hiSeqDepthFlag file $idx does not exist.\n") if(! -e $idx);
-			$tabixList->{'hiSeqDepthFlag'} = Bio::DB::HTS::Tabix->new(filename => $hsdBed);
+			$tabixList->{'hiSeqDepthFlag'} = _tabix_to_interval_tree($hsdBed);
 		}
 		#Setup postprocessing module
 		my $unmatchedVCFFlag = 0;
@@ -265,7 +283,6 @@ sub main{
 		@lineCache = ();
 	close($VCFOUT);
 
-	close_tabix($tabixList);
 	warn "Done flagging\n" if($opts->{'loud'});
 }
 
@@ -395,6 +412,18 @@ sub buildUnmatchedVCFFileListFromReference{
     close($REF);
   }
 	return $fileList;
+}
+
+sub _interval_hit {
+    my ($tabix, $chr, $from, $to) = @_;
+    return 0 unless (exists $tabix->{$chr});
+    return scalar @{$tabix->{$chr}->fetch($from-1, $to)};
+}
+
+sub _interval_hit_data {
+    my ($tabix, $chr, $from, $to) = @_;
+    return 0 unless (exists $tabix->{$chr});
+    return $tabix->{$chr}->fetch($from-1, $to);
 }
 
 sub isOldVersionOfCaVEMan{
@@ -533,14 +562,15 @@ sub runFlagger{
 		return $flagger->getAvgMapQualResult();
 	}elsif($flagName eq 'germlineIndelFlag'){
 		#GERMLINE INDEL
+        return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
 		#Use intersect to check for indel
-		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-		my $line = undef;
-    $line = $iter->next if(defined($iter)); # undef if not found
-		if(defined($line)){
-			return 0;
-		}
-		return 1;
+	# 	my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
+	# 	my $line = undef;
+    # $line = $iter->next if(defined($iter)); # undef if not found
+	# 	if(defined($line)){
+	# 		return 0;
+	# 	}
+	# 	return 1;
 	}elsif($flagName eq 'tumIndelDepthFlag'){
 		#TUM INDEL DEPTH
 		return $flagger->getTumIndelReadDepthResult();
@@ -549,13 +579,14 @@ sub runFlagger{
 		return $flagger->getDifferingReadPositionResult();
 	}elsif($flagName eq 'simpleRepeatFlag'){
 		#SIMPLE REPEATS
-		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    my $line = undef;
-		$line = $iter->next if(defined($iter)); # undef if not found
-		if(defined($line)){
-			return 0;
-		}
-		return 1;
+        return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
+	# 	my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
+    # my $line = undef;
+	# 	$line = $iter->next if(defined($iter)); # undef if not found
+	# 	if(defined($line)){
+	# 		return 0;
+	# 	}
+	# 	return 1;
 	}elsif($flagName eq 'unmatchedNormalVcfFlag'){
 		if(defined($isInUmVCF)){
 		  if($umformat eq $UNMATCHED_FORMAT_BED){#Check for bed rather than VCF
@@ -601,13 +632,14 @@ sub runFlagger{
 	}elsif($flagName eq 'centromericRepeatFlag'){
 		#CENTROMERIC REPEATS
 		#Use intersect to check for centromeric repeats
-		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    my $line = undef;
-		$line = $iter->next if(defined($iter)); # undef if not found
-		if(defined($line)){
-			return 0;
-		}
-		return 1;
+        return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
+	# 	my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
+    # my $line = undef;
+	# 	$line = $iter->next if(defined($iter)); # undef if not found
+	# 	if(defined($line)){
+	# 		return 0;
+	# 	}
+	# 	return 1;
 	}elsif($flagName eq 'snpFlag'){
 		#SNPS
 		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
@@ -622,30 +654,35 @@ sub runFlagger{
 		return $flagger->getPhasingResult();
 	}elsif($flagName eq 'annotationFlag'){
 		#ANNOTATION
-		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    my $line = undef;
-		$line = $iter->next if(defined($iter)); # undef if not found
-		if(defined($line)){
-			return 1;
-		}
-		return 0;
+        return _interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
+	# 	my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
+    # my $line = undef;
+	# 	$line = $iter->next if(defined($iter)); # undef if not found
+	# 	if(defined($line)){
+	# 		return 1;
+	# 	}
+	# 	return 0;
 	}elsif($flagName eq 'hiSeqDepthFlag'){
 		#HIGH SEQ DEPTH
-		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    my $line = undef;
-		$line = $iter->next if(defined($iter)); # undef if not found
-		if(defined($line)){
-			return 0;
-		}
-		return 1;
+        return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
+	# 	my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
+    # my $line = undef;
+	# 	$line = $iter->next if(defined($iter)); # undef if not found
+	# 	if(defined($line)){
+	# 		return 0;
+	# 	}
+	# 	return 1;
 	}elsif($flagName eq 'codingFlag'){
 		#CODING
-		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    my $line = undef;
-		$line = $iter->next if(defined($iter)); # undef if not found
-		if(defined($line)){
-			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
-		}
+        if(_interval_hit($tabixList->{$flagName},$chr,$pos,$pos)){
+            $$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
+        }
+	# 	my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
+    # my $line = undef;
+	# 	$line = $iter->next if(defined($iter)); # undef if not found
+	# 	if(defined($line)){
+	# 		$$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
+	# 	}
 		return -1;
 	}elsif($flagName eq 'clippingMedianFlag'){
 		$$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getClipMedianResult());

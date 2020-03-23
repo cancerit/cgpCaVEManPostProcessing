@@ -307,14 +307,12 @@ sub process_hashed_reads{
 
     foreach my $readnom( @$readname_arr){
         if(exists $hashed_reads->{$readnom}->{1} && exists $hashed_reads->{$readnom}->{-1}){
-            if($hashed_reads->{$readnom}->{1}->{qbase} ne $hashed_reads->{$readnom}->{-1}->{qbase}){
-                $loc_counts->{1}->{qbase}++;
-                $loc_counts->{1}->{qbase}++;
-            }
+          $loc_counts->{1}->{qbase}++;
+          $loc_counts->{-1}->{qbase}++;
         }elsif(exists $hashed_reads->{$readnom}->{1}){ # + strand populated only
             $loc_counts->{1}->{qbase}++;
 
-        }else{ # + strand populated only
+        }else{ # - strand populated only
             $loc_counts->{-1}->{qbase}++;
         }
     } # End of iteration through each readname for an initial count
@@ -338,7 +336,7 @@ sub process_hashed_reads{
             }
         }elsif(exists $hashed_reads->{$readnom}->{1}){ # + strand populated only
             $read_to_use = $hashed_reads->{$readnom}->{1};
-        }else{ # + strand populated only
+        }else{ # - strand populated only
             $read_to_use = $hashed_reads->{$readnom}->{-1};
         }
 

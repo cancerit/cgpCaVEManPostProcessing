@@ -295,26 +295,14 @@ sub process_hashed_reads{
     #Calculate other stuff
     my $indelRdCount = 0;
 
-    my $loc_counts;
-    $loc_counts->{1}->{A} = 0;
-    $loc_counts->{1}->{C} = 0;
-    $loc_counts->{1}->{G} = 0;
-    $loc_counts->{1}->{T} = 0;
-    $loc_counts->{-1}->{A} = 0;
-    $loc_counts->{-1}->{C} = 0;
-    $loc_counts->{-1}->{G} = 0;
-    $loc_counts->{-1}->{T} = 0;
+    my $loc_counts = {
+         1 => {A => 0, C => 0, G => 0, T => 0},
+        -1 => {A => 0, C => 0, G => 0, T => 0},
+    };
 
     foreach my $readnom( @$readname_arr){
-        if(exists $hashed_reads->{$readnom}->{1} && exists $hashed_reads->{$readnom}->{-1}){
-          $loc_counts->{1}->{qbase}++;
-          $loc_counts->{-1}->{qbase}++;
-        }elsif(exists $hashed_reads->{$readnom}->{1}){ # + strand populated only
-            $loc_counts->{1}->{qbase}++;
-
-        }else{ # - strand populated only
-            $loc_counts->{-1}->{qbase}++;
-        }
+        $loc_counts->{1}->{qbase}++ if(exists $hashed_reads->{$readnom}->{1});
+        $loc_counts->{-1}->{qbase}++ if(exists $hashed_reads->{$readnom}->{-1});
     } # End of iteration through each readname for an initial count
 
     foreach my $readnom(@$readname_arr){

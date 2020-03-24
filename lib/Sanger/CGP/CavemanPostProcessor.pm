@@ -293,32 +293,50 @@ sub _norms{
 sub process_hashed_reads{
   my ($code, $hashed_reads, $readname_arr) = @_;
 
-  my $loc_counts = {
-    1 => {A => 0, C => 0, G => 0, T => 0},
+  my %loc_counts = (
+    1  => {A => 0, C => 0, G => 0, T => 0},
     -1 => {A => 0, C => 0, G => 0, T => 0},
-  };
+  );
 
   foreach my $readnom(@$readname_arr){
+    my $read = $hashed_reads->{$readnom};
     my ($read_to_use, $read_to_use_2);
-    if(exists $hashed_reads->{$readnom}->{1} && exists $hashed_reads->{$readnom}->{-1}) {
-    # detected in both take read with the highest qscore
-      if($hashed_reads->{$readnom}->{1}->{qscore} == $hashed_reads->{$readnom}->{-1}->{qscore}) {
-        $read_to_use = $hashed_reads->{$readnom}->{1};
-        $read_to_use_2 = $hashed_reads->{$readnom}->{-1};
+    if(exists $read->{1} && exists $read->{-1}) {
+      # if change is different have to include both versions
+      if( $read->{1}->{qbase} ne $read->{-1}->{qbase}) {
+        $read_to_use = $read->{1};
+        $read_to_use_2 = $read->{-1};
+        $loc_counts{1}{$read->{1}->{qbase}}++;
+        $loc_counts{-1}{$read->{-1}->{qbase}}++;
       }
-      elsif($hashed_reads->{$readnom}->{1}->{qscore} > $hashed_reads->{$readnom}->{-1}->{qscore}) {
-        $read_to_use = $hashed_reads->{$readnom}->{1};
+      # score is same check loc counts for that allele to determine where to put
+      elsif($read->{1}->{qscore} == $read->{-1}->{qscore}) {
+        if($loc_counts{1}{$read->{1}->{qbase}} <= $loc_counts{-1}{$read->{-1}->{qbase}}) {
+          $read_to_use = $read->{1};
+          $loc_counts{1}{$read->{1}->{qbase}}++;
+        }
+        else {
+          $read_to_use = $read->{-1};
+          $loc_counts{-1}{$read->{-1}->{qbase}}++;
+        }
+      }
+      elsif($read->{1}->{qscore} > $read->{-1}->{qscore}) {
+        $read_to_use = $read->{1};
+        $loc_counts{1}{$read->{1}->{qbase}}++;
       }
       else{
-        $read_to_use = $hashed_reads->{$readnom}->{-1};
+        $read_to_use = $read->{-1};
+        $loc_counts{-1}{$read->{-1}->{qbase}}++;
       }
     }
     else {
-      if(exists $hashed_reads->{$readnom}->{1}) {
-        $read_to_use = $hashed_reads->{$readnom}->{1};
+      if(exists $read->{1}) {
+        $read_to_use = $read->{1};
+        $loc_counts{1}{$read->{1}->{qbase}}++;
       }
       else {
-        $read_to_use = $hashed_reads->{$readnom}->{-1};
+        $read_to_use = $read->{-1};
+        $loc_counts{-1}{$read->{-1}->{qbase}}++;
       }
     }
     &$code($read_to_use);

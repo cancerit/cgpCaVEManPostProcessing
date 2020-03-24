@@ -292,8 +292,6 @@ sub _norms{
 
 sub process_hashed_reads{
   my ($code, $hashed_reads, $readname_arr) = @_;
-  #Calculate other stuff
-  my $indelRdCount = 0;
 
   my $loc_counts = {
     1 => {A => 0, C => 0, G => 0, T => 0},

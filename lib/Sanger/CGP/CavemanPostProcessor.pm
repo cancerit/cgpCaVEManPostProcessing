@@ -103,16 +103,28 @@ sub runProcess{
   $self->_currentPos($start);
   $self->_refBase($refBase);
   $self->_mutBase($mutBase);
-    $tum_readnames = undef;
-    $tum_readnames_arr = undef;
-    $tum_readnames_hash = undef;
-  $self->{'tb'}->fetch($chr.':'.$start.'-'.$stop,\&_callbackTumFetch);
-    process_hashed_reads(\&populate_muts, $tum_readnames, $tum_readnames_arr);
-    $norm_readnames = undef;
-    $norm_readnames_arr = undef;
-    $norm_readnames_hash = undef;
-  $self->{'nb'}->fetch($chr.':'.$start.'-'.$stop,\&_callbackMatchedNormFetch);
-    process_hashed_reads(\&populate_norms, $norm_readnames, $norm_readnames_arr);
+  $tum_readnames = undef;
+  $tum_readnames_arr = undef;
+  $tum_readnames_hash = undef;
+  my $hts = $self->{'tb'};
+  $hts->hts_index->fetch(
+    $hts->hts_file,
+    $hts->header->parse_region($chr.':'.$start.'-'.$stop),
+    \&_callbackTumFetch,
+    $hts
+  );
+  process_hashed_reads(\&populate_muts, $tum_readnames, $tum_readnames_arr);
+  $norm_readnames = undef;
+  $norm_readnames_arr = undef;
+  $norm_readnames_hash = undef;
+  $hts = $self->{'nb'};
+  $hts->hts_index->fetch(
+    $hts->hts_file,
+    $hts->header->parse_region($chr.':'.$start.'-'.$stop),
+    \&_callbackMatchedNormFetch,
+    $hts
+  );
+  process_hashed_reads(\&populate_norms, $norm_readnames, $norm_readnames_arr);
 
   return 1;
 }
@@ -348,61 +360,56 @@ sub process_hashed_reads{
 }
 
 sub _callbackTumFetch{
-  my ($algn) = @_;
-  my $flagValue = $algn->flag;
+  my ($a, $hts) = @_;
+  my $flagValue = $a->flag;
   #Check read and mate are mapped. If not return.
-    return if((int($flagValue) & 2) != 2); # Proper pair
-    return if((int($flagValue) & 3852) != 0);
-    # Ensure that we keep
-    return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
-    return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
-    #Calculate other stuff
-    my $totalPCovg = 0;
-    my $totalNCovg = 0;
-    my $indelRdCount = 0;
+  return if((int($flagValue) & 2) != 2); # Proper pair
+  return if((int($flagValue) & 3852) != 0);
+  # Ensure that we keep
+  return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
+  return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
 
-  if(_isCurrentPosCoveredFromAlignment($algn) == 1){
-        return unless ($algn->proper_pair == 1);
-        # Ensure that we keep
-        return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
-        return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
-        my $this_read;
-        #Get the correct read position.
-    my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($algn);
-        my @splt = split(//,$algn->qseq);
+  my $algn = Bio::DB::HTS::AlignWrapper->new($a,$hts);
+  my $pos = $a->pos;
+  my $cigar_array = $algn->cigar_array; # expensive and reused so save to variable
+  #Quick check that were covering the base with this read (skips/indels are ignored)
+  if(_isCurrentPosCoveredFromAlignment($pos, $cigar_array) == 1){
+    my $this_read;
+    #Get the correct read position.
+    my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
 
-        my $rdname = $algn->qname;
-
-        #Read strand
+    my $rdname = $a->qname;
+    #Read strand, faster than using $a->strand
     my $str = 1;
     if($algn->reversed){
       $str = -1;
     }
+    my $cig_str = $algn->cigar_str; # expensive and reused so save to variable
 
-        #Read base
-        $this_read->{str} = $str;
-        $this_read->{qbase} = $splt[$rdPosIndexOfInterest-1];
-        $this_read->{matchesindel} = ($algn->cigar_str =~ m/[ID]/);
-        $this_read->{qscore} = $algn->qscore->[$rdPosIndexOfInterest-1];
-        $this_read->{xt} = $algn->aux_get('XT');
-        $this_read->{ln} = $algn->l_qseq;
-        $this_read->{rdPos} = $rdPosIndexOfInterest;
-        $this_read->{softclipcount} = 0;
-        if ($algn->cigar_str =~ m/$SOFT_CLIP_CIG/){
-           $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
-        }
-        $this_read->{primaryalnscore} = $algn->get_tag_values('AS');
-        $this_read->{qual} = $algn->qual;
-        $this_read->{start} = $algn->start;
-        $this_read->{rdName} = $rdname;
+    #Read base
+    $this_read->{str} = $str;
+    $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, 1;
+    $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);
+    $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
+    $this_read->{xt} = $a->aux_get('XT');
+    $this_read->{ln} = $a->l_qseq;
+    $this_read->{rdPos} = $rdPosIndexOfInterest;
+    $this_read->{softclipcount} = 0;
+    if ($cig_str =~ m/$SOFT_CLIP_CIG/){
+      $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
+    }
+    $this_read->{primaryalnscore} = $a->aux_get('AS');# $algn->get_tag_values('AS');
+    $this_read->{qual} = $a->qual;
+    $this_read->{start} = $algn->start;
+    $this_read->{rdName} = $rdname;
 
-        if(!exists $tum_readnames_hash->{$rdname}){
-            push(@$tum_readnames_arr, $rdname);
-            $tum_readnames_hash->{$rdname} = 0;
-        }
-        $tum_readnames->{$rdname}->{$str} = $this_read;
+    if(!exists $tum_readnames_hash->{$rdname}){
+      push(@$tum_readnames_arr, $rdname);
+      $tum_readnames_hash->{$rdname} = 0;
+    }
+    $tum_readnames->{$rdname}->{$str} = $this_read;
 
-    } # End of if this is a covered position
+  } # End of if this is a covered position
 
   return 1;
 }
@@ -483,35 +490,34 @@ sub _get_soft_clip_count_from_cigar{
 }
 
 sub _getReadPositionFromAlignment{
-  my ($algn) = @_;
+  my ($currentRefPos, $cigar_array) = @_; # 0-based pos ($a->pos)
   my $rdPosIndexOfInterest = 0;
-      my $currentRefPos = $algn->start -1;
-    foreach my $cigSect(@{$algn->cigar_array}){
-      if($cigSect->[0] eq $MATCH_CIG){
-        if($currentRefPos <= $currentPos && ($currentRefPos+$cigSect->[1]) >= $currentPos){
-          for(my $i=0;$i<$cigSect->[1];$i++){
-            $rdPosIndexOfInterest++;
-            $currentRefPos++;
-            if($currentPos == $currentRefPos){
-              return ($rdPosIndexOfInterest,$currentRefPos);
-            }
+  foreach my $cigSect(@{$cigar_array}){
+    if($cigSect->[0] eq $MATCH_CIG){
+      my $op_len = $cigSect->[1];
+      if($currentRefPos <= $currentPos && ($currentRefPos+$op_len) >= $currentPos){
+        for(0..($op_len - 1)) {
+          $rdPosIndexOfInterest++;
+          $currentRefPos++;
+          if($currentPos == $currentRefPos){
+            return ($rdPosIndexOfInterest,$currentRefPos);
           }
-        }else{
-          $rdPosIndexOfInterest += $cigSect->[1];
-          $currentRefPos += $cigSect->[1];
         }
-      }elsif($cigSect->[0] eq $DEL_CIG || $cigSect->[0] eq $SKIP_CIG){
-        $currentRefPos += $cigSect->[1];
-      }elsif($cigSect->[0] eq $INS_CIG || $cigSect->[0] eq $SOFT_CLIP_CIG){
-        $rdPosIndexOfInterest += $cigSect->[1];
+      }else{
+        $rdPosIndexOfInterest += $op_len;
+        $currentRefPos += $op_len;
       }
+    }elsif($cigSect->[0] eq $DEL_CIG || $cigSect->[0] eq $SKIP_CIG){
+      $currentRefPos += $cigSect->[1];
+    }elsif($cigSect->[0] eq $INS_CIG || $cigSect->[0] eq $SOFT_CLIP_CIG){
+      $rdPosIndexOfInterest += $cigSect->[1];
     }
+  }
 }
 
 sub _isCurrentPosCoveredFromAlignment{
-  my ($aln) = @_;
-  my $pos = $aln->start - 1;
-  foreach my $cigSect(@{$aln->cigar_array}){
+  my ($pos, $cigar_array) = @_; # 0-based pos
+  foreach my $cigSect(@{$cigar_array}){
 
     if($cigSect->[0] eq $MATCH_CIG){
       if($pos <= $currentPos && ($pos+$cigSect->[1]) >= $currentPos){
@@ -593,62 +599,55 @@ sub populate_norms{
 }
 
 sub _callbackMatchedNormFetch{
-  my ($algn) = @_;
-  my $flagValue = $algn->flag;
+  my ($a, $hts) = @_;
+  my $flagValue = $a->flag;
   #Check read and mate are mapped.
-    return if((int($flagValue) & 2) != 2); # Proper pair check
+  return if((int($flagValue) & 2) != 2); # Proper pair check
   return if((int($flagValue) & 3852) != 0);
-    # Ensure that we keep
-    return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
-    return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
+  # Ensure that we keep
+  return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
+  return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
+
+  my $algn = Bio::DB::HTS::AlignWrapper->new($a,$hts);
+  my $pos = $a->pos;
+  my $cigar_array = $algn->cigar_array; # expensive and reused so save to variable
   #Quick check that were covering the base with this read (skips/indels are ignored)
-
-    #Calculate other stuff
-    my $totalPCovg = 0;
-    my $totalNCovg = 0;
-    my $indelRdCount = 0;
-
-    if(_isCurrentPosCoveredFromAlignment($algn) == 1){
-        return unless ($algn->proper_pair == 1);
-        # Ensure that we keep
-        return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
-        return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
-        my $this_read;
+  if(_isCurrentPosCoveredFromAlignment($pos, $cigar_array) == 1){
+    my $this_read;
     #Get the correct read position.
-    my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($algn,$currentPos);
-    my @splt = split(//,$algn->qseq);
+    my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
 
-        my $rdname = $algn->qname;
-
-        #Read strand
+    my $rdname = $a->qname;
+    #Read strand, faster than using $a->strand
     my $str = 1;
     if($algn->reversed){
       $str = -1;
     }
+    my $cig_str = $algn->cigar_str; # expensive and reused so save to variable
 
-        #Read population
-        $this_read->{str} = $str;
-        $this_read->{qbase} = $splt[$rdPosIndexOfInterest-1];
-        $this_read->{matchesindel} = ($algn->cigar_str =~ m/[ID]/);
-        $this_read->{qscore} = $algn->qscore->[$rdPosIndexOfInterest-1];
-        $this_read->{xt} = $algn->aux_get('XT');
-        $this_read->{ln} = $algn->l_qseq;
-        $this_read->{rdPos} = $rdPosIndexOfInterest;
-        $this_read->{softclipcount} = 0;
-        if ($algn->cigar_str =~ m/$SOFT_CLIP_CIG/){
-           $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
-        }
-        $this_read->{primaryalnscore} = $algn->get_tag_values('AS');
-        $this_read->{qual} = $algn->qual;
-        $this_read->{start} = $algn->start;
-        $this_read->{rdName} = $rdname;
+    #Read population
+    $this_read->{str} = $str;
+    $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, 1;
+    $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);
+    $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
+    $this_read->{xt} = $a->aux_get('XT');
+    $this_read->{ln} = $a->l_qseq;
+    $this_read->{rdPos} = $rdPosIndexOfInterest;
+    $this_read->{softclipcount} = 0;
+    if ($cig_str =~ m/$SOFT_CLIP_CIG/){
+      $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($cigar_array);
+    }
+    $this_read->{primaryalnscore} = $a->aux_get('AS');# $algn->get_tag_values('AS');
+    $this_read->{qual} = $a->qual;
+    $this_read->{start} = $algn->start;
+    $this_read->{rdName} = $rdname;
 
-        if(!exists $norm_readnames_hash->{$rdname}){
-            push(@$norm_readnames_arr, $rdname);
-            $norm_readnames_hash->{$rdname} = 0;
-        }
+    if(!exists $norm_readnames_hash->{$rdname}){
+      push(@$norm_readnames_arr, $rdname);
+      $norm_readnames_hash->{$rdname} = 0;
+    }
 
-        $norm_readnames->{$rdname}->{$str} = $this_read;
+    $norm_readnames->{$rdname}->{$str} = $this_read;
 
   } # End of if this is a position covered by this alignment
   return 1;

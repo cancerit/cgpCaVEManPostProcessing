@@ -411,11 +411,8 @@ sub _evaluatePentamerCheck{
 	my ($self) = @_;
 	my $minus = 0;
 	my $plus = 0;
-	my $lastThird = 0;
 	#Check strands first.
 	foreach my $str(@{$self->_muts->{'tstr'}}){
-	#for(my $i=0;$i<scalar(@{$self->_muts->{'tstr'}});$i++){
-		#my $str = $self->_muts->{'tstr'}->[$i];
 		if($str == 1){
 			$plus++;
 		}else{
@@ -427,13 +424,11 @@ sub _evaluatePentamerCheck{
 	#If all or (all - 1) mut allele reads are on one strand continue.
 	my $sz = scalar(@{$self->_muts->{'tstr'}});
 	if(!(($minus >= ($sz -1) && $plus <= 1) || ($plus >= ($sz -1) && $minus <= 1)) ){
-		#print "Passes on strand rule.\n";
 		return 1;
 	}
 
 	my $avgBQOverall = 0;
 	my $cntAvg = 0;
-	my @tqs = @{$self->_muts->{'tqs'}};
 	my @trp = @{$self->_muts->{'trp'}};
 	my @trl = @{$self->_muts->{'trl'}};
 	my @tstr = @{$self->_muts->{'tstr'}};
@@ -443,34 +438,37 @@ sub _evaluatePentamerCheck{
 	#Read names are handily stored in $self->_muts->{'trn'} so we can look at each in turn.
 	my $avgBQ = 0;
 	my $analysed = 0;
+
+	my %want_rds = map { $_ => 1 } @{$self->_muts->{'trn'}};
+	my %aligns;
+	#Fetch the reads we want
+	my $t_bam = $self->{'tb'};
+	$t_bam->hts_index->fetch(
+		$t_bam->hts_file,
+		$t_bam->header->parse_region($self->_chromosome.":".$self->_currentPos."-".$self->_currentPos),
+		sub{
+			my $a = shift;
+			if(exists $want_rds{$a->qname}) {
+				$aligns{$a->qname} = $a
+			}
+		}
+	);
+
 	#Iterate through each read name
 	for(my $i=0;$i<$sz;$i++){
 		my $pos = $self->_muts->{'trp'}->[$i];
-		my $length = $self->_muts->{'trl'}->[$i];
 		my $rdName = $self->_muts->{'trn'}->[$i];
-		my $start = $self->_muts->{'trdst'}->[$i];
 		#If position is not in last 3rd we can return now.
-		#print "$rdName\n";
-		if($pos < ($length / 2)){
-			#print "Passed on last third of read $rdName $self->_muts->{'tstr'}->[$i]\n";
+		if($pos < ($self->_muts->{'trl'}->[$i] / 2)){ # trl is read length
 			return 1;
 		}
-		my $rd;
-		#Fetch the read we want
-		$self->{'tb'}->fetch($self->_chromosome.":".$self->_currentPos."-".$self->_currentPos,
-						sub{
-							my $a = shift;
-							if($a->qname eq $rdName){# && $start == $a->start){
-								$rd = $a;
-								return;
-							}
-						});
+
+		my $rd = $aligns{$rdName};
+
 		my $isReversed = $rd->reversed;
 		my $readPosOfMut = ($self->_currentPos - ($rd->pos + 1)) + 1;
 		my $seq = $rd->qseq;
 		my $quals = $rd->qscore();
-		my $posMatch = 0;
-		my $lastPos = 0;
 		my @matches = ();
 		if($isReversed == 1){
 			$seq =~ tr/acgtnACGTN/tgcanTGCAN/;
@@ -479,20 +477,15 @@ sub _evaluatePentamerCheck{
 			@$quals = reverse(@$quals);
 			$readPosOfMut = (length($seq) - $readPosOfMut) + 1;
 		}
-		#croak("Error RDPosFirst $pos != RDPosNew $readPosOfMut : \t $rdName\n") if($pos != $readPosOfMut);
-		#print "mut rd pos $readPosOfMut\n";
 		#Check for motif match in second half of the read (rev comped as required).
 		#No motif, so skip
 		next if($seq !~ m/GGC[AT]G/);
-			#print "No motif matches\n";
 		while($seq =~ m/GGC[AT]G/g){
-			#$posMatch = length($`);
 			push(@matches,length($`).",".length($&)."");
 		}
-		#warn $rdName,"\n";
-		#print "CURR_POS: ",$self->_currentPos,"\n";
-		#print "MUT_RD_POS: ",$readPosOfMut,"\n";
-		##print Dumper (@matches);
+
+		my $lastPos = 0;
+
 		my $halfLength = (length($seq)/2);
 		foreach my $match(@matches){
 			my @split = split(/,/,$match);
@@ -508,10 +501,6 @@ sub _evaluatePentamerCheck{
 		next if($lastPos <= 0);
 		#Finally we check the average base quality after the motif.
 		my $avg = $self->_calcualteMeanBaseQualAfterMotif($lastPos+1,$quals);
-		foreach my $q(@$quals){
-			#print "",$q,",";
-		}
-		#print "\n";
 		$avgBQOverall += $avg;
 		$cntAvg++;
 	}#End of iteration through each read name

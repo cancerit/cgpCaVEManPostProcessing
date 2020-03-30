@@ -1,5 +1,12 @@
 # CHANGES
 
+## 1.9.0
+
+* Fix edgecase in overlapping read processing
+  * Resulted in very small difference in passed variants at WGS level (+1)
+  * See #36
+* Significant performance improvements, see #37
+
 ## 1.8.9
 
 * Speedups in callback methods
@@ -13,7 +20,7 @@
 
 * Code modified for overlapping reads. Where reads overlap but carry the same base on each,
 * they will be assigned alternately to each strand so as to ensure an even spread of strandedness.
-  
+
 ### Behaviour change
 
 **Where the proper pair filter flag is used, this code now checks that the paired-end orientation is also used.**

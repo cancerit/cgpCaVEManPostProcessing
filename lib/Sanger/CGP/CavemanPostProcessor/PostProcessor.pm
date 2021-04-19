@@ -71,6 +71,7 @@ sub _init{
 	$self->readPosBeginningOfReadIgnoreProportion($inputs->{'readPosBeginningOfReadIgnoreProportion'});
 	$self->readPosTwoThirdsOfReadExtendProportion($inputs->{'readPosTwoThirdsOfReadExtendProportion'});
 	$self->minRdPosDepth($inputs->{'minRdPosDepth'});
+	$self->matchedNormalMaxMutProportion($inputs->{'matchedNormalMaxMutProportion'});
 
 	return $self;
 }

@@ -1,25 +1,9 @@
+env:
+  - CC=gcc
+
 notifications:
   slack: wtsi-cgpit:ptUMR1tkNyZJYd9TpGoss8WR
   email: false
-
-matrix:
-  include:
-    # works on Precise and Trusty
-    - os: linux
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-5
-      env:
-         - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
-
-before_install:
-  - eval "${MATRIX_EVAL}"
-
-env:
-  - CC=gcc
 
 addons:
   apt:
@@ -58,5 +42,5 @@ script:
   - cd ../
   - ./setup.sh $HOME/install
 
-dist: trusty
+dist: xenial
 sudo: false

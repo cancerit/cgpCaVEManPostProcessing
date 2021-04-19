@@ -27,6 +27,10 @@ perl:
   - "5.22"
 
 script:
+  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+  - sudo apt-get update -qq
+  - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-4.9; fi
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9" CC="gcc-4.9"; fi
   - export PATH=$HOME/install/bin:$HOME/install/biobambam2/bin:$PATH
   - git clone --depth 1 --single-branch --branch develop https://github.com/cancerit/cgpBigWig.git
   - cd cgpBigWig
@@ -42,5 +46,5 @@ script:
   - cd ../
   - ./setup.sh $HOME/install
 
-dist: xenial
+dist: trusty
 sudo: false

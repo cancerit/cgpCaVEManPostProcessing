@@ -54,7 +54,6 @@ sub _init{
 	my ($self,$inputs) = @_;
 	$self->matchedNormalAlleleHiCvgCutoff($inputs->{'matchedNormalAlleleHiCvgCutoff'});
 	$self->maxMatchedNormalAlleleHiCvgProportion($inputs->{'maxMatchedNormalAlleleHiCvgProportion'});
-	$self->matchedNormalMaxMutProportion($inputs->{'matchedNormalMaxMutProportion'});
 	$self->minSingleEndCoverage($inputs->{'minSingleEndCoverage'});
 	$self->SUPER::_init($inputs);
 	return $self;

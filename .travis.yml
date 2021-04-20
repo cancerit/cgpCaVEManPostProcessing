@@ -12,6 +12,7 @@ services:
 script:
   - set -e
   - echo 'Build and check docker image'
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
   - docker build -t cavemanpp .
   - docker images | grep -c cavemanpp
   - echo 'Verify program(s) from each inherited base image - dockstore-cgpbigwig'

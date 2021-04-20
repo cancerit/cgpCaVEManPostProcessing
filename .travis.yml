@@ -22,7 +22,7 @@ script:
   - docker run -t --rm cavemanpp samtools --version
   - docker run -t --rm cavemanpp bash -c 'bwa 2>&1 | grep Version'
   - echo 'Verify program(s) from this repo'
-  - docker run -t --rm cavemanwrap cgpFlagCaVEMan.pl --version
+  - docker run -t --rm cavemanpp cgpFlagCaVEMan.pl --version
 
 # matrix:
 #   include:

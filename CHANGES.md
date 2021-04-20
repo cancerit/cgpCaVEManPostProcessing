@@ -1,5 +1,9 @@
 # CHANGES
 
+## 1.9.2
+
+* Correct bug in exome matched normal proportion settings
+
 ## 1.9.0
 
 * Fix edgecase in overlapping read processing

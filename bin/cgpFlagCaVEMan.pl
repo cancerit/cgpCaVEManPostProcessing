@@ -591,41 +591,41 @@ sub runFlagger{
 		if(defined($isInUmVCF)){
 		  if($umformat eq $UNMATCHED_FORMAT_BED){#Check for bed rather than VCF
 
-        my ($chr,$start,$stop,$score,$mutlist) = split(/\t/,$isInUmVCF);
-        return 0 if($mutlist =~ m/$mut/i);
+            my ($chr,$start,$stop,$score,$mutlist) = split(/\t/,$isInUmVCF);
+            return 0 if($mutlist =~ m/$mut/i);
 
-      #End of if this is BED unmatched
+            #End of if this is BED unmatched
 		  }elsif($umformat eq $UNMATCHED_FORMAT_VCF){
 
-        my ($ch,$po,$ident,$refAll,$altAll,$quality,$filts,$info,$format,@samples) = split(/\t/,$isInUmVCF);
-        #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	PD4106b	PD4107b	PD4108b	PD4109b	PD4110b	PD4111b	PD4112b	PD4113b	PD4114b	PD4115b
-        my ($geno,@formats) = split(':',$format);
-        my $sampleHitCount = 0;
-        my $totalSampleCnt = 0;
-        foreach my $sampData(@samples){
-          $totalSampleCnt++;
-          next if($sampData eq q{0:.:.:.:.} || $sampData eq q{-} || $sampData eq q{.});
-          #GT:GF:CF:TF:AF	0|0:41:0:0:0
-          my ($gentype,@data) = split(':',$sampData);
-          my $totalCvg = 0;
-          my $mutAlleleCvg = 0;
-          my $proportion = 0;
-          for (my $i=0;$i<scalar(@data);$i++){
-            next unless ($formats[$i] =~ m/^[ACGT]{1}[A-Z]$/);
-            $totalCvg += $data[$i];
-            if(substr($formats[$i],0,1) eq $mut){
-              $mutAlleleCvg = $data[$i];
+            my ($ch,$po,$ident,$refAll,$altAll,$quality,$filts,$info,$format,@samples) = split(/\t/,$isInUmVCF);
+            #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	PD4106b	PD4107b	PD4108b	PD4109b	PD4110b	PD4111b	PD4112b	PD4113b	PD4114b	PD4115b
+            my ($geno,@formats) = split(':',$format);
+            my $sampleHitCount = 0;
+            my $totalSampleCnt = 0;
+            foreach my $sampData(@samples){
+                $totalSampleCnt++;
+                next if($sampData eq q{0:.:.:.:.} || $sampData eq q{-} || $sampData eq q{.});
+                #GT:GF:CF:TF:AF	0|0:41:0:0:0
+                my ($gentype,@data) = split(':',$sampData);
+                my $totalCvg = 0;
+                my $mutAlleleCvg = 0;
+                my $proportion = 0;
+                for (my $i=0;$i<scalar(@data);$i++){
+                    next unless ($formats[$i] =~ m/^[ACGT]{1}[A-Z]$/);
+                    $totalCvg += $data[$i];
+                    if(substr($formats[$i],0,1) eq $mut){
+                    $mutAlleleCvg = $data[$i];
+                    }
+                }
+                if($mutAlleleCvg >= $cfg->{"vcfUnmatchedMinMutAlleleCvg"}){
+                    $sampleHitCount++;
+                }
             }
-          }
-          if($mutAlleleCvg >= $cfg->{"vcfUnmatchedMinMutAlleleCvg"}){
-            $sampleHitCount++;
-          }
-          if((($sampleHitCount/scalar($totalSampleCnt))*100) >= $cfg->{"vcfUnmatchedMinSamplePct"}){
-            return 0;
-          }
-        }
-        return 1 if($totalSampleCnt == 0);
-			}#End of if this is VCF
+            return 1 if($totalSampleCnt == 0);
+            if((($sampleHitCount/$totalSampleCnt)*100) >= $cfg->{"vcfUnmatchedMinSamplePct"}){
+                return 0;
+            }
+          }#End of if this is VCF
 
 		}
 		return 1;

@@ -1,5 +1,9 @@
 # CHANGES
 
+## 1.9.3
+
+* Fix bug in caluclating unmatched normal proportion when using VCF not BED.
+
 ## 1.9.2
 
 * Correct bug in exome matched normal proportion settings

@@ -206,10 +206,27 @@ subtest 'depthFlag' => sub{
 	#Fail
 	$processor->_muts->{'tqs'} = [9,8,10,21,21,21,21,21,21];
 	ok($processor->depthFlag == 1,"Fail depth check");
-	#Change minDepthQual
+	#Change depthCutoffProportion
 
-	$processor->_prms->{'minDepthQual'} = 8;
+	$processor->_prms->{'depthCutoffProportion'} = (1/2);
 	ok($processor->depthFlag == 0,"Pass depth check, changed min depth quality.");
+
+  my $chr = 1;
+  my $pos = 10011533;
+  my $ref = "G";
+  my $mut = "T";
+  eval{$processor->set_position($chr,$pos,$ref,$mut);};
+  ok($@ =~ m//,"No error from eval.");
+
+  $processor->_muts->{'tqs'} = [9,8,25,25,25,25,25,25,25];
+  ok($processor->depthFlag == 0,"Pass depth check");
+  #Fail
+  $processor->_muts->{'tqs'} = [9,8,10,21,21,21,21,21,21];
+  ok($processor->depthFlag == 1,"Fail depth check");
+  #Change depthCutoffProportion
+
+  $processor->_prms->{'depthCutoffProportion'} = 1/2;
+  ok($processor->depthFlag == 0,"Pass depth check, changed min depth quality.");
   done_testing();
 };
 

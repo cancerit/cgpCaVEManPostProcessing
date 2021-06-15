@@ -50,6 +50,7 @@ const my $MIN_AVG_PHASING_BASE_QUAL => 21;
 const my $MIN_DEPTH_QUAL => 25;
 const my $MIN_NORM_MUT_ALLELE_BASE_QUAL => 15;
 const my $MIN_RD_POS_DEPTH => 8;
+const my $DEPTH_CUTOFF_PROP => (1/3);
 
 sub _init{
 	my ($self,$inputs) = @_;
@@ -59,6 +60,7 @@ sub _init{
 	}
 
 	$self->minDepthQual($inputs->{'minDepthQual'});
+    $self->depthCutoffProportion($inputs->{'depthCutoffProportion'});
 	$self->minNormalMutAlleleQual($inputs->{'minNormMutAllelequal'});
 	$self->percentageSamePos($inputs->{'samePosMaxPercent'});
 	$self->maxTumIndelProportion($inputs->{'maxTumIndelProportion'});
@@ -219,6 +221,18 @@ sub minPassAvgBaseQualPhasing{
 		$self->{'phaseQual'} = $MIN_AVG_PHASING_BASE_QUAL;
 	}
 	return $self->{'phaseQual'};
+}
+
+sub depthCutoffProportion{
+	my ($self,$q) = @_;
+	if(defined($q)){
+		$self->{'d'} = $q;
+	}else{
+		if(!defined($self->{'d'})){
+			$self->{'d'} = $DEPTH_CUTOFF_PROP;
+		}
+	}
+	return $self->{'d'};
 }
 
 sub minDepthQual{
@@ -553,7 +567,7 @@ sub _checkDepth{
 		if($q >= $self->minDepthQual){
 			$overCutoff++;
 		}
-		if($overCutoff >= ($depth / 3)){
+		if($overCutoff >= ($depth * $self->depthCutoffProportion)){
 			return 1;
 		}
 	}
@@ -685,6 +699,7 @@ CavemanPostProcessor - Perl module for post processing CaVEMan data.
 
   #Optional...
   											'minDepthQual' => 25,
+                                            'depthCutoffProportion' => (1/3),
   											'minNormMutAllelequal' => 20,
   											'maxNormalMutAlleleCount' => 1,
   											'minAnalysedQual' => 10,
@@ -768,7 +783,7 @@ Returns the set value of quality. Returns the default 25 if previously unset.
 
 Returns 1 (pass)
 IF
-	at least 1/3 of mutant alleles are of base quality >= minDepthQual
+	at least depthCutoffProportion of mutant alleles are of base quality >= minDepthQual
 OTHERWISE return 0
 
 =item * $object->getReadPositionResult()

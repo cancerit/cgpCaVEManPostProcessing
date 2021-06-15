@@ -427,7 +427,7 @@ sub depthFlag{
 		if($q >= get_param('minDepthQual')){
 			$overCutoff++;
 		}
-		if($overCutoff >= ($depth / 3)){
+		if($overCutoff >= ($depth / get_param('depthCutoffProportion'))){
 			return 0; #Pass
 		}
 	}

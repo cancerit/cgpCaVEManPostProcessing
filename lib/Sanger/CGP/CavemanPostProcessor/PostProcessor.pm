@@ -583,7 +583,7 @@ sub getCavemanMatchedNormalResult{
 }
 
 sub _checkCavemanMatchedNormal{
-    my ($self, $normal_col) = @_;
+    my ($self, $normal_col, $tumour_col) = @_;
     warn Dumper($normal_col, $tumour_col);
 }
 

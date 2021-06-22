@@ -574,6 +574,19 @@ sub _checkDepth{
 	return 0;
 }
 
+sub getCavemanMatchedNormalResult{
+    my ($self, $normal_col, $tumour_col) = @_;
+    if(!defined($self->{'cmnp'})){
+		$self->{'cmnp'} = $self->_checkCavemanMatchedNormal($normal_col);
+	}
+	return $self->{'cmnp'};
+}
+
+sub _checkCavemanMatchedNormal{
+    my ($self, $normal_col) = @_;
+    warn Dumper($normal_col, $tumour_col);
+}
+
 sub getReadPositionResult{
 	my ($self) = @_;
 	if(!defined($self->{'pos'})){

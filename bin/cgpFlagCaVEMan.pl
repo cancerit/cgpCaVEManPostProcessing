@@ -92,6 +92,9 @@ const my $CONFIG_DEFAULT => 'DEFAULT';
 const my $UNMATCHED_FORMAT_VCF => 'VCF';
 const my $UNMATCHED_FORMAT_BED=> 'BED';
 
+const my $VCF_COLUMN_NORMAL => 'NORMAL';
+const my $VCF_COLUMN_TUMOUR => 'TUMOUR';
+
 my $index = undef;
 my $flagopts = undef;
 my $intersectFlagStore;
@@ -633,63 +636,38 @@ sub runFlagger{
 		#CENTROMERIC REPEATS
 		#Use intersect to check for centromeric repeats
         return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
-	# 	my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    # my $line = undef;
-	# 	$line = $iter->next if(defined($iter)); # undef if not found
-	# 	if(defined($line)){
-	# 		return 0;
-	# 	}
-	# 	return 1;
 	}elsif($flagName eq 'snpFlag'){
 		#SNPS
 		my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    my $line = undef;
+        my $line = undef;
 		$line = $iter->next if(defined($iter)); # undef if not found
 		if(defined($line)){
 			$$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
 		}
 		return -1;
+    }elsif($flagName eq 'cavemanMatchNormalProportionFlag'){
+        return $flagger->getCavemanMatchedNormalResult($vcf->get_column($x,$VCF_COLUMN_NORMAL,$vcf->get_column($x,$VCF_COLUMN_TUMOUR);
 	}elsif($flagName eq 'phasingFlag'){
 		#PHASING
 		return $flagger->getPhasingResult();
 	}elsif($flagName eq 'annotationFlag'){
 		#ANNOTATION
         return _interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
-	# 	my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    # my $line = undef;
-	# 	$line = $iter->next if(defined($iter)); # undef if not found
-	# 	if(defined($line)){
-	# 		return 1;
-	# 	}
-	# 	return 0;
 	}elsif($flagName eq 'hiSeqDepthFlag'){
 		#HIGH SEQ DEPTH
         return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
-	# 	my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    # my $line = undef;
-	# 	$line = $iter->next if(defined($iter)); # undef if not found
-	# 	if(defined($line)){
-	# 		return 0;
-	# 	}
-	# 	return 1;
 	}elsif($flagName eq 'codingFlag'){
 		#CODING
         if(_interval_hit($tabixList->{$flagName},$chr,$pos,$pos)){
             $$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
         }
-	# 	my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    # my $line = undef;
-	# 	$line = $iter->next if(defined($iter)); # undef if not found
-	# 	if(defined($line)){
-	# 		$$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
-	# 	}
 		return -1;
 	}elsif($flagName eq 'clippingMedianFlag'){
 		$$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getClipMedianResult());
 	}elsif($flagName eq 'alignmentScoreReadLengthAdjustedFlag'){
-    $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAlignmentScoreMedianReadAdjusted());
+        $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAlignmentScoreMedianReadAdjusted());
 	}elsif($flagName eq 'alnScoreMedianFlag'){
-    $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAlignmentScoreMedian());
+        $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAlignmentScoreMedian());
 	}elsif($flagName eq 'lowMutBurdenFlag'){
 		#Low mut burden
 		croak('LOW_MUT_BURDEN');

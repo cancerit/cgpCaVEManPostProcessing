@@ -128,7 +128,7 @@ subtest 'Initialise module (ALL params)' => sub {
 																			'minRdPosDepth' => 10]);
 
 	ok($processor->minDepthQual == 2,"Min depth qual");
-    ok($processor->depthCutoffProportion == (1/2),"depthCutoffProportion");
+    is($processor->depthCutoffProportion, (1/2),"depthCutoffProportion");
 	ok($processor->minNormalMutAlleleQual == 3,"Min normal mut allele qual");
 	ok($processor->minAnalysedQual == 5,"Min analysed qualities");
 	ok($processor->percentageSamePos == 8,"Same position max pct");

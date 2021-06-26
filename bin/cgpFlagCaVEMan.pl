@@ -646,7 +646,7 @@ sub runFlagger{
 		}
 		return -1;
     }elsif($flagName eq 'cavemanMatchNormalProportionFlag'){
-        return $flagger->getCavemanMatchedNormalResult($vcf->get_column($x,$VCF_COLUMN_NORMAL,$vcf->get_column($x,$VCF_COLUMN_TUMOUR));
+        return $flagger->getCavemanMatchedNormalResult($vcf->get_column($x,$VCF_COLUMN_NORMAL),$vcf->get_column($x,$VCF_COLUMN_TUMOUR));
 	}elsif($flagName eq 'phasingFlag'){
 		#PHASING
 		return $flagger->getPhasingResult();

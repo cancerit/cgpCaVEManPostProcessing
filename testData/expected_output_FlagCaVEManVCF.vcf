@@ -46,7 +46,7 @@
 ##SAMPLE=<ID=NORMAL,Description="Normal",Accession=1234567,Platform=<HiSeq,GAII>,Protocol=genomic,SampleName=PDtestb>
 ##SAMPLE=<ID=TUMOUR,Description="Mutant",Accession=1234568,Platform=HiSeq,Protocol=genomic,SampleName=PDtesta>
 ##cgpAnalysisProc_20130206.1=123456
-##FILTER=<ID=DTH,Description="Less than depthCutoffProportion mutant alleles were >= 25 base quality">
+##FILTER=<ID=DTH,Description="Less than 0.3333 mutant alleles were >= 25 base quality">
 ##FILTER=<ID=RP,Description="Coverage was less than 8 and no mutant alleles were found in the first 2/3 of a read (shifted 0.08 from the start and extended 0.08 more than 2/3 of the read length)">
 ##FILTER=<ID=MN,Description="More than 0.05 of mutant alleles that were >= 15 base quality found in the matched normal">
 ##FILTER=<ID=PT,Description="Mutant alleles all on one direction of read (1rd allowed on opposite strand) and in second half of the read. Second half of read contains the motif GGC[AT]G in sequenced orientation and the mean base quality of all bases after the motif was less than 20">

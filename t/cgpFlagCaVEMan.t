@@ -245,6 +245,7 @@ sub compare{
 	$exp =~ s/InputVCFVer=<(.+)>>/InputVCFVer=<>>/g;
 	$new =~ s/InputVCFVer=<(.+)>>/InputVCFVer=<>>/g;
 	#check they equate.
+    warn Dumper($new, $exp);
 	is_deeply(_tab_data_to_object($new), _tab_data_to_object($exp),"compare $line_no");
 }
 

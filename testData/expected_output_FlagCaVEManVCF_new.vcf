@@ -59,6 +59,7 @@
 ##FILTER=<ID=SE,Description="Coverage is >= 10 on each strand but mutant allele is only present on one strand">
 ##FILTER=<ID=MNP,Description="Tumour sample mutant allele proportion - normal sample mutant allele proportion < 0.2">
 ##INFO=<ID=ASRD,Number=1,Type=Float,Description="A soft flag median (read length adjusted) alignment score of reads showing the variant allele">
+##FILTER=<ID=CMNP,Description="Tumour sample mutant allele proportion - normal sample mutant allele proportion < 0.2 (differs from MNP in using CaVEMan only seen reads as per VCF)">
 ##INFO=<ID=CLPM,Number=1,Type=Float,Description="A soft flag median number of soft clipped bases in variant supporting reads">
 ##INFO=<ID=ASMD,Number=1,Type=Float,Description="A soft flag median alignement score of reads showing the variant allele">
 ##vcfProcessLog_20120916.1=<InputVCF=<input_FlagCaVEManVCF.vcf.1>,InputVCFSource=<flagCaVEMan.pl>,InputVCFVer=<(17053:17054M)>,InputVCFParam=<h=.,g=germline_indel.bed.gz,f=input_FlagCaVEManVCF.vcf.1,t=WGS,loud=.,n=testflagwt.bam,m=testflagmt.bam,v=flag.to.vcf.convert.ini,s=HUMAN,l=2000,c=flag.vcf.config.tmp.ini,idx=1,o=actual_output_flagVCF.vcf.1,sp=.,sa=.,b=testData,ab=testData,p=123456,umv=unmatchedVCF,ref=genome.fa.fai>>

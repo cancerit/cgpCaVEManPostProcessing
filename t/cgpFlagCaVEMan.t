@@ -66,23 +66,23 @@ main(@ARGV);
 sub main{
 	setup_config();
 	run_flag();
-	compare($test_out_file, $expect_output,$index);
+	compare($test_out_file, $expect_output,$index, __LINE__);
 	#Test create output directory not existing
 	run_flag_output_dir();
-	compare($test_out_file_new_dir, $expect_output,$index);
+	compare($test_out_file_new_dir, $expect_output,$index, __LINE__);
 	unlink($test_out_file_new_dir.'.1');
 	rmdir($test_new_dir) or croak("Error trying to rmdir $test_new_dir");
 	# Test flaglist at cmdline single
 	run_flag_one_cmdline_flag();
-	compare($test_out_file, $expect_output_oneflag ,$index);
+	compare($test_out_file, $expect_output_oneflag ,$index, __LINE__);
 	# Test flaglist at cmdline multi
 	run_flag_multi_cmdline_flag();
-	compare($test_out_file, $expect_output_multiflag ,$index);
+	compare($test_out_file, $expect_output_multiflag ,$index, __LINE__);
 	checkSupportedButNoFlags();
 	checkUnsupportedOption();
 	run_old_flag();
 	#check_old_version_correct
-	compare($test_out_oldVersionVCF, $expected_out_oldVersionVCF);
+	compare($test_out_oldVersionVCF, $expected_out_oldVersionVCF, __LINE__);
 	remove_created_files();
 }
 
@@ -186,7 +186,7 @@ sub checkUnsupportedOption{
 }
 
 sub compare{
-	my ($test_out_file, $expect_output,$idx) = @_;
+	my ($test_out_file, $expect_output,$idx, $line_no) = @_;
 	#Read new file
 	my $NW;
 	my $new;
@@ -245,7 +245,7 @@ sub compare{
 	$exp =~ s/InputVCFVer=<(.+)>>/InputVCFVer=<>>/g;
 	$new =~ s/InputVCFVer=<(.+)>>/InputVCFVer=<>>/g;
 	#check they equate.
-	is_deeply(_tab_data_to_object($new), _tab_data_to_object($exp),'compare');
+	is_deeply(_tab_data_to_object($new), _tab_data_to_object($exp),"compare $line_no");
 }
 
 sub _tab_data_to_object {

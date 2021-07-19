@@ -158,7 +158,8 @@ subtest 'Initialise module (ALL params)' => sub {
 																			'tumBam' => $T_BAM,
 																			'normBam' => $T_BAM]);
 	ok($processor->minDepthQual == 25,"Min depth qual");
-    ok($processor->depthCutoffProportion == (1/3)),"depthCutoffProportion");
+    my $exp_depthCutoffProportion = 1/3;
+    ok($processor->depthCutoffProportion == $exp_depthCutoffProportion,"depthCutoffProportion ".$processor->depthCutoffProportion." != ".exp_depthCutoffProportion);
 	ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
 	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
 	ok($processor->percentageSamePos == 80,"Same position max pct");

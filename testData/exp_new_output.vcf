@@ -46,7 +46,7 @@
 ##SAMPLE=<ID=NORMAL,Description="Normal",Accession=1234567,Platform=HiSeq,Protocol=genomic,SampleName=PDtestb>
 ##SAMPLE=<ID=TUMOUR,Description="Mutant",Accession=1234568,Platform=HiSeq,Protocol=genomic,SampleName=PDtesta>
 ##cgpAnalysisProc_20160314.1=12345
-##FILTER=<ID=DTH,Description="Less than 0.3333 mutant alleles were >= 25 base quality">
+##FILTER=<ID=DTH,Description="Less than 0.333333 mutant alleles were >= 25 base quality">
 ##FILTER=<ID=RP,Description="Coverage was less than 8 and no mutant alleles were found in the first 2/3 of a read (shifted 0.08 from the start and extended 0.08 more than 2/3 of the read length)">
 ##FILTER=<ID=MN,Description="More than 0.05 of mutant alleles that were >= 15 base quality found in the matched normal">
 ##FILTER=<ID=PT,Description="Mutant alleles all on one direction of read (1rd allowed on opposite strand) and in second half of the read. Second half of read contains the motif GGC[AT]G in sequenced orientation and the mean base quality of all bases after the motif was less than 20">
@@ -61,6 +61,7 @@
 ##INFO=<ID=ASRD,Number=1,Type=Float,Description="A soft flag median (read length adjusted) alignment score of reads showing the variant allele">
 ##INFO=<ID=CLPM,Number=1,Type=Float,Description="A soft flag median number of soft clipped bases in variant supporting reads">
 ##INFO=<ID=ASMD,Number=1,Type=Float,Description="A soft flag median alignement score of reads showing the variant allele">
+##FILTER=<ID=CMNP,Description="Tumour sample mutant allele proportion - normal sample mutant allele proportion < 0.2 (differs from MNP in using CaVEMan only seen reads as per VCF)">
 ##vcfProcessLog_20160314.1=<InputVCF=<input_FlagCaVEManVCF.vcf>,InputVCFSource=<flagCaVEMan.pl>,InputVCFVer=<1.6.0>,InputVCFParam=<v=flag.to.vcf.convert.ini,s=HUMAN,c=flag.vcf.config.new.ini,p=12345,g=germline_indel.bed.gz,b=/nfs/users/nfs_d/drj/projects/git/cgpCaVEManPostProcessing/t/../testData/,f=input_FlagCaVEManVCF.vcf,t=WGS>>
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NORMAL	TUMOUR
 15	22095504	ID_36061	G	A	.	DP	DP=22;MP=8.4e-01;GP=1.5e-01;TG=GG/AG;TP=8.1e-01;SG=AG/GG;SP=7.8e-02	GT:AA:CA:GA:TA:PM	0|0:0:0:9:0:0.0e+00	0|1:4:0:9:0:3.1e-01

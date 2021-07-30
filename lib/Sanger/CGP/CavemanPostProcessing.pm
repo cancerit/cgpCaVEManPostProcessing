@@ -44,6 +44,7 @@ const my $HARD_CLIP_CIG => 'H';
 
 const my $MIN_SINGLE_END_CVG => 10;
 const my $MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
+const my $CAVEMAN_MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
 
 my $muts;
 my $norms;
@@ -179,6 +180,18 @@ sub _calculateMatchedNormalProportion{
 	#Fail if the difference is less than the given proportion/percentage
 	return 0 if($normProp > 0 && ($tumProp - $normProp) < $self->matchedNormalMaxMutProportion());
 	return 1;
+}
+
+sub maxCavemanMatchedNormalProportion{
+    my ($self, $val) = @_;
+    if(defined($val)){
+		 $self->{'cmnmmp'} = $val;
+	}else{
+		if(!defined($self->{'cmnmmp'})){
+			$self->{'cmnmmp'} = $CAVEMAN_MATCHED_NORMAL_MAX_MUT_PROP;
+		}
+	}
+	return $self->{'cmnmmp'};
 }
 
 sub matchedNormalMaxMutProportion{

@@ -25,7 +25,7 @@ use Sanger::CGP::CavemanPostProcessing::Config;
 use Data::Dumper;
 use Const::Fast qw(const);
 
-use Test::More tests => 18;
+use Test::More tests => 19;
 
 use FindBin qw($Bin);
 const my $lib_path => "$Bin/../lib";
@@ -208,8 +208,12 @@ subtest 'depthFlag' => sub{
 	ok($processor->depthFlag == 1,"Fail depth check");
 	#Change depthCutoffProportion
 
-	$processor->_prms->{'depthCutoffProportion'} = (1/2);
-	ok($processor->depthFlag == 0,"Pass depth check, changed min depth quality.");
+    $processor->_muts->{'tqs'} = [9,8,10,20,20,21,21,21,21];
+	$processor->_prms->{'depthCutoffProportion'} = 0.5;
+	ok($processor->depthFlag == 1,"Fail depth check, changed min depthCutoffProportion.");
+    $processor->_prms->{'minDepthQual'} = 21;
+    $processor->_muts->{'tqs'} = [9,8,10,20,21,21,21,21,21];
+    ok($processor->depthFlag == 0,"Fail depth check, changed min depthCutoffProportion.");
 
   my $chr = 1;
   my $pos = 10011533;
@@ -218,6 +222,8 @@ subtest 'depthFlag' => sub{
   eval{$processor->set_position($chr,$pos,$ref,$mut);};
   ok($@ =~ m//,"No error from eval.");
 
+  $processor->_prms->{'minDepthQual'} = 25;
+  $processor->_prms->{'depthCutoffProportion'} = 0.333333;
   $processor->_muts->{'tqs'} = [9,8,25,25,25,25,25,25,25];
   ok($processor->depthFlag == 0,"Pass depth check");
   #Fail
@@ -225,8 +231,14 @@ subtest 'depthFlag' => sub{
   ok($processor->depthFlag == 1,"Fail depth check");
   #Change depthCutoffProportion
 
-  $processor->_prms->{'depthCutoffProportion'} = 1/2;
+  $processor->_prms->{'minDepthQual'} = 21;
   ok($processor->depthFlag == 0,"Pass depth check, changed min depth quality.");
+
+  $processor->_muts->{'tqs'} = [9,8,25,25,25,25,25,25,25];
+  ok($processor->depthFlag == 0,"Pass depth check");
+  
+
+
   done_testing();
 };
 
@@ -710,4 +722,36 @@ subtest 'sameReadPosFlag' => sub {
 	$processor->_prms->{'samePosMaxPercent'} = 50;
 	ok($processor->sameReadPosFlag == 1,"Fail same read pos, changed %age");
   done_testing();
+};
+
+subtest 'cavemanMatchNormalProportionFlag' => sub {
+  my $processor = new_ok('Sanger::CGP::CavemanPostProcessing::Flagger');
+  my $cfg = Sanger::CGP::CavemanPostProcessing::Config->new();
+  my $opts;
+  $opts->{'c'} = $CONFIG;
+  $opts->{'v'} = $FLAG_CFG;
+  $opts->{'s'} = $SPECIES;
+  $opts->{'t'} = $TYPE;
+  $opts->{'g'} = $GERMLINE_INDEL;
+  $opts->{'b'} = $BED_LOC;
+  $cfg->init_config($opts);
+  $processor->init($T_BAM,$T_BAM,$cfg);
+  my $chr = 1;
+  my $pos = 10011533;
+  my $ref = "A";
+  my $mut = "T";
+  eval{$processor->set_position($chr,$pos,$ref,$mut);};
+  ok($@ =~ m//,"No error from eval.");
+  my $normal_col = '0/0:90:0:0:10:0.1'; #0.1
+  my $normal_col_fail = '0/0:60:0:0:40:0.4'; #0.4
+  my $tumcol = '1/0:50:0:0:50:0.5'; #0.5
+  my $oldformat = 'GT:AA:CA:GA:TA:PM';
+  ok($processor->_getCavemanMatchNormalProportionFlag($normal_col,$tumcol,$oldformat)==0,"Pass caveman matched normal check old format");
+  ok($processor->_getCavemanMatchNormalProportionFlag($normal_col_fail,$tumcol,$oldformat)==1,"Fail caveman matched normal check old format");
+  my $newformat = 'GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM';
+  $normal_col = '0/0:45:0:0:5:45:0:0:5:0.1'; #0.1
+  $normal_col_fail = '0/0:30:0:0:20:30:0:0:20:0.4'; #0.4
+  $tumcol = '1/0:25:0:0:25:25:0:0:25:0.5'; #0.5
+  ok($processor->_getCavemanMatchNormalProportionFlag($normal_col,$tumcol,$newformat)==0,"Pass caveman matched normal check new format");
+  ok($processor->_getCavemanMatchNormalProportionFlag($normal_col_fail,$tumcol,$newformat)==1,"Fail caveman matched normal check new format");
 };

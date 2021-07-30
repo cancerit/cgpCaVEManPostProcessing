@@ -25,7 +25,7 @@ use Data::Dumper;
 use Bio::DB::HTS;
 use Const::Fast qw(const);
 
-use Test::More tests => 20;
+use Test::More tests => 21;
 
 use FindBin qw($Bin);
 my $lib_path = "$Bin/../lib";
@@ -85,7 +85,7 @@ subtest 'Initialise module (bam params)' => sub {
 	isa_ok($processor->tumBam(), "Bio::DB::HTS", "Test tumour bam");
 	isa_ok($processor->normBam(), "Bio::DB::HTS", "Test normal bam");
 	ok($processor->minDepthQual == 25,"Min depth qual");
-    ok($processor->depthCutoffProportion == (1/3),"depthCutoffProportion");
+    ok($processor->depthCutoffProportion == 0.333333,"depthCutoffProportion");
 	ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
 	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
 	ok($processor->percentageSamePos == 80,"Same position max pct");
@@ -158,8 +158,7 @@ subtest 'Initialise module (ALL params)' => sub {
 																			'tumBam' => $T_BAM,
 																			'normBam' => $T_BAM]);
 	ok($processor->minDepthQual == 25,"Min depth qual");
-    my $exp_depthCutoffProportion = (1/3);
-    ok($processor->depthCutoffProportion == $exp_depthCutoffProportion,"depthCutoffProportion ".$processor->depthCutoffProportion." != ".exp_depthCutoffProportion);
+    ok($processor->depthCutoffProportion == 0.333333,"depthCutoffProportion got: ".$processor->depthCutoffProportion." exp: ".0.333333);
 	ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
 	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
 	ok($processor->percentageSamePos == 80,"Same position max pct");
@@ -206,7 +205,7 @@ subtest 'Test all getters/setters' => sub {
 	ok($processor->minDepthQual == 25,"Min depth qual");
 	$processor->minDepthQual(17);
 	ok($processor->minDepthQual == 17,"Min depth qual changed");
-    ok($processor->depthCutoffProportion == (1/3),"depthCutoffProportion");
+    ok($processor->depthCutoffProportion == (0.333333),"depthCutoffProportion");
 	$processor->depthCutoffProportion(1/2);
 	ok($processor->depthCutoffProportion == (1/2),"depthCutoffProportion changed");
 	ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
@@ -361,8 +360,12 @@ subtest 'getDepthResult' => sub{
 	ok($processor->getDepthResult == 0,"Fail depth check");
 	#Change depthCutoffProportion
 	$processor->clearResults;
-	$processor->depthCutoffProportion(1/2);
+    $processor->minDepthQual(21);
 	ok($processor->getDepthResult == 1,"Pass depth check, changed min depth quality.");
+    $processor->depthCutoffProportion(0.5);
+    $processor->clearResults;
+    $processor->_muts->{'tqs'} = [9,8,10,21,25,25,25,25,21];
+    ok($processor->getDepthResult == 1,"Pass depth check, changed depthCutoffProportion.");
 	done_testing();
 };
 
@@ -511,6 +514,27 @@ subtest 'Initialise module (bam clip params)' => sub {
 	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
 	ok($processor->keepSW == 0,"Keep SW off by default");
   done_testing();
+};
+
+subtest 'getCavemanMatchedNormalResult' => sub {
+    my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
+    my $normal_col = '0/0:90:0:10:0:0.1'; #0.1
+    my $normal_col_fail = '0/0:60:0:40:0:0.4'; #0.4
+    my $tumcol = '1/0:50:0:50:0:0.5'; #0.5
+    my $oldformat = 'GT:AA:CA:GA:TA:PM';
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col,$tumcol,$oldformat)==1,"Pass caveman matched normal check old format");
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$oldformat)==0,"Fail caveman matched normal check old format");
+
+    my $newformat = 'GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM';
+    $normal_col = '0/0:45:0:5:0:45:0:5:0:0.1'; #0.1
+    $normal_col_fail = '0/0:30:0:20:0:30:0:20:0:0.4'; #0.4
+    $tumcol = '1/0:25:0:25:0:25:0:25:0:0.5'; #0.5
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col,$tumcol,$newformat)==1,"Pass caveman matched normal check new format");
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$newformat)==0,"Fail caveman matched normal check new format");
 };
 
 subtest 'Clipped Read tests' => sub {

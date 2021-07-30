@@ -79,15 +79,15 @@ sub run_flag{
 			" -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc".
 			" -u $unmatched_vcf -ref $ref";
 	my ($out, $err, $exit) = capture{ system($cmd) };
-	is($exit, 0,'Flagging ran correctly');
+	is($exit, 0,'Flagging ran correctly') or diag($cmd,$out, $err, $exit);
   #Check headers
   my $exp_header = read_header($expect_output);
   my $got_header = read_header($test_out_file);
   is_deeply(_tab_data_to_object($got_header), _tab_data_to_object($exp_header),'compare headers');
   #Check non headers
   my $exp_body = read_non_header($expect_output);
-  my $got_body = read_non_header($test_out_file);
-  is_deeply(_tab_data_to_object($got_body), _tab_data_to_object($exp_body),'compare non-header');
+  my  $got_body = read_non_header($test_out_file);
+  is_deeply(_tab_data_to_object($got_body), _tab_data_to_object($exp_body),'compare non-header') or diag ($expect_output,"\n",$exp_body,"\n$test_out_file\n",$got_body);
 }
 
 sub run_old_flag{
@@ -107,6 +107,9 @@ sub checkSupportedButNoFlags{
 			" -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
 			"-u $unmatched_vcf -ref $ref";
 	my ($out, $err, $exit) = capture{ system($cmd) };
+    if($exit!=0){
+		warn Dumper($err);
+	}
 	like($err, qr/No flag list found in .+ for section. No flagging will be done./, 'Correctly runs with warnings as no flags available (check message).');
 	is($exit, 0, 'Correctly runs with warnings as no flags available (check exitcode).');
 }

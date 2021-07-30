@@ -94,6 +94,7 @@ const my $UNMATCHED_FORMAT_BED=> 'BED';
 
 const my $VCF_COLUMN_NORMAL => 'NORMAL';
 const my $VCF_COLUMN_TUMOUR => 'TUMOUR';
+const my $VCF_COLUMN_FORMAT => 'FORMAT';
 
 my $index = undef;
 my $flagopts = undef;
@@ -646,7 +647,7 @@ sub runFlagger{
 		}
 		return -1;
     }elsif($flagName eq 'cavemanMatchNormalProportionFlag'){
-        return $flagger->getCavemanMatchedNormalResult($vcf->get_column($x,$VCF_COLUMN_NORMAL),$vcf->get_column($x,$VCF_COLUMN_TUMOUR));
+        return $flagger->getCavemanMatchedNormalResult($vcf->get_column($x,$VCF_COLUMN_NORMAL),$vcf->get_column($x,$VCF_COLUMN_TUMOUR),$vcf->get_column($x,$VCF_COLUMN_FORMAT));
 	}elsif($flagName eq 'phasingFlag'){
 		#PHASING
 		return $flagger->getPhasingResult();

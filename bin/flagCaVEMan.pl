@@ -116,7 +116,7 @@ sub main {
         $$x[7]=$caveVCF->input_vcf->add_info_field($$x[7],$flag->id=>undef);
       }
     }
-    my ($results,$info) = flagVCFLine($x,$cfg,$flagger,$umNormVcf);
+    my ($results,$info) = flagVCFLine($x,$cfg,$flagger,$umNormVcf,$caveVCF);
     #Add the relevant filters or PASS to the filter section.
     $$x[6]=$caveVCF->input_vcf->add_filter($$x[6],%$results);
     $$x[7]=$caveVCF->input_vcf->add_info_field($$x[7],%$info);
@@ -138,7 +138,7 @@ sub main {
 }
 
 sub flagVCFLine{
-  my ($x,$cfg,$flagger,$umNormVcf) = @_;
+  my ($x,$cfg,$flagger,$umNormVcf,$caveVCF) = @_;
   $flagger->set_position($$x[0],$$x[1],$$x[3],$$x[4]);
   my $results;
   my $info;
@@ -165,6 +165,8 @@ sub flagVCFLine{
           croak("Unknown format '$umformat' for UMVcf");
         }
       }#End of if we have a matching unmatched panel entry
+    }elsif($flag->is_need_vcf){
+      $res = $flagger->$name($caveVCF->input_vcf(), $x);
     }else{#A non intersect filter to run
       $res = $flagger->$name();
     }

@@ -38,12 +38,21 @@ use Sanger::CGP::CavemanPostProcessing;
 const my $BAD_BITS => hex RFLAGS->{UNMAPPED}|RFLAGS->{M_UNMAPPED}|RFLAGS->{NOT_PRIMARY}|RFLAGS->{QC_FAILED}|RFLAGS->{DUPLICATE}|RFLAGS->{SUPPLEMENTARY};
 const my $GOOD_BITS => hex RFLAGS->{MAP_PAIR};
 
+const my $VCF_COLUMN_NORMAL => 'NORMAL';
+const my $VCF_COLUMN_TUMOUR => 'TUMOUR';
+const my $VCF_COLUMN_FORMAT => 'FORMAT';
+const my $OLD_ALLELE_VCF_FORMAT => 'GT:AA:CA:GA:TA:PM';
+const my $NEW_ALLELE_VCF_FORMAT => 'GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM';
+const my %OLD_ALLELE_VCF_FORMAT_INDEX_HASH => ('A' => 1, 'C' => 2, 'G' => 3, 'T' => 4, );
+const my %NEW_ALLELE_VCF_FORMAT_INDEX_HASH => ('A'=>[1,5], 'C' =>[2,6], 'G'=>[3,7], 'T'=>[4,8], );
+
 my $ref;
 my $mut;
 my $pos;
 my $chr;
 my $prms = {};
 my $muts = {};
+my $is_stranded_format = 1;
 
 sub new {
 	my ($proto) = @_;
@@ -427,11 +436,47 @@ sub depthFlag{
 		if($q >= get_param('minDepthQual')){
 			$overCutoff++;
 		}
-		if($overCutoff >= ($depth / get_param('depthCutoffProportion'))){
+		if($overCutoff >= ($depth * get_param('depthCutoffProportion'))){
 			return 0; #Pass
 		}
 	}
 	return 1; #Fail
+}
+
+sub cavemanMatchNormalProportionFlag{
+    my ($self, $vcf, $x) = @_;
+    my $normal_col = $vcf->get_column($x,$VCF_COLUMN_NORMAL);
+    my $tumour_col = $vcf->get_column($x,$VCF_COLUMN_TUMOUR);
+    my $format = $vcf->get_column($x,$VCF_COLUMN_FORMAT);
+    return $self->_getCavemanMatchNormalProportionFlag($normal_col,$tumour_col,$format);
+}
+
+sub _getCavemanMatchNormalProportionFlag{
+    my ($self,$normal_col,$tumour_col,$format) = @_;
+    my @splitnorm = split(/:/,$normal_col);
+    my @splittum = split(/:/,$tumour_col);
+    my @splitformat = split(/:/,$format);
+    $is_stranded_format = 0 if($format =~ m/$OLD_ALLELE_VCF_FORMAT/);
+    my $total_norm_cvg = 0;
+    my $mut_allele_cvg = 0;
+    my $total_tumm_cvg = 0;
+    my $mut_allele_tum_cvg = 0;
+    my %decode_hash = %OLD_ALLELE_VCF_FORMAT_INDEX_HASH;
+    if($is_stranded_format==1){
+      %decode_hash = %NEW_ALLELE_VCF_FORMAT_INDEX_HASH;
+      $total_norm_cvg = sum(@splitnorm[1..8]);
+      $total_tumm_cvg = sum(@splittum[1..8]);
+    }else{
+      $total_norm_cvg = sum(@splitnorm[1..4]);
+      $total_tumm_cvg = sum(@splittum[1..4]);
+    }
+    my $mutbase = $self->{'mut'};
+    $mut_allele_cvg = sum(@splitnorm[$decode_hash{$mutbase}]);
+    $mut_allele_tum_cvg = sum(@splittum[$decode_hash{$mutbase}]);
+    my $norm_prop = $mut_allele_cvg/$total_norm_cvg;
+    my $tum_prop = $mut_allele_tum_cvg/$total_tumm_cvg;
+    return 1 if($norm_prop > 0 && (($tum_prop - $norm_prop) < get_param('maxCavemanMatchedNormalProportion'))); #Fail
+    return 0; #Pass
 }
 
 sub readPositionFlag{

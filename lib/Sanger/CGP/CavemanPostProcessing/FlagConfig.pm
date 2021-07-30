@@ -50,6 +50,14 @@ sub is_intersect{
   return $self->{'in'};
 }
 
+sub is_need_vcf{
+  my ($self,$val) = @_;
+  if(defined($val)){
+    $self->{'needvcf'} = $val;
+  }
+  return $self->{'needvcf'};
+}
+
 sub id{
   my ($self,$val) = @_;
   if(defined($val)){

@@ -564,6 +564,8 @@ sub runFlagger{
 	}elsif($flagName eq 'avgMapQualFlag'){
 		#MEAN MAP QUAL
 		return $flagger->getAvgMapQualResult();
+    }elsif($flagName eq 'withinGapRangeFlag'){
+        return $flagger->getReadGapFlagResult();
 	}elsif($flagName eq 'germlineIndelFlag'){
 		#GERMLINE INDEL
         return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);

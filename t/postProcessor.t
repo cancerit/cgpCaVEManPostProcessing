@@ -25,7 +25,7 @@ use Data::Dumper;
 use Bio::DB::HTS;
 use Const::Fast qw(const);
 
-use Test::More tests => 21;
+use Test::More tests => 22;
 
 use FindBin qw($Bin);
 my $lib_path = "$Bin/../lib";
@@ -537,17 +537,97 @@ subtest 'getCavemanMatchedNormalResult' => sub {
     ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$newformat)==0,"Fail caveman matched normal check new format");
 };
 
+subtest 'Read Gap Tests' => sub {
+  #Fail as more than proportion
+  my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  my $chr = 1;
+  my $pos = 10011533;
+  my $ref = "G";
+  my $mut = "T";
+
+  ok($processor->minGapPresentInPercentReads==30,"Correct minGapPresentInPercentReads");
+  ok($processor->meanMapQualGapFlag==10,"Correct minMeanMapQualGapFlag");
+  ok($processor->withinXBpOfDeletion==10,"Correct withinXBpOfDeletion");
+
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  ok($processor->getReadGapFlagResult==1,"Initially passes read gap flag");
+
+  #Change to fail 
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  my $allTumMapQuals = [60,29,60,60];
+  my $allTumBases = ['T','G','G','T'];
+  my $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==0,"Fail read gap.");
+
+  #Change to pass on map qualities
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [5,5,5,6];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  ok($processor->getReadGapFlagResult==1,"Pass read gap on map qualities.");
+
+  #Change to fail
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==0,"Fail read gap 2.");
+
+  #Change to pass on distance from deletion
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,11,11,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==1,"Pass on deletion distance.");
+
+  #Change to fail
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==0,"Fail read gap 3.");
+
+  #Change to pass on percentage reads
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60,60];
+  $allTumBases = ['T','G','G','G','T'];
+  $allMinGapDistances = [-1,11,11,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==1,"Pass on percentage reads.");
+  
+  done_testing();
+};
+
 subtest 'Clipped Read tests' => sub {
-	my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
-	my $chr = 1;
-	my $pos = 10437;
-	my $ref = "T";
-	my $mut = "C";
-	$processor->runProcess($chr,$pos,$pos,$ref,$mut);
-	ok($processor->_chromosome eq $chr,"Chromosome correct");
-	ok($processor->_currentPos == $pos,"Current pos updated");
-	ok($processor->_refBase eq $ref,"Ref base changed");
-	ok($processor->_mutBase eq $mut,"Mut base changed");
+  my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
+  my $chr = 1;
+  my $pos = 10437;
+  my $ref = "T";
+  my $mut = "C";
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  ok($processor->_chromosome eq $chr,"Chromosome correct");
+  ok($processor->_currentPos == $pos,"Current pos updated");
+  ok($processor->_refBase eq $ref,"Ref base changed");
+  ok($processor->_mutBase eq $mut,"Mut base changed");
 
 	#Manually set counts
 	my $exp_sclp = [1,2,3,4,5,6,7,8,9,10];

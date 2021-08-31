@@ -30,6 +30,7 @@ use Carp;
 use Const::Fast qw(const);
 use Attribute::Abstract;
 use Data::Dumper;
+use List::Util qw(min max);
 use base 'Exporter';
 
 our $VERSION = '1.9.3';
@@ -332,6 +333,8 @@ sub _callbackTumFetch{
 			$muts->{'indelTCount'} += 1;
 		}
 
+    my $gapDist = _getDistanceFromGapInRead($algn->cigar_array,$rdPosIndexOfInterest);
+
 		#Read base
 		my $qbase = $splt[$rdPosIndexOfInterest-1];
 
@@ -345,6 +348,10 @@ sub _callbackTumFetch{
 		push(@{$muts->{'allTumBaseQuals'}},$qscore);
 
 		push(@{$muts->{'allTumStrands'}},$str);
+
+    push(@{$muts->{'allTumMapQuals'}},$algn->qual);
+
+    push(@{$muts->{'allMinGapDistances'}},$gapDist);
 
 		#return if(uc($qbase) ne uc($mutBase));
 
@@ -421,6 +428,26 @@ sub _get_soft_clip_count_from_cigar{
 		}
 	}
 	return $count;
+}
+
+sub _getDistanceFromGapInRead{
+  my ($cigar_array,$rdPosIndexOfInterest) = @_;
+  my $min_gap_dist = -1;
+  my $currentRp = 0;
+  foreach my $cigSect(@{$cigar_array}){
+    if($cigSect->[0] eq $MATCH_CIG || $cigSect->[0] eq $SKIP_CIG ||
+          $cigSect->[0] eq $INS_CIG || $cigSect->[0] eq $SOFT_CLIP_CIG){
+      $currentRp+=$cigSect->[1];
+    }elsif($cigSect->[0] eq $DEL_CIG){
+      my $dp_start = $currentRp+1;
+      my $dp_end = $currentRp+$cigSect->[1];
+      my $tmp_dist = max(abs($rdPosIndexOfInterest-$dp_start),abs($dp_end-$rdPosIndexOfInterest));
+      if($tmp_dist < $min_gap_dist || $min_gap_dist == -1){
+        $min_gap_dist = $tmp_dist;
+      }
+    }
+  }
+  return $min_gap_dist;
 }
 
 sub _getReadPositionFromAlignment{

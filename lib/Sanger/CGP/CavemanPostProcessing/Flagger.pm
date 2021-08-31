@@ -26,7 +26,8 @@ use autodie;
 use Carp;
 use Const::Fast;
 use POSIX qw(strftime ceil);
-use List::Util qw (sum);
+use List::Util qw (sum zip max);
+
 
 use Bio::DB::HTS;
 use Bio::DB::HTS::Constants;
@@ -45,6 +46,13 @@ const my $OLD_ALLELE_VCF_FORMAT => 'GT:AA:CA:GA:TA:PM';
 const my $NEW_ALLELE_VCF_FORMAT => 'GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM';
 const my %OLD_ALLELE_VCF_FORMAT_INDEX_HASH => ('A' => 1, 'C' => 2, 'G' => 3, 'T' => 4, );
 const my %NEW_ALLELE_VCF_FORMAT_INDEX_HASH => ('A'=>[1,5], 'C' =>[2,6], 'G'=>[3,7], 'T'=>[4,8], );
+
+const my $MATCH_CIG => 'M';
+const my $SKIP_CIG => 'N';
+const my $INS_CIG => 'I';
+const my $DEL_CIG => 'D';
+const my $SOFT_CLIP_CIG => 'S';
+const my $HARD_CLIP_CIG => 'H';
 
 my $ref;
 my $mut;
@@ -208,6 +216,8 @@ sub _tumFetch{
 		#Base quality
 		my $qscore = $algn->qscore->[$rdPosIndexOfInterest-1];
 
+    my $gapDist = _getDistanceFromGapInRead($algn->cigar_array,$rdPosIndexOfInterest);
+
 		push(@{$muts->{'completeMutStrands'}},$str);
 
 		push(@{$muts->{'allTumBases'}},$qbase);
@@ -215,6 +225,10 @@ sub _tumFetch{
 		push(@{$muts->{'allTumBaseQuals'}},$qscore);
 
 		push(@{$muts->{'allTumStrands'}},$str);
+
+    push(@{$muts->{'allTumMapQuals'}},$algn->qual);
+
+    push(@{$muts->{'allMinGapDistances'}},$gapDist);
 
 		#return if(uc($qbase) ne uc($mutBase));
     my $xt = $algn->aux_get('XT');
@@ -278,6 +292,26 @@ sub _tumFetch{
 		push(@{$muts->{'sclp'}},$softclipcount);
 	}
 	return 1;
+}
+
+sub _getDistanceFromGapInRead{
+  my ($cigar_array,$rdPosIndexOfInterest) = @_;
+  my $min_gap_dist = -1;
+  my $currentRp = 0;
+  foreach my $cigSect(@{$cigar_array}){
+    if($cigSect->[0] eq $MATCH_CIG || $cigSect->[0] eq $SKIP_CIG ||
+          $cigSect->[0] eq $INS_CIG || $cigSect->[0] eq $SOFT_CLIP_CIG){
+      $currentRp+=$cigSect->[1];
+    }elsif($cigSect->[0] eq $DEL_CIG){
+      my $dp_start = $currentRp+1;
+      my $dp_end = $currentRp+$cigSect->[1];
+      my $tmp_dist = max(abs($rdPosIndexOfInterest-$dp_start),abs($dp_end-$rdPosIndexOfInterest));
+      if($tmp_dist < $min_gap_dist || $min_gap_dist == -1){
+        $min_gap_dist = $tmp_dist;
+      }
+    }
+  }
+  return $min_gap_dist;
 }
 
 sub _matchedNormFetch{
@@ -812,6 +846,30 @@ sub sameReadPosFlag{
 		}
 	}
 	return 0;
+}
+
+sub withinGapRangeFlag{
+  my ($self) = @_;
+  my $meanMapQ = sum($self->_muts->{'allTumMapQuals'})/scalar(@{$self->_muts->{'allTumMapQuals'}});
+  return 0 if($meanMapQ < get_param('minMeanMapQualGapFlag')); #Pass as likely mismapping
+  my $total_reads = scalar(@{$self->_muts->{'allTumMapQuals'}});
+  my @non_tum_base_dist = [];
+  my $norm_base_dist_count = 0;
+  foreach (zip($self->_muts->{'allTumBases'},$self->_muts->{'allMinGapDistances'})){
+    my ($base, $distance) = @{$_};
+    if($base eq $self->{'mut'}){
+      return 0 if($distance != -1);
+    }else{
+      if($distance != -1 && $distance <= get_param('withinXBpOfDeletion')){
+        push(@non_tum_base_dist, $distance);
+        $norm_base_dist_count++;
+      }
+    }
+  }
+  return 0 if($norm_base_dist_count==0); #Pass if zero reference reads with gap
+  my $percentage_reads_present = ($norm_base_dist_count/$total_reads) * 100;
+  return 1 if($percentage_reads_present >= get_param('minGapPresentInReads'));
+  return 0;
 }
 
 1;

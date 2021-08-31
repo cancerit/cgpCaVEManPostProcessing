@@ -25,7 +25,7 @@ use Sanger::CGP::CavemanPostProcessing::Config;
 use Data::Dumper;
 use Const::Fast qw(const);
 
-use Test::More tests => 19;
+use Test::More tests => 20;
 
 use FindBin qw($Bin);
 const my $lib_path => "$Bin/../lib";
@@ -754,4 +754,85 @@ subtest 'cavemanMatchNormalProportionFlag' => sub {
   $tumcol = '1/0:25:0:0:25:25:0:0:25:0.5'; #0.5
   ok($processor->_getCavemanMatchNormalProportionFlag($normal_col,$tumcol,$newformat)==0,"Pass caveman matched normal check new format");
   ok($processor->_getCavemanMatchNormalProportionFlag($normal_col_fail,$tumcol,$newformat)==1,"Fail caveman matched normal check new format");
+};
+
+subtest 'Read Gap Tests' => sub {
+  #Fail as more than proportion
+  my $processor = new_ok('Sanger::CGP::CavemanPostProcessing::Flagger');
+  my $cfg = Sanger::CGP::CavemanPostProcessing::Config->new();
+  my $opts;
+  $opts->{'c'} = $CONFIG;
+  $opts->{'v'} = $FLAG_CFG;
+  $opts->{'s'} = $SPECIES;
+  $opts->{'t'} = $TYPE;
+  $opts->{'g'} = $GERMLINE_INDEL;
+  $opts->{'b'} = $BED_LOC;
+  $cfg->init_config($opts);
+  $processor->init($T_BAM,$T_BAM,$cfg);
+  my $chr = 1;
+  my $pos = 10011533;
+  my $ref = "A";
+  my $mut = "T";
+  eval{$processor->set_position($chr,$pos,$ref,$mut);};
+  ok($@ =~ m//,"No error from eval.");
+
+  ok($processor-> _prms->{'minGapPresentInReads'}==30,"Correct minGapPresentInPercentReads");
+  ok($processor-> _prms->{'minMeanMapQualGapFlag'}==10,"Correct minMeanMapQualGapFlag");
+  ok($processor-> _prms->{'withinXBpOfDeletion'}==10,"Correct withinXBpOfDeletion");
+
+  ok($processor->withinGapRangeFlag==0,"Initially passes read gap flag");
+
+  #Change to fail 
+  my $allTumMapQuals = [60,29,60,60];
+  my $allTumBases = ['T','G','G','T'];
+  my $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->withinGapRangeFlag==1,"Fail read gap.");
+
+  #Change to pass on map qualities
+  eval{$processor->set_position($chr,$pos,$ref,$mut);};
+  ok($@ =~ m//,"No error from eval.");
+  $allTumMapQuals = [5,5,5,6];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  ok($processor->withinGapRangeFlag==0,"Pass read gap on map qualities.");
+
+  #Change to fail
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->withinGapRangeFlag==1,"Fail read gap 2.");
+
+  #Change to pass on distance from deletion
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,11,11,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->withinGapRangeFlag==0,"Pass on deletion distance.");
+
+  #Change to fail
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->withinGapRangeFlag==1,"Fail read gap 3.");
+
+  #Change to pass on percentage reads
+  $allTumMapQuals = [60,29,60,60,60];
+  $allTumBases = ['T','G','G','G','T'];
+  $allMinGapDistances = [-1,11,11,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->withinGapRangeFlag==0,"Pass on percentage reads.");
+  
+  done_testing();
 };

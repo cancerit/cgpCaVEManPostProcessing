@@ -653,8 +653,10 @@ sub _checkCavemanMatchedNormal{
       $total_tumm_cvg = sum(@splittum[1..4]);
     }
     my $mutbase = $self->_mutBase();
-    $mut_allele_cvg = sum(@splitnorm[$decode_hash{$mutbase}]);
-    $mut_allele_tum_cvg = sum(@splittum[$decode_hash{$mutbase}]);
+    for my $idx($decode_hash{$mutbase}){
+      $mut_allele_cvg += $splitnorm[$idx];
+      $mut_allele_tum_cvg += $splittum[$idx];
+    }
     my $norm_prop = $mut_allele_cvg/$total_norm_cvg;
     my $tum_prop = $mut_allele_tum_cvg/$total_tumm_cvg;
   #Fail if the difference is less than the given proportion/percentage

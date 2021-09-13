@@ -938,11 +938,9 @@ sub validateInput {
   delete $opts->{'version'}; # needs to be deleted or breaks tests
 
   die( "Unknown parameter: ".$ARGV[0]) if(scalar(@ARGV) > 0);
-  pod2usage("Missing parameters") if(!defined($opts->{'f'}) || !defined($opts->{'o'})
-                      || !defined($opts->{'s'})
-                      || !defined($opts->{'m'}) || !defined($opts->{'n'})
-                      || !defined($opts->{'ref'}) );
-
+  foreach my $optname(qw(f o s m n ref)){
+    pod2usage("Missing parameter ".$optname);
+  }
 
   unless(-e $opts->{'f'} && -r $opts->{'f'}){
     pod2usage("VCF file to flag does not exist or has incorrect permissions: ".$opts->{'f'}."\n");

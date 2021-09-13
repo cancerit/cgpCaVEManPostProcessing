@@ -939,7 +939,7 @@ sub validateInput {
 
   die( "Unknown parameter: ".$ARGV[0]) if(scalar(@ARGV) > 0);
   foreach my $optionname(qw(f o s m n ref)){
-    pod2usage("Missing parameter ".$optionname) if(!defined($opts->{$optionname});
+    pod2usage("Missing parameter ".$optionname) if(!defined($opts->{$optionname}));
   }
 
   unless(-e $opts->{'f'} && -r $opts->{'f'}){

@@ -58,6 +58,8 @@ const my %NEW_ALLELE_VCF_FORMAT_INDEX_HASH => ('A'=>[1,5], 'C' =>[2,6], 'G'=>[3,
 const my $WITHIN_XBP_OF_DEL => 10;
 const my $MIN_GAP_IN_PCT_READS => 30;
 const my $MEAN_MAPQ_GAPFLAG => 10;
+const my $CAVEMAN_MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
+
 
 my $is_stranded_format = 1;
 
@@ -129,6 +131,18 @@ sub meanMapQualGapFlag{
     }
   }
   return $self->{'minMeanMapQualGapFlag'};
+}
+
+sub maxCavemanMatchedNormalProportion{
+    my ($self, $val) = @_;
+    if(defined($val)){
+		 $self->{'cmnmmp'} = $val;
+	}else{
+		if(!defined($self->{'cmnmmp'})){
+			$self->{'cmnmmp'} = $CAVEMAN_MATCHED_NORMAL_MAX_MUT_PROP;
+		}
+	}
+	return $self->{'cmnmmp'};
 }
 
 sub withinXBpOfDeletion{
@@ -634,34 +648,37 @@ sub getCavemanMatchedNormalResult{
 }
 
 sub _checkCavemanMatchedNormal{
-    my ($self, $normal_col, $tumour_col, $format) = @_;
-    my @splitnorm = split(/:/,$normal_col);
-    my @splittum = split(/:/,$tumour_col);
-    my @splitformat = split(/:/,$format);
-    $is_stranded_format = 0 if($format =~ m/$OLD_ALLELE_VCF_FORMAT/);
-    my $total_norm_cvg = 0;
-    my $mut_allele_cvg = 0;
-    my $total_tumm_cvg = 0;
-    my $mut_allele_tum_cvg = 0;
-    my %decode_hash = %OLD_ALLELE_VCF_FORMAT_INDEX_HASH;
-    if($is_stranded_format==1){
-      %decode_hash = %NEW_ALLELE_VCF_FORMAT_INDEX_HASH;
-      $total_norm_cvg = sum(@splitnorm[1..8]);
-      $total_tumm_cvg = sum(@splittum[1..8]);
-    }else{
-      $total_norm_cvg = sum(@splitnorm[1..4]);
-      $total_tumm_cvg = sum(@splittum[1..4]);
-    }
-    my $mutbase = $self->_mutBase();
-    for my $idx($decode_hash{$mutbase}){
-      $mut_allele_cvg += $splitnorm[$idx];
-      $mut_allele_tum_cvg += $splittum[$idx];
-    }
-    my $norm_prop = $mut_allele_cvg/$total_norm_cvg;
-    my $tum_prop = $mut_allele_tum_cvg/$total_tumm_cvg;
+  my ($self, $normal_col, $tumour_col, $format) = @_;
+  my @splitnorm = split(/:/,$normal_col);
+  my @splittum = split(/:/,$tumour_col);
+  my @splitformat = split(/:/,$format);
+  if($format !~ m/$OLD_ALLELE_VCF_FORMAT/ && $format !~ m/$NEW_ALLELE_VCF_FORMAT/){
+    croak("VCF input format $format for cavemanMatchedNormal doesn't match a known CaVEMan VCF output format");
+  }
+  $is_stranded_format = 0 if($format =~ m/$OLD_ALLELE_VCF_FORMAT/);
+  my $total_norm_cvg = 0;
+  my $mut_allele_cvg = 0;
+  my $total_tumm_cvg = 0;
+  my $mut_allele_tum_cvg = 0;
+  my %decode_hash = %OLD_ALLELE_VCF_FORMAT_INDEX_HASH;
+  if($is_stranded_format==1){
+    %decode_hash = %NEW_ALLELE_VCF_FORMAT_INDEX_HASH;
+    $total_norm_cvg = sum(@splitnorm[1..8]);
+    $total_tumm_cvg = sum(@splittum[1..8]);
+  }else{
+    $total_norm_cvg = sum(@splitnorm[1..4]);
+    $total_tumm_cvg = sum(@splittum[1..4]);
+  }
+  my $mutbase = $self->_mutBase();
+  for my $idx($decode_hash{$mutbase}){
+    $mut_allele_cvg += $splitnorm[$idx];
+    $mut_allele_tum_cvg += $splittum[$idx];
+  }
+  my $norm_prop = $mut_allele_cvg/$total_norm_cvg;
+  my $tum_prop = $mut_allele_tum_cvg/$total_tumm_cvg;
   #Fail if the difference is less than the given proportion/percentage
-    return 0 if($norm_prop > 0 && ($tum_prop - $norm_prop) < $self->maxCavemanMatchedNormalProportion());
-    return 1;
+  return 0 if($norm_prop > 0 && ($tum_prop - $norm_prop) < $self->maxCavemanMatchedNormalProportion());
+  return 1;
 }
 
 sub getReadGapFlagResult{

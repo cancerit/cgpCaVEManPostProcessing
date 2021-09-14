@@ -83,7 +83,7 @@ sub main{
 	run_old_flag();
 	#check_old_version_correct
 	compare($test_out_oldVersionVCF, $expected_out_oldVersionVCF, undef,__LINE__);
-	#remove_created_files();
+	remove_created_files();
 }
 
 sub setup_config{

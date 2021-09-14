@@ -61,7 +61,7 @@
 ##INFO=<ID=ASRD,Number=1,Type=Float,Description="A soft flag median (read length adjusted) alignment score of reads showing the variant allele">
 ##INFO=<ID=CLPM,Number=1,Type=Float,Description="A soft flag median number of soft clipped bases in variant supporting reads">
 ##INFO=<ID=ASMD,Number=1,Type=Float,Description="A soft flag median alignement score of reads showing the variant allele">
-##FILTER=<ID=CMNP,Description="Tumour sample mutant allele proportion - normal sample mutant allele proportion < 0.2 (differs from MNP in using CaVEMan only seen reads as per VCF)">
+##FILTER=<ID=CMNP,Description="Tumour sample mutant allele proportion - normal sample mutant allele proportion < 0.2 (differs from MNP in using only reads seen by CaVEMan as per VCF)">
 ##FILTER=<ID=GAP,Description="If variant is within 10 of a deletion/gap seen in reads without the variant, the deletion is present in at least 30 percent of total reads and no variant showing reads show the deletion. ">
 ##vcfProcessLog_20160314.1=<InputVCF=<input_FlagCaVEManVCF.vcf>,InputVCFSource=<flagCaVEMan.pl>,InputVCFVer=<1.6.0>,InputVCFParam=<v=flag.to.vcf.convert.ini,s=HUMAN,c=flag.vcf.config.new.ini,p=12345,g=germline_indel.bed.gz,b=/nfs/users/nfs_d/drj/projects/git/cgpCaVEManPostProcessing/t/../testData/,f=input_FlagCaVEManVCF.vcf,t=WGS>>
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NORMAL	TUMOUR

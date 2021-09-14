@@ -533,8 +533,6 @@ subtest 'getCavemanMatchedNormalResult' => sub {
     $processor->runProcess('6',138186703,138186703,"A","G");
     ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$oldformat)==0,"Fail caveman matched normal check old format, modified proportion");
 
-    
-
     my $newformat = 'GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM';
     $normal_col = '0/0:45:0:5:0:45:0:5:0:0.1'; #0.1
     $normal_col_fail = '0/0:30:0:20:0:30:0:20:0:0.4'; #0.4

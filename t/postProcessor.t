@@ -526,6 +526,14 @@ subtest 'getCavemanMatchedNormalResult' => sub {
     ok($processor->getCavemanMatchedNormalResult($normal_col,$tumcol,$oldformat)==1,"Pass caveman matched normal check old format");
     $processor->runProcess('6',138186703,138186703,"A","G");
     ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$oldformat)==0,"Fail caveman matched normal check old format");
+    $processor->maxCavemanMatchedNormalProportion(0.09);
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$oldformat)==1,"Pass caveman matched normal check old format, modified proportion");
+    $processor->maxCavemanMatchedNormalProportion(0.2);
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$oldformat)==0,"Fail caveman matched normal check old format, modified proportion");
+
+    
 
     my $newformat = 'GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM';
     $normal_col = '0/0:45:0:5:0:45:0:5:0:0.1'; #0.1
@@ -535,6 +543,14 @@ subtest 'getCavemanMatchedNormalResult' => sub {
     ok($processor->getCavemanMatchedNormalResult($normal_col,$tumcol,$newformat)==1,"Pass caveman matched normal check new format");
     $processor->runProcess('6',138186703,138186703,"A","G");
     ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$newformat)==0,"Fail caveman matched normal check new format");
+    #Modify proportion cutoff to pass again
+    $processor->maxCavemanMatchedNormalProportion(0.09);
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$newformat)==1,"Pass caveman matched normal check new format, modified proportion");
+    $processor->maxCavemanMatchedNormalProportion(0.2);
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$newformat)==0,"Fail caveman matched normal check new format, modified proportion");
+
 };
 
 subtest 'Read Gap Tests' => sub {

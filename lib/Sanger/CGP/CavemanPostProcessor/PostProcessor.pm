@@ -53,7 +53,7 @@ const my $MIN_RD_POS_DEPTH => 8;
 const my $DEPTH_CUTOFF_PROP => 0.333333;
 const my $OLD_ALLELE_VCF_FORMAT => 'GT:AA:CA:GA:TA:PM';
 const my $NEW_ALLELE_VCF_FORMAT => 'GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM';
-const my %OLD_ALLELE_VCF_FORMAT_INDEX_HASH => ('A' => 1, 'C' => 2, 'G' => 3, 'T' => 4, );
+const my %OLD_ALLELE_VCF_FORMAT_INDEX_HASH => ('A' => [1], 'C' => [2], 'G' => [3], 'T' => [4], );
 const my %NEW_ALLELE_VCF_FORMAT_INDEX_HASH => ('A'=>[1,5], 'C' =>[2,6], 'G'=>[3,7], 'T'=>[4,8], );
 const my $WITHIN_XBP_OF_DEL => 10;
 const my $MIN_GAP_IN_PCT_READS => 30;
@@ -670,7 +670,7 @@ sub _checkCavemanMatchedNormal{
     $total_tumm_cvg = sum(@splittum[1..4]);
   }
   my $mutbase = $self->_mutBase();
-  for my $idx($decode_hash{$mutbase}){
+  for my $idx(@{$decode_hash{$mutbase}}){
     $mut_allele_cvg += $splitnorm[$idx];
     $mut_allele_tum_cvg += $splittum[$idx];
   }

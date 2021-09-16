@@ -37,6 +37,11 @@ const my $T_BAI => $test_data_path.'test.bam.bai';
 const my $PENT_BAM => $test_data_path.'pent.bam';
 const my $PENT_BAI => $test_data_path.'pent.bam.bai';
 
+const my $GAP_N_BAM => $test_data_path.'gap_flag_test_normal.bam';
+const my $GAP_N_BAI => $test_data_path.'gap_flag_test_normal.bam.bai';
+const my $GAP_T_BAI => $test_data_path.'gap_flag_test_tumour.bam.bai';
+const my $GAP_T_BAM => $test_data_path.'gap_flag_test_tumour.bam';
+
 const my $CLIP_M_BAM => $test_data_path.'clip.m.bam';
 const my $CLIP_M_BAI => $test_data_path.'clip.m.bam.bai';
 const my $CLIP_N_BAM => $test_data_path.'clip.n.bam';
@@ -552,11 +557,6 @@ subtest 'getCavemanMatchedNormalResult' => sub {
 };
 
 subtest 'Read Gap Tests' => sub {
-
-
-chr11:96092222-96092222
-chr18:31873455-3187345
-
   #Fail as more than proportion
   my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
   my $chr = 1;
@@ -643,7 +643,23 @@ chr18:31873455-3187345
   $processor->_muts->{'allTumBases'} = $allTumBases;
   $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
   ok($processor->getReadGapFlagResult==1,"Pass on percentage reads.");
-  
+
+  $chr = "chr11";
+  $pos = 96092222;
+  $ref = "C";
+  $mut = "T";
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $GAP_T_BAM, normBam => $GAP_N_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  ok($processor->getReadGapFlagResult==0,"Fail on real data.");
+
+  $chr = "chr18";
+  $pos = 31873455;
+  $ref = "A";
+  $mut = "C";
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $GAP_T_BAM, normBam => $GAP_N_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  ok($processor->getReadGapFlagResult==0,"Fail on real data 2.");
+
   done_testing();
 };
 

@@ -30,6 +30,7 @@ use Carp;
 use Const::Fast qw(const);
 use Attribute::Abstract;
 use Data::Dumper;
+use List::Util qw(min max);
 use base 'Exporter';
 
 our $VERSION = '1.9.3';
@@ -44,6 +45,7 @@ const my $HARD_CLIP_CIG => 'H';
 
 const my $MIN_SINGLE_END_CVG => 10;
 const my $MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
+const my $CAVEMAN_MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
 
 my $muts;
 my $norms;
@@ -84,22 +86,6 @@ sub _init_base{
 	_init method required by inheriting classes.
 =cut
 sub _init : Abstract;
-
-sub runProcess{
-	my ($self,$chr,$start,$stop,$refBase,$mutBase) = @_;
-	$muts = undef;
-	$norms = undef;
-	$muts_rds = {};
-	$norms_rds = {};
-	$self->clearResults();
-	$self->_chromosome($chr);
-	$self->_currentPos($start);
-	$self->_refBase($refBase);
-	$self->_mutBase($mutBase);
-	$self->{'tb'}->fetch($chr.':'.$start.'-'.$stop,\&_callbackTumFetch);
-	$self->{'nb'}->fetch($chr.':'.$start.'-'.$stop,\&_callbackMatchedNormFetch);
-	return 1;
-}
 
 =item clearResults
 	Clears last positions worth of data from the stored results.
@@ -179,6 +165,18 @@ sub _calculateMatchedNormalProportion{
 	#Fail if the difference is less than the given proportion/percentage
 	return 0 if($normProp > 0 && ($tumProp - $normProp) < $self->matchedNormalMaxMutProportion());
 	return 1;
+}
+
+sub maxCavemanMatchedNormalProportion{
+    my ($self, $val) = @_;
+    if(defined($val)){
+		 $self->{'cmnmmp'} = $val;
+	}else{
+		if(!defined($self->{'cmnmmp'})){
+			$self->{'cmnmmp'} = $CAVEMAN_MATCHED_NORMAL_MAX_MUT_PROP;
+		}
+	}
+	return $self->{'cmnmmp'};
 }
 
 sub matchedNormalMaxMutProportion{
@@ -274,131 +272,6 @@ sub _norms{
 	return $norms;
 }
 
-sub _callbackTumFetch{
-	my ($algn) = @_;
-	my $flagValue = $algn->flag;
-	#Check read and mate are mapped. If not return.
-	return if((int($flagValue) & 8) != 0);
-	return if((int($flagValue) & 4) != 0);
-	#Check for duplicate status
-	return if((int($flagValue) & 256) != 0);
-	return if((int($flagValue) & 512) != 0);
-	return if((int($flagValue) & 1024) != 0);
-	return if((int($flagValue) & 2048) != 0); #Exclude supplementary alignments
-	#Quick check that were covering the base with this read (skips/indels are ignored)
-	if(_isCurrentPosCoveredFromAlignment($algn) == 1){
-		#Get the correct read position.
-		my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($algn);
-		#print $rdPosIndexOfInterest,"\n";
-		#print $algn->qseq,"\n";
-		my @splt = split(//,$algn->qseq);
-  		#Calculate other stuff
-		my $totalPCovg = 0;
-		my $totalNCovg = 0;
-		my $indelRdCount = 0;
-		my $nom = $algn->qname;
-		my $start = $algn->start;
-		#Read strand
-		my $str = 1;
-		if($algn->reversed){
-			$str = -1;
-		}
-		return unless ($algn->proper_pair == 1);
-    # Ensure that we keep
-    return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
-    return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
-
-		$muts->{'totalTCoverage'} += 1;
-		if($str == 1){
-			$muts->{'totalTCoveragePos'} += 1;
-		}else{
-			$muts->{'totalTCoverageNeg'} += 1;
-		}
-		my $xt = $algn->aux_get('XT');
-		if($algn->cigar_str =~ m/[ID]/){
-			$muts->{'indelTCount'} += 1;
-		}
-
-		#Read base
-		my $qbase = $splt[$rdPosIndexOfInterest-1];
-
-		#Base quality
-		my $qscore = $algn->qscore->[$rdPosIndexOfInterest-1];
-
-		push(@{$muts->{'completeMutStrands'}},$str);
-
-		push(@{$muts->{'allTumBases'}},$qbase);
-
-		push(@{$muts->{'allTumBaseQuals'}},$qscore);
-
-		push(@{$muts->{'allTumStrands'}},$str);
-
-		#return if(uc($qbase) ne uc($mutBase));
-
-		return if ($keepSW == 0 && defined($xt) && $xt eq 'M');
-
-		return if($qscore < $minAnalysedQual);
-
-		my $rdPos = $rdPosIndexOfInterest;
-		my $ln = $algn->l_qseq;
-
-		$muts->{'tumcvg'} += 1;
-
-		#return if(uc($qbase) ne uc($mutBase));
-
-		if($str == 1){
-			$totalPCovg++;
-		}else{
-			$totalNCovg++;
-			$rdPos = ($ln - $rdPos) + 1;
-		}
-
-		$muts->{'pcvg'} += $totalPCovg;
-
-		$muts->{'ncvg'} += $totalNCovg;
-
-		my $rdName = $algn->qname;
-
-		return if(uc($qbase) ne uc($mutBase));
-
-		my $softclipcount = _get_soft_clip_count_from_cigar($algn->cigar_array);
-		my $primaryalnscore = $algn->get_tag_values('AS');
-
-		#Tum quals
-		push(@{$muts->{'tqs'}},$qscore);
-
-		#Tum Rd Pos
-		push(@{$muts->{'trp'}},$rdPos);
-
-		#Tum rd length
-		push(@{$muts->{'trl'}},$ln);
-
-		#Tum XT tags
-		push(@{$muts->{'txt'}},$xt);
-
-		#Tum rd start
-		push(@{$muts->{'trdst'}},$start);
-
-		#Strands
-		push(@{$muts->{'tstr'}},$str);
-
-		#RdNames
-		push(@{$muts->{'trn'}},$rdName);
-
-		#Mapping quals
-		push(@{$muts->{'tmq'}},$algn->qual);
-
-		#AlnScoresPrm
-		push(@{$muts->{'alnp'}},$primaryalnscore);
-
-		#Softclipping
-		push(@{$muts->{'sclp'}},$softclipcount);
-
-		#print Dumper($a);
-	}
-	return 1;
-}
-
 sub _get_soft_clip_count_from_cigar{
 	my ($cig_arr) = @_;
 	my $count = 0;
@@ -408,6 +281,26 @@ sub _get_soft_clip_count_from_cigar{
 		}
 	}
 	return $count;
+}
+
+sub _getDistanceFromGapInRead{
+  my ($cigar_array,$rdPosIndexOfInterest) = @_;
+  my $min_gap_dist = -1;
+  my $currentRp = 0;
+  foreach my $cigSect(@{$cigar_array}){
+    if($cigSect->[0] eq $MATCH_CIG || $cigSect->[0] eq $SKIP_CIG ||
+          $cigSect->[0] eq $INS_CIG || $cigSect->[0] eq $SOFT_CLIP_CIG){
+      $currentRp+=$cigSect->[1];
+    }elsif($cigSect->[0] eq $DEL_CIG){
+      my $dp_start = $currentRp+1;
+      my $dp_end = $currentRp+$cigSect->[1];
+      my $tmp_dist = max(abs($rdPosIndexOfInterest-$dp_start),abs($dp_end-$rdPosIndexOfInterest));
+      if($tmp_dist < $min_gap_dist || $min_gap_dist == -1){
+        $min_gap_dist = $tmp_dist;
+      }
+    }
+  }
+  return $min_gap_dist;
 }
 
 sub _getReadPositionFromAlignment{
@@ -454,125 +347,6 @@ sub _isCurrentPosCoveredFromAlignment{
 		}
 	}
 	return 0;
-}
-
-sub _callbackMatchedNormFetch{
-		my ($algn) = @_;
-	my $flagValue = $algn->flag;
-	#Check read and mate are mapped.
-	return if((int($flagValue) & 8) != 0);
-	return if((int($flagValue) & 4) != 0);
-	#Check for duplicate status
-	return if((int($flagValue) & 256) != 0);
-	return if((int($flagValue) & 512) != 0);
-	return if((int($flagValue) & 1024) != 0);
-	return if((int($flagValue) & 2048) != 0); #Exclude supplementary alignments
-	#Quick check that were covering the base with this read (skips/indels are ignored)
-	if(_isCurrentPosCoveredFromAlignment($algn) == 1){
-		#Get the correct read position.
-		my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($algn,$currentPos);
-		#print $rdPosIndexOfInterest,"\n";
-		#print $algn->qseq,"\n";
-		my @splt = split(//,$algn->qseq);
-  		#Calculate other stuff
-		my $totalPCovg = 0;
-		my $totalNCovg = 0;
-		my $indelRdCount = 0;
-		my $nom = $algn->qname;
-		return unless ($algn->proper_pair == 1);
-    # Ensure that we keep
-    return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
-    return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
-
-		if(!defined($muts->{'totalNCoverage'})){
-			$muts->{'totalNCoverage'} = 0;
-		}
-		$muts->{'totalNCoverage'} += 1;
-		my $xt = $algn->aux_get('XT');
-		#Read base
-		my $qbase = $splt[$rdPosIndexOfInterest-1];
-
-		#Read strand
-		my $str = 1;
-		if($algn->reversed){
-			$str = -1;
-		}
-		#Base quality
-		my $qscore = $algn->qscore->[$rdPosIndexOfInterest-1];
-
-		if(!defined($muts->{'allNormBases'})){
-			$muts->{'allNormBases'} = [];
-		}
-		push(@{$muts->{'allNormBases'}},$qbase);
-
-		if(!defined($muts->{'allNormBaseQuals'})){
-			$muts->{'allNormBaseQuals'} = [];
-		}
-		push(@{$muts->{'allNormBaseQuals'}},$qscore);
-
-		if(!defined($muts->{'allNormStrands'})){
-			$muts->{'allNormStrands'} = [];
-		}
-		push(@{$muts->{'allNormStrands'}},$str);
-
-		return if ($keepSW == 0 && defined $xt && $xt eq 'M');
-
-		return if($qscore < $minAnalysedQual);
-
-		if(!defined($muts->{'normcvg'})){
-			$muts->{'normcvg'} = 0;
-		}
-		$muts->{'normcvg'} += 1;
-
-
-		#return if(uc($qbase) ne uc($mutBase));
-
-		my $rdPos = $rdPosIndexOfInterest;
-
-		my $ln = length($algn->qseq);
-
-		if($str == +1){
-			$totalPCovg++;
-		}else{
-			$totalNCovg++;
-			$rdPos = ($ln - $rdPos) + 1;
-		}
-		my $rdName = $algn->qname;
-		return if(uc($qbase) ne uc($mutBase));
-		#Tum quals
-		if(!defined($muts->{'nqs'})){
-			my @empty = ();
-			$muts->{'nqs'} = \@empty;
-		}
-		push(@{$muts->{'nqs'}},$qscore);
-
-		#Tum Rd Pos
-		if(!defined($muts->{'nrp'})){
-			my @empty = ();
-			$muts->{'nrp'} = \@empty;
-		}
-		push(@{$muts->{'nrp'}},$rdPos);
-
-		#Tum rd length
-		if(!defined($muts->{'nrl'})){
-			my @empty = ();
-			$muts->{'nrl'} = \@empty;
-		}
-		push(@{$muts->{'nrl'}},$ln);
-
-		if(!defined($muts->{'npcvg'})){
-			$muts->{'npcvg'} = 0;
-		}
-		$muts->{'npcvg'} += $totalPCovg;
-
-		if(!defined($muts->{'nncvg'} )){
-			$muts->{'nncvg'} = 0;
-		}
-		$muts->{'nncvg'} += $totalNCovg;
-
-
-	}
-	return 1;
 }
 
 sub DESTROY{

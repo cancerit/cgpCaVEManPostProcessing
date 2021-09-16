@@ -82,7 +82,7 @@ sub main{
 	checkUnsupportedOption();
 	run_old_flag();
 	#check_old_version_correct
-	compare($test_out_oldVersionVCF, $expected_out_oldVersionVCF, __LINE__);
+	compare($test_out_oldVersionVCF, $expected_out_oldVersionVCF, undef,__LINE__);
 	remove_created_files();
 }
 
@@ -159,6 +159,9 @@ sub run_old_flag{
 			" -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
 			" -u $unmatched_vcf -ref $ref";
 	my ($out, $err, $exit) = capture{ system($cmd) };
+    if($exit!=0){
+		warn Dumper($err);
+	}
 	is($exit, 0, 'Old version flagging ran correctly');
 }
 
@@ -169,7 +172,6 @@ sub checkSupportedButNoFlags{
 			" --index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
 			"-u $unmatched_vcf -ref $ref";
 	my ($out, $err, $exit) = capture{ system($cmd) };
-	warn "********$err\n";
 	like($err, qr/No flagList found in .+ for section HUMAN_WXS FLAGLIST. No flagging will be done./, 'Correctly exits as no flags available (check message).');
 	isnt($exit, 0, 'Correctly runs with warnings as no flags available (check exitcode).');
 }
@@ -245,8 +247,7 @@ sub compare{
 	$exp =~ s/InputVCFVer=<(.+)>>/InputVCFVer=<>>/g;
 	$new =~ s/InputVCFVer=<(.+)>>/InputVCFVer=<>>/g;
 	#check they equate.
-    warn Dumper($new, $exp);
-	is_deeply(_tab_data_to_object($new), _tab_data_to_object($exp),"compare $line_no");
+	is_deeply(_tab_data_to_object($new), _tab_data_to_object($exp),"compare $line_no") or diag($new, $exp);
 }
 
 sub _tab_data_to_object {

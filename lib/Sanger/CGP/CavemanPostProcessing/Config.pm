@@ -43,6 +43,7 @@ const my $CONFIG_DESCRIPTION => "description";
 const my $CONFIG_VAL => "val";
 const my $CONFIG_TYPE => "type";
 const my $CONFIG_INTERSECT => "intersect";
+const my $CONFIG_NEED_VCF => "needs_vcf";
 const my $CONFIG_OPTIONNAME => "optname";
 const my $CONFIG_FILENAME => "filename";
 const my $CONFIG_NUMBER => 'Number';
@@ -133,6 +134,11 @@ sub _read_flag_config{
     if(!($self->flag_config->exists($flag_section,$CONFIG_DESCRIPTION))){
       croak("No flag description found for $flag_section");
     }
+    my $need_vcf = 0;
+    if($self->flag_config->exists($flag_section,$CONFIG_NEED_VCF)){
+        $need_vcf = $self->flag_config->val($flag_section,$CONFIG_NEED_VCF);
+    }
+    $flag->is_need_vcf($need_vcf);
     my $pre_description = $self->flag_config->val($flag_section,$CONFIG_DESCRIPTION);
     #Populate the description with the config values.
     my $desc = $self->description_with_params($flag_section,$pre_description);

@@ -26,7 +26,8 @@ use autodie;
 use Carp;
 use Const::Fast;
 use POSIX qw(strftime ceil);
-use List::Util qw (sum);
+use List::Util qw (sum zip max);
+
 
 use Bio::DB::HTS;
 use Bio::DB::HTS::Constants;
@@ -38,12 +39,28 @@ use Sanger::CGP::CavemanPostProcessing;
 const my $BAD_BITS => hex RFLAGS->{UNMAPPED}|RFLAGS->{M_UNMAPPED}|RFLAGS->{NOT_PRIMARY}|RFLAGS->{QC_FAILED}|RFLAGS->{DUPLICATE}|RFLAGS->{SUPPLEMENTARY};
 const my $GOOD_BITS => hex RFLAGS->{MAP_PAIR};
 
+const my $VCF_COLUMN_NORMAL => 'NORMAL';
+const my $VCF_COLUMN_TUMOUR => 'TUMOUR';
+const my $VCF_COLUMN_FORMAT => 'FORMAT';
+const my $OLD_ALLELE_VCF_FORMAT => 'GT:AA:CA:GA:TA:PM';
+const my $NEW_ALLELE_VCF_FORMAT => 'GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM';
+const my %OLD_ALLELE_VCF_FORMAT_INDEX_HASH => ('A' => 1, 'C' => 2, 'G' => 3, 'T' => 4, );
+const my %NEW_ALLELE_VCF_FORMAT_INDEX_HASH => ('A'=>[1,5], 'C' =>[2,6], 'G'=>[3,7], 'T'=>[4,8], );
+
+const my $MATCH_CIG => 'M';
+const my $SKIP_CIG => 'N';
+const my $INS_CIG => 'I';
+const my $DEL_CIG => 'D';
+const my $SOFT_CLIP_CIG => 'S';
+const my $HARD_CLIP_CIG => 'H';
+
 my $ref;
 my $mut;
 my $pos;
 my $chr;
 my $prms = {};
 my $muts = {};
+my $is_stranded_format = 1;
 
 sub new {
 	my ($proto) = @_;
@@ -199,6 +216,8 @@ sub _tumFetch{
 		#Base quality
 		my $qscore = $algn->qscore->[$rdPosIndexOfInterest-1];
 
+    my $gapDist = _getDistanceFromGapInRead($algn->cigar_array,$rdPosIndexOfInterest);
+
 		push(@{$muts->{'completeMutStrands'}},$str);
 
 		push(@{$muts->{'allTumBases'}},$qbase);
@@ -206,6 +225,10 @@ sub _tumFetch{
 		push(@{$muts->{'allTumBaseQuals'}},$qscore);
 
 		push(@{$muts->{'allTumStrands'}},$str);
+
+    push(@{$muts->{'allTumMapQuals'}},$algn->qual);
+
+    push(@{$muts->{'allMinGapDistances'}},$gapDist);
 
 		#return if(uc($qbase) ne uc($mutBase));
     my $xt = $algn->aux_get('XT');
@@ -269,6 +292,26 @@ sub _tumFetch{
 		push(@{$muts->{'sclp'}},$softclipcount);
 	}
 	return 1;
+}
+
+sub _getDistanceFromGapInRead{
+  my ($cigar_array,$rdPosIndexOfInterest) = @_;
+  my $min_gap_dist = -1;
+  my $currentRp = 0;
+  foreach my $cigSect(@{$cigar_array}){
+    if($cigSect->[0] eq $MATCH_CIG || $cigSect->[0] eq $SKIP_CIG ||
+          $cigSect->[0] eq $INS_CIG || $cigSect->[0] eq $SOFT_CLIP_CIG){
+      $currentRp+=$cigSect->[1];
+    }elsif($cigSect->[0] eq $DEL_CIG){
+      my $dp_start = $currentRp+1;
+      my $dp_end = $currentRp+$cigSect->[1];
+      my $tmp_dist = max(abs($rdPosIndexOfInterest-$dp_start),abs($dp_end-$rdPosIndexOfInterest));
+      if($tmp_dist < $min_gap_dist || $min_gap_dist == -1){
+        $min_gap_dist = $tmp_dist;
+      }
+    }
+  }
+  return $min_gap_dist;
 }
 
 sub _matchedNormFetch{
@@ -427,11 +470,47 @@ sub depthFlag{
 		if($q >= get_param('minDepthQual')){
 			$overCutoff++;
 		}
-		if($overCutoff >= ($depth / get_param('depthCutoffProportion'))){
+		if($overCutoff >= ($depth * get_param('depthCutoffProportion'))){
 			return 0; #Pass
 		}
 	}
 	return 1; #Fail
+}
+
+sub cavemanMatchNormalProportionFlag{
+    my ($self, $vcf, $x) = @_;
+    my $normal_col = $vcf->get_column($x,$VCF_COLUMN_NORMAL);
+    my $tumour_col = $vcf->get_column($x,$VCF_COLUMN_TUMOUR);
+    my $format = $vcf->get_column($x,$VCF_COLUMN_FORMAT);
+    return $self->_getCavemanMatchNormalProportionFlag($normal_col,$tumour_col,$format);
+}
+
+sub _getCavemanMatchNormalProportionFlag{
+    my ($self,$normal_col,$tumour_col,$format) = @_;
+    my @splitnorm = split(/:/,$normal_col);
+    my @splittum = split(/:/,$tumour_col);
+    my @splitformat = split(/:/,$format);
+    $is_stranded_format = 0 if($format =~ m/$OLD_ALLELE_VCF_FORMAT/);
+    my $total_norm_cvg = 0;
+    my $mut_allele_cvg = 0;
+    my $total_tumm_cvg = 0;
+    my $mut_allele_tum_cvg = 0;
+    my %decode_hash = %OLD_ALLELE_VCF_FORMAT_INDEX_HASH;
+    if($is_stranded_format==1){
+      %decode_hash = %NEW_ALLELE_VCF_FORMAT_INDEX_HASH;
+      $total_norm_cvg = sum(@splitnorm[1..8]);
+      $total_tumm_cvg = sum(@splittum[1..8]);
+    }else{
+      $total_norm_cvg = sum(@splitnorm[1..4]);
+      $total_tumm_cvg = sum(@splittum[1..4]);
+    }
+    my $mutbase = $self->{'mut'};
+    $mut_allele_cvg = sum(@splitnorm[$decode_hash{$mutbase}]);
+    $mut_allele_tum_cvg = sum(@splittum[$decode_hash{$mutbase}]);
+    my $norm_prop = $mut_allele_cvg/$total_norm_cvg;
+    my $tum_prop = $mut_allele_tum_cvg/$total_tumm_cvg;
+    return 1 if($norm_prop > 0 && (($tum_prop - $norm_prop) < get_param('maxCavemanMatchedNormalProportion'))); #Fail
+    return 0; #Pass
 }
 
 sub readPositionFlag{
@@ -767,6 +846,30 @@ sub sameReadPosFlag{
 		}
 	}
 	return 0;
+}
+
+sub withinGapRangeFlag{
+  my ($self) = @_;
+  my $meanMapQ = sum($self->_muts->{'allTumMapQuals'})/scalar(@{$self->_muts->{'allTumMapQuals'}});
+  return 0 if($meanMapQ < get_param('minMeanMapQualGapFlag')); #Pass as likely mismapping
+  my $total_reads = scalar(@{$self->_muts->{'allTumMapQuals'}});
+  my @non_tum_base_dist = [];
+  my $norm_base_dist_count = 0;
+  foreach (zip($self->_muts->{'allTumBases'},$self->_muts->{'allMinGapDistances'})){
+    my ($base, $distance) = @{$_};
+    if($base eq $self->{'mut'}){
+      return 0 if($distance != -1);
+    }else{
+      if($distance != -1 && $distance <= get_param('withinXBpOfDeletion')){
+        push(@non_tum_base_dist, $distance);
+        $norm_base_dist_count++;
+      }
+    }
+  }
+  return 0 if($norm_base_dist_count==0); #Pass if zero reference reads with gap
+  my $percentage_reads_present = ($norm_base_dist_count/$total_reads) * 100;
+  return 1 if($percentage_reads_present >= get_param('minGapPresentInReads'));
+  return 0;
 }
 
 1;

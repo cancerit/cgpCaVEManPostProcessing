@@ -25,7 +25,7 @@ use Bio::DB::HTS;
 use Bio::DB::HTS::Constants;
 use Bio::DB::HTS::Alignment;
 use POSIX qw(strftime ceil);
-use List::Util qw (sum);
+use List::Util qw (sum zip);
 use Carp;
 use Const::Fast qw(const);
 
@@ -50,605 +50,731 @@ const my $MIN_AVG_PHASING_BASE_QUAL => 21;
 const my $MIN_DEPTH_QUAL => 25;
 const my $MIN_NORM_MUT_ALLELE_BASE_QUAL => 15;
 const my $MIN_RD_POS_DEPTH => 8;
-const my $DEPTH_CUTOFF_PROP => (1/3);
+const my $DEPTH_CUTOFF_PROP => 0.333333;
+const my $OLD_ALLELE_VCF_FORMAT => 'GT:AA:CA:GA:TA:PM';
+const my $NEW_ALLELE_VCF_FORMAT => 'GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM';
+const my %OLD_ALLELE_VCF_FORMAT_INDEX_HASH => ('A' => [1], 'C' => [2], 'G' => [3], 'T' => [4], );
+const my %NEW_ALLELE_VCF_FORMAT_INDEX_HASH => ('A'=>[1,5], 'C' =>[2,6], 'G'=>[3,7], 'T'=>[4,8], );
+const my $WITHIN_XBP_OF_DEL => 10;
+const my $MIN_GAP_IN_PCT_READS => 30;
+const my $MEAN_MAPQ_GAPFLAG => 10;
+const my $CAVEMAN_MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
+
+
+my $is_stranded_format = 1;
 
 sub _init{
-	my ($self,$inputs) = @_;
+  my ($self,$inputs) = @_;
 
-	if(!defined($inputs->{'tumBam'}) || !defined($inputs->{'normBam'})){
-		croak("tumBam and normBam are required for initialisation.\n");
-	}
+  if(!defined($inputs->{'tumBam'}) || !defined($inputs->{'normBam'})){
+    croak("tumBam and normBam are required for initialisation.\n");
+  }
 
-	$self->minDepthQual($inputs->{'minDepthQual'});
-    $self->depthCutoffProportion($inputs->{'depthCutoffProportion'});
-	$self->minNormalMutAlleleQual($inputs->{'minNormMutAllelequal'});
-	$self->percentageSamePos($inputs->{'samePosMaxPercent'});
-	$self->maxTumIndelProportion($inputs->{'maxTumIndelProportion'});
-	$self->maxNormIndelProportion($inputs->{'maxNormIndelProportion'});
-	$self->minPassAvgMapQual($inputs->{'minPassAvgMapQual'});
-	$self->pentamerMinPassAvgQual($inputs->{'pentamerMinPassAvgQual'});
-	$self->minPassAvgBaseQualPhasing($inputs->{'minPassPhaseQual'});
-	$self->maxPhasingMinorityStrandReadProportion($inputs->{'maxPhasingMinorityStrandReadProportion'});
-	$self->maxMatchedNormalAlleleProportion($inputs->{'maxMatchedNormalAlleleProportion'});
-	$self->readPosBeginningOfReadIgnoreProportion($inputs->{'readPosBeginningOfReadIgnoreProportion'});
-	$self->readPosTwoThirdsOfReadExtendProportion($inputs->{'readPosTwoThirdsOfReadExtendProportion'});
-	$self->minRdPosDepth($inputs->{'minRdPosDepth'});
-	$self->matchedNormalMaxMutProportion($inputs->{'matchedNormalMaxMutProportion'});
+  $self->minDepthQual($inputs->{'minDepthQual'});
+  $self->depthCutoffProportion($inputs->{'depthCutoffProportion'});
+  $self->minNormalMutAlleleQual($inputs->{'minNormMutAllelequal'});
+  $self->percentageSamePos($inputs->{'samePosMaxPercent'});
+  $self->maxTumIndelProportion($inputs->{'maxTumIndelProportion'});
+  $self->maxNormIndelProportion($inputs->{'maxNormIndelProportion'});
+  $self->minPassAvgMapQual($inputs->{'minPassAvgMapQual'});
+  $self->pentamerMinPassAvgQual($inputs->{'pentamerMinPassAvgQual'});
+  $self->minPassAvgBaseQualPhasing($inputs->{'minPassPhaseQual'});
+  $self->maxPhasingMinorityStrandReadProportion($inputs->{'maxPhasingMinorityStrandReadProportion'});
+  $self->maxMatchedNormalAlleleProportion($inputs->{'maxMatchedNormalAlleleProportion'});
+  $self->readPosBeginningOfReadIgnoreProportion($inputs->{'readPosBeginningOfReadIgnoreProportion'});
+  $self->readPosTwoThirdsOfReadExtendProportion($inputs->{'readPosTwoThirdsOfReadExtendProportion'});
+  $self->minRdPosDepth($inputs->{'minRdPosDepth'});
+  $self->matchedNormalMaxMutProportion($inputs->{'matchedNormalMaxMutProportion'});
+  $self->maxCavemanMatchedNormalProportion($inputs->{'maxCavemanMatchedNormalProportion'});
+  $self->withinXBpOfDeletion($inputs->{'withinXBpOfDeletion'});
+  $self->minGapPresentInPercentReads($inputs->{'minGapPresentInReads'});
+  $self->meanMapQualGapFlag($inputs->{'minMeanMapQualGapFlag'});
 
-	return $self;
+  return $self;
 }
 
 sub clearResults{
-	my ($self) = @_;
-	$self->{'depth'} = undef;
-	$self->{'pos'} = undef;
-	$self->{'norm'} = undef;
-	$self->{'other'} = undef;
-	$self->{'dpos'} = undef;
-	$self->{'indelTum'} = undef;
-	$self->{'indelNorm'} = undef;
-	$self->{'motif'} = undef;
-	$self->{'mapQ'} = undef;
-	$self->{'otherOLD'} = undef;
-	$self->{'phase'} = undef;
-	$self->{'XTCheck'} = undef;
-	$self->{'single'} = undef;
-	$self->{'umpropres'} = undef;
-	$self->{'clipmed'} = undef;
-	$self->{'alnmedrd'} = undef;
-	$self->{'algnmed'} = undef;
-	return 1;
+  my ($self) = @_;
+  $self->{'depth'} = undef;
+  $self->{'pos'} = undef;
+  $self->{'norm'} = undef;
+  $self->{'other'} = undef;
+  $self->{'dpos'} = undef;
+  $self->{'indelTum'} = undef;
+  $self->{'indelNorm'} = undef;
+  $self->{'motif'} = undef;
+  $self->{'mapQ'} = undef;
+  $self->{'otherOLD'} = undef;
+  $self->{'phase'} = undef;
+  $self->{'XTCheck'} = undef;
+  $self->{'single'} = undef;
+  $self->{'umpropres'} = undef;
+  $self->{'clipmed'} = undef;
+  $self->{'alnmedrd'} = undef;
+  $self->{'algnmed'} = undef;
+  $self->{'cmnp'} = undef;
+  $self->{'gapflg'} = undef;
+  return 1;
 }
 
 #-----------------------------
-#	Getters/setters
+#  Getters/setters
 #-----------------------------
 
-sub maxMatchedNormalAlleleProportion{
-	my ($self,$p) = @_;
-	if(defined($p)){
-		 $self->{'maxMatchedNormalAlleleProportion'} = $p;
+sub meanMapQualGapFlag{
+  my ($self, $p) = @_;
+  if(defined($p)){
+    $self->{'minMeanMapQualGapFlag'} = $p;
+  }else{
+    if(!defined($self->{'minMeanMapQualGapFlag'})){
+      $self->{'minMeanMapQualGapFlag'} = $MEAN_MAPQ_GAPFLAG;
+    }
+  }
+  return $self->{'minMeanMapQualGapFlag'};
+}
+
+sub maxCavemanMatchedNormalProportion{
+    my ($self, $val) = @_;
+    if(defined($val)){
+		 $self->{'cmnmmp'} = $val;
 	}else{
-		if(!defined($self->{'maxMatchedNormalAlleleProportion'})){
-			$self->{'maxMatchedNormalAlleleProportion'} = $MAX_MATCHED_NORM_MUT_ALLELE_PROP;
+		if(!defined($self->{'cmnmmp'})){
+			$self->{'cmnmmp'} = $CAVEMAN_MATCHED_NORMAL_MAX_MUT_PROP;
 		}
 	}
-	return $self->{'maxMatchedNormalAlleleProportion'};
+	return $self->{'cmnmmp'};
+}
+
+sub withinXBpOfDeletion{
+    my ($self, $p) = @_;
+    if(defined($p)){
+         $self->{'getWithinXBpOfDeletion'} = $p;
+    }else{
+        if(!defined($self->{'getWithinXBpOfDeletion'})){
+            $self->{'getWithinXBpOfDeletion'} = $WITHIN_XBP_OF_DEL;
+        }
+    }
+    return $self->{'getWithinXBpOfDeletion'};
+}
+
+sub minGapPresentInPercentReads{
+    my ($self, $p) = @_;
+    if(defined($p)){
+         $self->{'minGapPresentInReads'} = $p;
+    }else{
+        if(!defined($self->{'minGapPresentInReads'})){
+            $self->{'minGapPresentInReads'} = $MIN_GAP_IN_PCT_READS;
+        }
+    }
+    return $self->{'minGapPresentInReads'};
+}
+
+sub maxMatchedNormalAlleleProportion{
+  my ($self,$p) = @_;
+  if(defined($p)){
+     $self->{'maxMatchedNormalAlleleProportion'} = $p;
+  }else{
+    if(!defined($self->{'maxMatchedNormalAlleleProportion'})){
+      $self->{'maxMatchedNormalAlleleProportion'} = $MAX_MATCHED_NORM_MUT_ALLELE_PROP;
+    }
+  }
+  return $self->{'maxMatchedNormalAlleleProportion'};
 }
 
 sub maxPhasingMinorityStrandReadProportion{
-	my ($self,$p) = @_;
-	if(defined($p)){
-		$self->{'maxPhasingMinorityStrandReadProportion'} = $p;
-	}else{
-		if(!defined($self->{'maxPhasingMinorityStrandReadProportion'})){
-			$self->{'maxPhasingMinorityStrandReadProportion'} = $MAX_PHASING_MINORITY_STRAND_PROP;
-		}
-	}
-	return $self->{'maxPhasingMinorityStrandReadProportion'};
+  my ($self,$p) = @_;
+  if(defined($p)){
+    $self->{'maxPhasingMinorityStrandReadProportion'} = $p;
+  }else{
+    if(!defined($self->{'maxPhasingMinorityStrandReadProportion'})){
+      $self->{'maxPhasingMinorityStrandReadProportion'} = $MAX_PHASING_MINORITY_STRAND_PROP;
+    }
+  }
+  return $self->{'maxPhasingMinorityStrandReadProportion'};
 }
 
 sub readPosBeginningOfReadIgnoreProportion{
-	my ($self,$p) = @_;
-	if(defined($p)){
-		 $self->{'readPosBeginningOfReadIgnoreProportion'} = $p;
-	}else{
-		if(!defined($self->{'readPosBeginningOfReadIgnoreProportion'})){
-			$self->{'readPosBeginningOfReadIgnoreProportion'} = $RD_POS_BEGINNING_OF_RD_PROP;
-		}
-	}
-	return $self->{'readPosBeginningOfReadIgnoreProportion'};
+  my ($self,$p) = @_;
+  if(defined($p)){
+     $self->{'readPosBeginningOfReadIgnoreProportion'} = $p;
+  }else{
+    if(!defined($self->{'readPosBeginningOfReadIgnoreProportion'})){
+      $self->{'readPosBeginningOfReadIgnoreProportion'} = $RD_POS_BEGINNING_OF_RD_PROP;
+    }
+  }
+  return $self->{'readPosBeginningOfReadIgnoreProportion'};
 }
 
 sub readPosTwoThirdsOfReadExtendProportion{
-	my ($self,$p) = @_;
-	if(defined($p)){
-		 $self->{'readPosTwoThirdsOfReadExtendProportion'} = $p;
-	}else{
-		if(!defined($self->{'readPosTwoThirdsOfReadExtendProportion'})){
-			$self->{'readPosTwoThirdsOfReadExtendProportion'} = $RD_POS_END_OF_TWOTHIRDS_EXTEND_PROP;
-		}
-	}
-	return $self->{'readPosTwoThirdsOfReadExtendProportion'};
+  my ($self,$p) = @_;
+  if(defined($p)){
+     $self->{'readPosTwoThirdsOfReadExtendProportion'} = $p;
+  }else{
+    if(!defined($self->{'readPosTwoThirdsOfReadExtendProportion'})){
+      $self->{'readPosTwoThirdsOfReadExtendProportion'} = $RD_POS_END_OF_TWOTHIRDS_EXTEND_PROP;
+    }
+  }
+  return $self->{'readPosTwoThirdsOfReadExtendProportion'};
 }
 
 
 sub pentamerMinPassAvgQual{
-	my ($self,$p) = @_;
-	if(defined($p)){
-		 $self->{'pentamerMinPassAvgQual'} = $p;
-	}else{
-		if(!defined($self->{'pentamerMinPassAvgQual'})){
-			$self->{'pentamerMinPassAvgQual'} = $MIN_PASS_AVG_QUAL_PENTAMER;
-		}
-	}
-	return $self->{'pentamerMinPassAvgQual'};
+  my ($self,$p) = @_;
+  if(defined($p)){
+     $self->{'pentamerMinPassAvgQual'} = $p;
+  }else{
+    if(!defined($self->{'pentamerMinPassAvgQual'})){
+      $self->{'pentamerMinPassAvgQual'} = $MIN_PASS_AVG_QUAL_PENTAMER;
+    }
+  }
+  return $self->{'pentamerMinPassAvgQual'};
 }
 
 sub percentageSamePos{
-	my ($self,$p) = @_;
-	if(defined($p)){
-		$self->{'pctSamePos'} = $p;
-	}else{
-		if(!defined($self->{'pctSamePos'})){
-			$self->{'pctSamePos'} = $SAME_RD_POS_PERCENT;
-		}
-	}
-	return $self->{'pctSamePos'};
+  my ($self,$p) = @_;
+  if(defined($p)){
+    $self->{'pctSamePos'} = $p;
+  }else{
+    if(!defined($self->{'pctSamePos'})){
+      $self->{'pctSamePos'} = $SAME_RD_POS_PERCENT;
+    }
+  }
+  return $self->{'pctSamePos'};
 }
 
 sub maxTumIndelProportion{
-	my ($self,$p) = @_;
-	if(defined($p)){
-		$self->{'maxTumIndelProp'} = $p;
-	}else{
-		if(!defined($self->{'maxTumIndelProp'})){
-			$self->{'maxTumIndelProp'} = $MAX_TUM_INDEL_PROP;
-		}
-	}
-	return $self->{'maxTumIndelProp'};
+  my ($self,$p) = @_;
+  if(defined($p)){
+    $self->{'maxTumIndelProp'} = $p;
+  }else{
+    if(!defined($self->{'maxTumIndelProp'})){
+      $self->{'maxTumIndelProp'} = $MAX_TUM_INDEL_PROP;
+    }
+  }
+  return $self->{'maxTumIndelProp'};
 }
 
 sub maxNormIndelProportion{
-	my ($self,$p) = @_;
-	if(defined($p)){
-		$self->{'maxNormIndelProp'} = $p;
-	}else{
-		if(!defined($self->{'maxNormIndelProp'})){
-			$self->{'maxNormIndelProp'} = $MAX_NORM_INDEL_PROP;
-		}
-	}
-	return $self->{'maxNormIndelProp'};
+  my ($self,$p) = @_;
+  if(defined($p)){
+    $self->{'maxNormIndelProp'} = $p;
+  }else{
+    if(!defined($self->{'maxNormIndelProp'})){
+      $self->{'maxNormIndelProp'} = $MAX_NORM_INDEL_PROP;
+    }
+  }
+  return $self->{'maxNormIndelProp'};
 }
 
 sub minPassAvgMapQual{
-	my ($self,$p) = @_;
-	if(defined($p)){
-		$self->{'minAvgMq'} = $p;
-	}else{
-		if(!defined($self->{'minAvgMq'})){
-			$self->{'minAvgMq'} = $MIN_AVG_MAP_QUAL;
-		}
-	}
-	return $self->{'minAvgMq'};
+  my ($self,$p) = @_;
+  if(defined($p)){
+    $self->{'minAvgMq'} = $p;
+  }else{
+    if(!defined($self->{'minAvgMq'})){
+      $self->{'minAvgMq'} = $MIN_AVG_MAP_QUAL;
+    }
+  }
+  return $self->{'minAvgMq'};
 }
 
 sub minPassAvgBaseQualPhasing{
-	my ($self,$bq) = @_;
-	if(defined($bq)){
-		$self->{'phaseQual'} = $bq;
-	}elsif(!defined($self->{'phaseQual'})){
-		$self->{'phaseQual'} = $MIN_AVG_PHASING_BASE_QUAL;
-	}
-	return $self->{'phaseQual'};
+  my ($self,$bq) = @_;
+  if(defined($bq)){
+    $self->{'phaseQual'} = $bq;
+  }elsif(!defined($self->{'phaseQual'})){
+    $self->{'phaseQual'} = $MIN_AVG_PHASING_BASE_QUAL;
+  }
+  return $self->{'phaseQual'};
 }
 
 sub depthCutoffProportion{
-	my ($self,$q) = @_;
-	if(defined($q)){
-		$self->{'d'} = $q;
-	}else{
-		if(!defined($self->{'d'})){
-			$self->{'d'} = $DEPTH_CUTOFF_PROP;
-		}
-	}
-	return $self->{'d'};
+  my ($self,$dp) = @_;
+  if(defined($dp)){
+    $self->{'dc'} = $dp;
+  }else{
+    if(!defined($self->{'dc'})){
+      $self->{'dc'} = $DEPTH_CUTOFF_PROP;
+    }
+  }
+  return $self->{'dc'};
 }
 
 sub minDepthQual{
-	my ($self,$q) = @_;
-	if(defined($q)){
-		$self->{'d'} = $q;
-	}else{
-		if(!defined($self->{'d'})){
-			$self->{'d'} = $MIN_DEPTH_QUAL;
-		}
-	}
-	return $self->{'d'};
+  my ($self,$q) = @_;
+  if(defined($q)){
+    $self->{'d'} = $q;
+  }else{
+    if(!defined($self->{'d'})){
+      $self->{'d'} = $MIN_DEPTH_QUAL;
+    }
+  }
+  return $self->{'d'};
 }
 
 sub minNormalMutAlleleQual{
-	my ($self,$q) = @_;
-	if(defined($q)){
-		$self->{'q'} = $q;
-	}else{
-		if(!defined($self->{'q'})){
-			$self->{'q'} = $MIN_NORM_MUT_ALLELE_BASE_QUAL;
-		}
-	}
-	return $self->{'q'};
+  my ($self,$q) = @_;
+  if(defined($q)){
+    $self->{'q'} = $q;
+  }else{
+    if(!defined($self->{'q'})){
+      $self->{'q'} = $MIN_NORM_MUT_ALLELE_BASE_QUAL;
+    }
+  }
+  return $self->{'q'};
 }
 
 sub minRdPosDepth{
-	my ($self,$q) = @_;
-	if(defined($q)){
-		$self->{'minRdPsDpth'} = $q;
-	}else{
-		if(!defined($self->{'minRdPsDpth'})){
-			$self->{'minRdPsDpth'} = $MIN_RD_POS_DEPTH;
-		}
-	}
-	return $self->{'minRdPsDpth'};
+  my ($self,$q) = @_;
+  if(defined($q)){
+    $self->{'minRdPsDpth'} = $q;
+  }else{
+    if(!defined($self->{'minRdPsDpth'})){
+      $self->{'minRdPsDpth'} = $MIN_RD_POS_DEPTH;
+    }
+  }
+  return $self->{'minRdPsDpth'};
 }
 
 #-----------------------------
-#	Post processing tests
+#  Post processing tests
 #-----------------------------
 
 sub getTumIndelReadDepthResult{
-	my ($self) = @_;
-	if(!defined($self->{'indelTum'})){
-		$self->{'indelTum'} = $self->_mutIndelCheck();
-	}
-	return $self->{'indelTum'};
+  my ($self) = @_;
+  if(!defined($self->{'indelTum'})){
+    $self->{'indelTum'} = $self->_mutIndelCheck();
+  }
+  return $self->{'indelTum'};
 }
 
 sub getPentamerResult{
-	my ($self) = @_;
-	if(!defined($self->{'motif'})){
-		$self->{'motif'} = $self->_evaluatePentamerCheck();
-	}
-	return $self->{'motif'};
+  my ($self) = @_;
+  if(!defined($self->{'motif'})){
+    $self->{'motif'} = $self->_evaluatePentamerCheck();
+  }
+  return $self->{'motif'};
 }
 
 sub getPhasingResult{
-	my ($self) = @_;
-	if(!defined($self->{'phase'})){
-		$self->{'phase'} = $self->_runPhasingCheck();
-	}
-	return $self->{'phase'};
+  my ($self) = @_;
+  if(!defined($self->{'phase'})){
+    $self->{'phase'} = $self->_runPhasingCheck();
+  }
+  return $self->{'phase'};
 }
 
 sub _runPhasingCheck{
-	my ($self) = @_;
-	#Count mut bases on each strand.
-	my ($f_q_sum, $r_q_sum, $f_count, $r_count) = (0,0,0,0);
-	for(my $i=0;$i<scalar(@{$self->_muts->{'allTumStrands'}});$i++){
-		if($self->_muts->{'allTumStrands'}->[$i] == 1){
-			$f_count++;
-	    	$f_q_sum += $self->_muts->{'allTumBaseQuals'}->[$i];
-	  	}else {
-	   	$r_count++;
-	    	$r_q_sum += $self->_muts->{'allTumBaseQuals'}->[$i];
-	  	}
-	}
-	#Calcualte the average qualities of mutant bases.
-	my ($f_av_qual,$r_av_qual) = ('.','.');
-	if($f_count > 0) {
-	  $f_av_qual = $f_q_sum / $f_count;
-	}
-	if($r_count > 0) {
-	  $r_av_qual = $r_q_sum / $r_count;
-	}
+  my ($self) = @_;
+  #Count mut bases on each strand.
+  my ($f_q_sum, $r_q_sum, $f_count, $r_count) = (0,0,0,0);
+  for(my $i=0;$i<scalar(@{$self->_muts->{'allTumStrands'}});$i++){
+    if($self->_muts->{'allTumStrands'}->[$i] == 1){
+      $f_count++;
+        $f_q_sum += $self->_muts->{'allTumBaseQuals'}->[$i];
+      }else {
+       $r_count++;
+        $r_q_sum += $self->_muts->{'allTumBaseQuals'}->[$i];
+      }
+  }
+  #Calcualte the average qualities of mutant bases.
+  my ($f_av_qual,$r_av_qual) = ('.','.');
+  if($f_count > 0) {
+    $f_av_qual = $f_q_sum / $f_count;
+  }
+  if($r_count > 0) {
+    $r_av_qual = $r_q_sum / $r_count;
+  }
 
-	#Get proportions for strand
-	#Use the counts and avg quals to evaluate phasing
-	#Only on fwd strand
-	if($f_count > 0 && ($r_count == 0 || ($r_count / ($self->_getTotalReadsOnStrandCount(-1))) <= $self->maxPhasingMinorityStrandReadProportion())){
-		if($f_av_qual < $self->minPassAvgBaseQualPhasing){
-			return 0;
-		}
-	}elsif($r_count > 0 && ($f_count == 0 || ($f_count / $self->_getTotalReadsOnStrandCount(1)) <= $self->maxPhasingMinorityStrandReadProportion())){#Only on rev strand
-		if($r_av_qual < $self->minPassAvgBaseQualPhasing){
-			return 0;
-		}
-	}
-	return 1;
+  #Get proportions for strand
+  #Use the counts and avg quals to evaluate phasing
+  #Only on fwd strand
+  if($f_count > 0 && ($r_count == 0 || ($r_count / ($self->_getTotalReadsOnStrandCount(-1))) <= $self->maxPhasingMinorityStrandReadProportion())){
+    if($f_av_qual < $self->minPassAvgBaseQualPhasing){
+      return 0;
+    }
+  }elsif($r_count > 0 && ($f_count == 0 || ($f_count / $self->_getTotalReadsOnStrandCount(1)) <= $self->maxPhasingMinorityStrandReadProportion())){#Only on rev strand
+    if($r_av_qual < $self->minPassAvgBaseQualPhasing){
+      return 0;
+    }
+  }
+  return 1;
 }
 
 sub _getTotalReadsOnStrandCount{
-	my ($self,$strand) = @_;
-	my $strandCount = 0;
-	foreach my $str(@{$self->_muts->{'completeMutStrands'}}){
-		if($strand == $str){
-			$strandCount++;
-		}
-	}
-	return $strandCount;
+  my ($self,$strand) = @_;
+  my $strandCount = 0;
+  foreach my $str(@{$self->_muts->{'completeMutStrands'}}){
+    if($strand == $str){
+      $strandCount++;
+    }
+  }
+  return $strandCount;
 }
 
 sub getNormIndelReadDepthResult{
-	my ($self) = @_;
-	if(!defined($self->{'indelNorm'})){
-		$self->{'indelNorm'} = $self->_normIndelCheck();
-	}
-	return $self->{'indelNorm'};
+  my ($self) = @_;
+  if(!defined($self->{'indelNorm'})){
+    $self->{'indelNorm'} = $self->_normIndelCheck();
+  }
+  return $self->{'indelNorm'};
 }
 
 sub _normIndelCheck{
-	my ($self) = @_;
-	if($self->_muts->{'totalNCoverage'} == 0){
-		return 1;
-	}
-	my $prop = ($self->_muts->{'indelNCount'} / $self->_muts->{'totalNCoverage'}) * 100;
-	if($prop <= $self->maxNormIndelProportion){
-		return 1;
-	}
-	return 0;
+  my ($self) = @_;
+  if($self->_muts->{'totalNCoverage'} == 0){
+    return 1;
+  }
+  my $prop = ($self->_muts->{'indelNCount'} / $self->_muts->{'totalNCoverage'}) * 100;
+  if($prop <= $self->maxNormIndelProportion){
+    return 1;
+  }
+  return 0;
 
 }
 
 sub _mutIndelCheck{
-	my ($self) = @_;
-	if(!exists $self->_muts->{'totalTCoverage'} || $self->_muts->{'totalTCoverage'} == 0){
-		return 1;
-	}
-	my $prop = ($self->_muts->{'indelTCount'} / $self->_muts->{'totalTCoverage'}) * 100;
-	if($prop <= $self->maxTumIndelProportion){
-		return 1;
-	}
-	return 0;
+  my ($self) = @_;
+  if(!exists $self->_muts->{'totalTCoverage'} || $self->_muts->{'totalTCoverage'} == 0){
+    return 1;
+  }
+  my $prop = ($self->_muts->{'indelTCount'} / $self->_muts->{'totalTCoverage'}) * 100;
+  if($prop <= $self->maxTumIndelProportion){
+    return 1;
+  }
+  return 0;
 
 }
 
 sub getDepthResult{
-	my ($self) = @_;
-	if(!defined($self->{'depth'})){
-		$self->{'depth'} = $self->_checkDepth();
-	}
-	return $self->{'depth'};
+  my ($self) = @_;
+  if(!defined($self->{'depth'})){
+    $self->{'depth'} = $self->_checkDepth();
+  }
+  return $self->{'depth'};
 }
 
 sub getDifferingReadPositionResult{
-	my ($self) = @_;
-	if(!defined($self->{'dpos'})){
-		$self->{'dpos'} = $self->_checkDiffReadPos();
-	}
-	return $self->{'dpos'};
+  my ($self) = @_;
+  if(!defined($self->{'dpos'})){
+    $self->{'dpos'} = $self->_checkDiffReadPos();
+  }
+  return $self->{'dpos'};
 }
 
 sub getAvgMapQualResult{
-	my ($self) = @_;
-	if(!defined($self->{'mapQ'})){
-		$self->{'mapQ'} = $self->_checkAvgMapQual();
-	}
-	return $self->{'mapQ'};
+  my ($self) = @_;
+  if(!defined($self->{'mapQ'})){
+    $self->{'mapQ'} = $self->_checkAvgMapQual();
+  }
+  return $self->{'mapQ'};
 }
 
 sub _checkAvgMapQual{
-	my ($self) = @_;
-	my $total = 0;
-	my $noOfMQs = 0;
-	foreach my $mq(@{$self->_muts->{'tmq'}}){
-		$total += $mq;
-		$noOfMQs++;
-	}
-	if($noOfMQs == 0){
-		#warn ("checkAvgMapQual: Should not have encountered 0 mutant allele reads in the tumour for ",$self->_chromosome,":",$self->_currentPos,", returning pass.\n");
-		return 0;
-	}
-	#If the mean is less than the min mq for a pass we fail.
-	return 0 if(($total / $noOfMQs) < $self->minPassAvgMapQual);
-	return 1;
+  my ($self) = @_;
+  my $total = 0;
+  my $noOfMQs = 0;
+  foreach my $mq(@{$self->_muts->{'tmq'}}){
+    $total += $mq;
+    $noOfMQs++;
+  }
+  if($noOfMQs == 0){
+    #warn ("checkAvgMapQual: Should not have encountered 0 mutant allele reads in the tumour for ",$self->_chromosome,":",$self->_currentPos,", returning pass.\n");
+    return 0;
+  }
+  #If the mean is less than the min mq for a pass we fail.
+  return 0 if(($total / $noOfMQs) < $self->minPassAvgMapQual);
+  return 1;
 }
 
 sub _evaluatePentamerCheck{
-	my ($self) = @_;
-	my $minus = 0;
-	my $plus = 0;
-	#Check strands first.
-	foreach my $str(@{$self->_muts->{'tstr'}}){
-		if($str == 1){
-			$plus++;
-		}else{
-			$minus++;
-		}
-		return 1 if($plus > 1 && $minus > 1);
-	}
+  my ($self) = @_;
+  my $minus = 0;
+  my $plus = 0;
+  #Check strands first.
+  foreach my $str(@{$self->_muts->{'tstr'}}){
+    if($str == 1){
+      $plus++;
+    }else{
+      $minus++;
+    }
+    return 1 if($plus > 1 && $minus > 1);
+  }
 
-	#If all or (all - 1) mut allele reads are on one strand continue.
-	my $sz = scalar(@{$self->_muts->{'tstr'}});
-	if(!(($minus >= ($sz -1) && $plus <= 1) || ($plus >= ($sz -1) && $minus <= 1)) ){
-		return 1;
-	}
+  #If all or (all - 1) mut allele reads are on one strand continue.
+  my $sz = scalar(@{$self->_muts->{'tstr'}});
+  if(!(($minus >= ($sz -1) && $plus <= 1) || ($plus >= ($sz -1) && $minus <= 1)) ){
+    return 1;
+  }
 
-	my $avgBQOverall = 0;
-	my $cntAvg = 0;
-	my @trp = @{$self->_muts->{'trp'}};
-	my @trl = @{$self->_muts->{'trl'}};
-	my @tstr = @{$self->_muts->{'tstr'}};
-	my @trn = @{$self->_muts->{'trn'}};
-	#We've checked 3rds of read and the strand,
-	#if we got this far we have to check the entire mutant read.
-	#Read names are handily stored in $self->_muts->{'trn'} so we can look at each in turn.
-	my $avgBQ = 0;
-	my $analysed = 0;
+  my $avgBQOverall = 0;
+  my $cntAvg = 0;
+  my @trp = @{$self->_muts->{'trp'}};
+  my @trl = @{$self->_muts->{'trl'}};
+  my @tstr = @{$self->_muts->{'tstr'}};
+  my @trn = @{$self->_muts->{'trn'}};
+  #We've checked 3rds of read and the strand,
+  #if we got this far we have to check the entire mutant read.
+  #Read names are handily stored in $self->_muts->{'trn'} so we can look at each in turn.
+  my $avgBQ = 0;
+  my $analysed = 0;
 
-	my %want_rds = map { $_ => 1 } @{$self->_muts->{'trn'}};
-	my %aligns;
-	#Fetch the reads we want
-	my $t_bam = $self->{'tb'};
-	$t_bam->hts_index->fetch(
-		$t_bam->hts_file,
-		$t_bam->header->parse_region($self->_chromosome.":".$self->_currentPos."-".$self->_currentPos),
-		sub{
-			my $a = shift;
-			if(exists $want_rds{$a->qname}) {
-				$aligns{$a->qname} = $a
-			}
-		}
-	);
+  my %want_rds = map { $_ => 1 } @{$self->_muts->{'trn'}};
+  my %aligns;
+  #Fetch the reads we want
+  my $t_bam = $self->{'tb'};
+  $t_bam->hts_index->fetch(
+    $t_bam->hts_file,
+    $t_bam->header->parse_region($self->_chromosome.":".$self->_currentPos."-".$self->_currentPos),
+    sub{
+      my $a = shift;
+      if(exists $want_rds{$a->qname}) {
+        $aligns{$a->qname} = $a
+      }
+    }
+  );
 
-	#Iterate through each read name
-	for(my $i=0;$i<$sz;$i++){
-		my $pos = $self->_muts->{'trp'}->[$i];
-		my $rdName = $self->_muts->{'trn'}->[$i];
-		#If position is not in last 3rd we can return now.
-		if($pos < ($self->_muts->{'trl'}->[$i] / 2)){ # trl is read length
-			return 1;
-		}
+  #Iterate through each read name
+  for(my $i=0;$i<$sz;$i++){
+    my $pos = $self->_muts->{'trp'}->[$i];
+    my $rdName = $self->_muts->{'trn'}->[$i];
+    #If position is not in last 3rd we can return now.
+    if($pos < ($self->_muts->{'trl'}->[$i] / 2)){ # trl is read length
+      return 1;
+    }
 
-		my $rd = $aligns{$rdName};
+    my $rd = $aligns{$rdName};
 
-		my $isReversed = $rd->reversed;
-		my $readPosOfMut = ($self->_currentPos - ($rd->pos + 1)) + 1;
-		my $seq = $rd->qseq;
-		my $quals = $rd->qscore();
-		my @matches = ();
-		if($isReversed == 1){
-			$seq =~ tr/acgtnACGTN/tgcanTGCAN/;
-			$seq = reverse($seq);
-			#Reverse the quality array
-			@$quals = reverse(@$quals);
-			$readPosOfMut = (length($seq) - $readPosOfMut) + 1;
-		}
-		#Check for motif match in second half of the read (rev comped as required).
-		#No motif, so skip
-		next if($seq !~ m/GGC[AT]G/);
-		while($seq =~ m/GGC[AT]G/g){
-			push(@matches,length($`).",".length($&)."");
-		}
+    my $isReversed = $rd->reversed;
+    my $readPosOfMut = ($self->_currentPos - ($rd->pos + 1)) + 1;
+    my $seq = $rd->qseq;
+    my $quals = $rd->qscore();
+    my @matches = ();
+    if($isReversed == 1){
+      $seq =~ tr/acgtnACGTN/tgcanTGCAN/;
+      $seq = reverse($seq);
+      #Reverse the quality array
+      @$quals = reverse(@$quals);
+      $readPosOfMut = (length($seq) - $readPosOfMut) + 1;
+    }
+    #Check for motif match in second half of the read (rev comped as required).
+    #No motif, so skip
+    next if($seq !~ m/GGC[AT]G/);
+    while($seq =~ m/GGC[AT]G/g){
+      push(@matches,length($`).",".length($&)."");
+    }
 
-		my $lastPos = 0;
+    my $lastPos = 0;
 
-		my $halfLength = (length($seq)/2);
-		foreach my $match(@matches){
-			my @split = split(/,/,$match);
-			next if($split[0] < $halfLength);
-			last if($split[0]+ $split[1] >= $readPosOfMut);
-			#This will eventually give us the last occurrence of the motif before the mutation
-			if($split[0]+ $split[1] < $readPosOfMut){
-				#Last pos of the match is the start pos + the length - 1
-				$lastPos = ($split[0] + $split[1]);
-			}
-		}
+    my $halfLength = (length($seq)/2);
+    foreach my $match(@matches){
+      my @split = split(/,/,$match);
+      next if($split[0] < $halfLength);
+      last if($split[0]+ $split[1] >= $readPosOfMut);
+      #This will eventually give us the last occurrence of the motif before the mutation
+      if($split[0]+ $split[1] < $readPosOfMut){
+        #Last pos of the match is the start pos + the length - 1
+        $lastPos = ($split[0] + $split[1]);
+      }
+    }
 
-		next if($lastPos <= 0);
-		#Finally we check the average base quality after the motif.
-		my $avg = $self->_calcualteMeanBaseQualAfterMotif($lastPos+1,$quals);
-		$avgBQOverall += $avg;
-		$cntAvg++;
-	}#End of iteration through each read name
-	return 1 if($cntAvg < 1);
-	if(($avgBQOverall / $cntAvg) < $self->pentamerMinPassAvgQual()){
-		return 0;
-	}
-	return 1;
+    next if($lastPos <= 0);
+    #Finally we check the average base quality after the motif.
+    my $avg = $self->_calcualteMeanBaseQualAfterMotif($lastPos+1,$quals);
+    $avgBQOverall += $avg;
+    $cntAvg++;
+  }#End of iteration through each read name
+  return 1 if($cntAvg < 1);
+  if(($avgBQOverall / $cntAvg) < $self->pentamerMinPassAvgQual()){
+    return 0;
+  }
+  return 1;
 
 }
 
 sub _calcualteMeanBaseQualAfterMotif{
-	my ($self,$startPos,$quals) = @_;
-	my $qSum = 0;
-	my $qCount = 0;
-	for(my $i=$startPos-1;$i<scalar(@$quals);$i++){
-		$qSum += $quals->[$i];
-		$qCount++;
-	}
-	if($qCount == 0){
-		return 0;
-	}
-	return ($qSum / $qCount);
+  my ($self,$startPos,$quals) = @_;
+  my $qSum = 0;
+  my $qCount = 0;
+  for(my $i=$startPos-1;$i<scalar(@$quals);$i++){
+    $qSum += $quals->[$i];
+    $qCount++;
+  }
+  if($qCount == 0){
+    return 0;
+  }
+  return ($qSum / $qCount);
 }
 
 sub _checkDiffReadPos{
-	my ($self) = @_;
-	my $tmp;
-	my $noOfReads = scalar(@{$self->_muts->{'trp'}});
-	my $permittedNo = $noOfReads  * ( $self->percentageSamePos / 100 );
-	for(my $i=0;$i<scalar(@{$self->_muts->{'trp'}});$i++){
-		my $rdPos = $self->_muts->{'trp'}->[$i];
-		if(!defined($tmp->{$rdPos})){
-			$tmp->{$rdPos} = 0;
-		}
-		$tmp->{$rdPos}++;
-		if($tmp->{$rdPos} > $permittedNo){
-			return 0;
-		}
-	}
-	return 1;
+  my ($self) = @_;
+  my $tmp;
+  my $noOfReads = scalar(@{$self->_muts->{'trp'}});
+  my $permittedNo = $noOfReads  * ( $self->percentageSamePos / 100 );
+  for(my $i=0;$i<scalar(@{$self->_muts->{'trp'}});$i++){
+    my $rdPos = $self->_muts->{'trp'}->[$i];
+    if(!defined($tmp->{$rdPos})){
+      $tmp->{$rdPos} = 0;
+    }
+    $tmp->{$rdPos}++;
+    if($tmp->{$rdPos} > $permittedNo){
+      return 0;
+    }
+  }
+  return 1;
 }
 
 sub _checkDepth{
-	my ($self) = @_;
-	my $depth = scalar(@{$self->_muts->{'tqs'}});
-	my $overCutoff = 0;
-	foreach my $q(@{$self->_muts->{'tqs'}}){
-		if($q >= $self->minDepthQual){
-			$overCutoff++;
-		}
-		if($overCutoff >= ($depth * $self->depthCutoffProportion)){
-			return 1;
-		}
-	}
-	return 0;
+  my ($self) = @_;
+  my $depth = scalar(@{$self->_muts->{'tqs'}});
+  my $overCutoff = 0;
+  foreach my $q(@{$self->_muts->{'tqs'}}){
+    if($q >= $self->minDepthQual){
+      $overCutoff++;
+    }
+    if($overCutoff >= ($depth * $self->depthCutoffProportion)){
+      return 1;
+    }
+  }
+  return 0;
 }
 
 sub getCavemanMatchedNormalResult{
-    my ($self, $normal_col, $tumour_col) = @_;
+    my ($self, $normal_col, $tumour_col, $format) = @_;
     if(!defined($self->{'cmnp'})){
-		$self->{'cmnp'} = $self->_checkCavemanMatchedNormal($normal_col);
-	}
-	return $self->{'cmnp'};
+    $self->{'cmnp'} = $self->_checkCavemanMatchedNormal($normal_col, $tumour_col, $format);
+  }
+  return $self->{'cmnp'};
 }
 
 sub _checkCavemanMatchedNormal{
-    my ($self, $normal_col, $tumour_col) = @_;
-    warn Dumper($normal_col, $tumour_col);
+  my ($self, $normal_col, $tumour_col, $format) = @_;
+  my @splitnorm = split(/:/,$normal_col);
+  my @splittum = split(/:/,$tumour_col);
+  my @splitformat = split(/:/,$format);
+  if($format !~ m/$OLD_ALLELE_VCF_FORMAT/ && $format !~ m/$NEW_ALLELE_VCF_FORMAT/){
+    croak("VCF input format $format for cavemanMatchedNormal doesn't match a known CaVEMan VCF output format");
+  }
+  $is_stranded_format = 0 if($format =~ m/$OLD_ALLELE_VCF_FORMAT/);
+  my $total_norm_cvg = 0;
+  my $mut_allele_cvg = 0;
+  my $total_tumm_cvg = 0;
+  my $mut_allele_tum_cvg = 0;
+  my %decode_hash = %OLD_ALLELE_VCF_FORMAT_INDEX_HASH;
+  if($is_stranded_format==1){
+    %decode_hash = %NEW_ALLELE_VCF_FORMAT_INDEX_HASH;
+    $total_norm_cvg = sum(@splitnorm[1..8]);
+    $total_tumm_cvg = sum(@splittum[1..8]);
+  }else{
+    $total_norm_cvg = sum(@splitnorm[1..4]);
+    $total_tumm_cvg = sum(@splittum[1..4]);
+  }
+  my $mutbase = $self->_mutBase();
+  for my $idx(@{$decode_hash{$mutbase}}){
+    $mut_allele_cvg += $splitnorm[$idx];
+    $mut_allele_tum_cvg += $splittum[$idx];
+  }
+  my $norm_prop = $mut_allele_cvg/$total_norm_cvg;
+  my $tum_prop = $mut_allele_tum_cvg/$total_tumm_cvg;
+  #Fail if the difference is less than the given proportion/percentage
+  return 0 if($norm_prop > 0 && ($tum_prop - $norm_prop) < $self->maxCavemanMatchedNormalProportion());
+  return 1;
+}
+
+sub getReadGapFlagResult{
+    my ($self) = @_;
+    if(!defined($self->{'gapflg'})){
+    $self->{'gapflg'} = $self->_checkReadGap();
+  }
+  return $self->{'gapflg'};
+}
+
+sub _checkReadGap{
+  my ($self) = @_;
+  my $meanMapQ = sum($self->_muts->{'allTumMapQuals'})/scalar(@{$self->_muts->{'allTumMapQuals'}});
+  return 1 if($meanMapQ < $self->meanMapQualGapFlag); #Pass as likely mismapping
+  my $total_reads = scalar(@{$self->_muts->{'allTumMapQuals'}});
+  my @non_tum_base_dist = [];
+  my $norm_base_dist_count = 0;
+  foreach (zip($self->_muts->{'allTumBases'},$self->_muts->{'allMinGapDistances'})){
+    my ($base, $distance) = @{$_};
+    if($base eq $self->_mutBase){
+      return 1 if($distance != -1);
+    }else{
+      if($distance != -1 && $distance <= $self->withinXBpOfDeletion){
+        push(@non_tum_base_dist, $distance);
+        $norm_base_dist_count++;
+      }
+    }
+  }
+  return 1 if($norm_base_dist_count==0); #Pass if zero reference reads with gap
+  my $percentage_reads_present = ($norm_base_dist_count/$total_reads) * 100;
+  return 0 if($percentage_reads_present >= $self->minGapPresentInPercentReads);
+  return 1;
 }
 
 sub getReadPositionResult{
-	my ($self) = @_;
-	if(!defined($self->{'pos'})){
-		$self->{'pos'} = $self->_checkReadPos();
-	}
-	return $self->{'pos'};
+  my ($self) = @_;
+  if(!defined($self->{'pos'})){
+    $self->{'pos'} = $self->_checkReadPos();
+  }
+  return $self->{'pos'};
 }
 
 sub _checkReadPos{
-	my ($self) = @_;
-	my $sec3rd = 0;
-	my $first3rd = 0;
-	if(scalar(@{$self->_muts->{'trp'}}) > $self->{'minRdPsDpth'}){
-		return 1;
-	}
-	for(my $i=0;$i<scalar(@{$self->_muts->{'trp'}});$i++){
-		my $rdLn = $self->_muts->{'trl'}->[$i];
-		my $thirds = $rdLn / 3;
-		my $rdPos = $self->_muts->{'trp'}->[$i];
-		my $prop = ($rdLn * $self->{'readPosBeginningOfReadIgnoreProportion'});
-		my $halfprop = ($rdLn * $self->{'readPosTwoThirdsOfReadExtendProportion'});
-		#In first or second third, but not first n%, extending by m%
-		if($rdPos <= (($thirds * 2)+$halfprop) && $rdPos > $prop){
-			return 1;
-		}
-	}
-	return 0;
+  my ($self) = @_;
+  my $sec3rd = 0;
+  my $first3rd = 0;
+  if(scalar(@{$self->_muts->{'trp'}}) > $self->{'minRdPsDpth'}){
+    return 1;
+  }
+  for(my $i=0;$i<scalar(@{$self->_muts->{'trp'}});$i++){
+    my $rdLn = $self->_muts->{'trl'}->[$i];
+    my $thirds = $rdLn / 3;
+    my $rdPos = $self->_muts->{'trp'}->[$i];
+    my $prop = ($rdLn * $self->{'readPosBeginningOfReadIgnoreProportion'});
+    my $halfprop = ($rdLn * $self->{'readPosTwoThirdsOfReadExtendProportion'});
+    #In first or second third, but not first n%, extending by m%
+    if($rdPos <= (($thirds * 2)+$halfprop) && $rdPos > $prop){
+      return 1;
+    }
+  }
+  return 0;
 
 }
 
 sub getNormMutsAllelesResult{
-	my ($self) = @_;
-	if(!defined($self->{'norm'})){
-		$self->{'norm'} = $self->_checkNormMuts();
-	}
-	return $self->{'norm'};
+  my ($self) = @_;
+  if(!defined($self->{'norm'})){
+    $self->{'norm'} = $self->_checkNormMuts();
+  }
+  return $self->{'norm'};
 }
 
 sub _checkNormMuts{
-	my ($self) = @_;
-	my $qualCnt = 0;
-	my $call = "";
-	foreach my $q(@{$self->_muts->{'nqs'}}){
-		if($q >= $self->minNormalMutAlleleQual()){
-			$qualCnt++;
-		}
-		my $proportion = $qualCnt / $self->_muts->{'totalNCoverage'};
-		if($proportion > $self->maxMatchedNormalAlleleProportion()){
-			return 0;
-		}
+  my ($self) = @_;
+  my $qualCnt = 0;
+  my $call = "";
+  foreach my $q(@{$self->_muts->{'nqs'}}){
+    if($q >= $self->minNormalMutAlleleQual()){
+      $qualCnt++;
+    }
+    my $proportion = $qualCnt / $self->_muts->{'totalNCoverage'};
+    if($proportion > $self->maxMatchedNormalAlleleProportion()){
+      return 0;
+    }
 
-	}
-	return 1;
+  }
+  return 1;
 }
 
 sub median{
-	return (sum( ( sort { $a <=> $b } @_ )[ int( $#_/2 ), ceil( $#_/2 ) ] )/2);
+  return (sum( ( sort { $a <=> $b } @_ )[ int( $#_/2 ), ceil( $#_/2 ) ] )/2);
 }
 
 sub _checkMedianClipping{
-	my ($self) = @_;
-	return sprintf('%.2f',median(@{$self->_muts->{'sclp'}}));
+  my ($self) = @_;
+  return sprintf('%.2f',median(@{$self->_muts->{'sclp'}}));
 }
 
 sub _calcPrimAlignmentScoreReadAdjustedMedian{
@@ -661,16 +787,16 @@ sub _calcPrimAlignmentScoreReadAdjustedMedian{
 }
 
 sub getClipMedianResult{
-	my ($self) = @_;
-	if(!defined($self->{'clipmed'})){
-		$self->{'clipmed'} = $self->_checkMedianClipping();
-	}
-	return $self->{'clipmed'};
+  my ($self) = @_;
+  if(!defined($self->{'clipmed'})){
+    $self->{'clipmed'} = $self->_checkMedianClipping();
+  }
+  return $self->{'clipmed'};
 }
 
 sub getAlignmentScoreMedianReadAdjusted{
   my ($self) = @_;
-	if(!defined($self->{'alnmedrd'})){
+  if(!defined($self->{'alnmedrd'})){
     $self->{'alnmedrd'} = $self->_calcPrimAlignmentScoreReadAdjustedMedian();
   }
   return $self->{'alnmedrd'};
@@ -686,17 +812,17 @@ sub getAlignmentScoreMedian{
 
 sub _calcPrimAlignmentScoreMedian{
   my ($self) = @_;
-	return sprintf('%.2f',median(@{$self->_muts->{'alnp'}}));
+  return sprintf('%.2f',median(@{$self->_muts->{'alnp'}}));
 }
 
 #----------
-#	DESTROY
+#  DESTROY
 #----------
 
 sub DESTROY{
-	my $self = shift;
-	#warn "PostProcessor::DESTROY\n";
-	$self->SUPER::DESTROY;
+  my $self = shift;
+  #warn "PostProcessor::DESTROY\n";
+  $self->SUPER::DESTROY;
 }
 
 return 1;
@@ -711,33 +837,33 @@ CavemanPostProcessor - Perl module for post processing CaVEMan data.
   my $processor = CavemanPostProcessor->new(tumBam => 'tumBamPath', normBam => 'normBamPath'); #Required
 
   #Optional...
-  											'minDepthQual' => 25,
+                        'minDepthQual' => 25,
                                             'depthCutoffProportion' => (1/3),
-  											'minNormMutAllelequal' => 20,
-  											'maxNormalMutAlleleCount' => 1,
-  											'minAnalysedQual' => 10,
-  											'minUnmatchedNormalQual' => 20,
-  											'maxUnmatchedNormAlleleCount' => 2,
-  											'unmatchedNormalSampleList' => 'sample1.bam,sample2.bam,sample3.bam',
-  											'samePosMaxPercent' => 80,
-  											'keepSW' => 1,
-  											'maxTumIndelProportion' => 10,
-  											'maxNormIndelProportion' => 10 ,
-  											'pentamerMinPassAvgQual'  => 20,
-  											'minPassPhaseQual'=> 21,
-  											'minPassAvgMapQual' =>
+                        'minNormMutAllelequal' => 20,
+                        'maxNormalMutAlleleCount' => 1,
+                        'minAnalysedQual' => 10,
+                        'minUnmatchedNormalQual' => 20,
+                        'maxUnmatchedNormAlleleCount' => 2,
+                        'unmatchedNormalSampleList' => 'sample1.bam,sample2.bam,sample3.bam',
+                        'samePosMaxPercent' => 80,
+                        'keepSW' => 1,
+                        'maxTumIndelProportion' => 10,
+                        'maxNormIndelProportion' => 10 ,
+                        'pentamerMinPassAvgQual'  => 20,
+                        'minPassPhaseQual'=> 21,
+                        'minPassAvgMapQual' =>
 
-	foreach (chromosome){
-		foreach(mutant position){
-			$processor->runProcess($chr,$start,$stop,$refBase,$mutBase);
-			if($processor->getDepthResult == 1 &&
-						$processor->getReadPositionResult == 1 &&
-						$processor->getNormMutsAllelesResult == 1 &&
-						$postProcessor->getUnmatchedNormalResult == 1){
-				$pass = 1;
-			}
-		}
-	}
+  foreach (chromosome){
+    foreach(mutant position){
+      $processor->runProcess($chr,$start,$stop,$refBase,$mutBase);
+      if($processor->getDepthResult == 1 &&
+            $processor->getReadPositionResult == 1 &&
+            $processor->getNormMutsAllelesResult == 1 &&
+            $postProcessor->getUnmatchedNormalResult == 1){
+        $pass = 1;
+      }
+    }
+  }
 
 
 
@@ -752,7 +878,7 @@ For details of each check see the relevant method documentation.
 =over 4
 
 =item * CavemanPostProcessor->new($tumBamFile,$normBamFile,$minDepthQual,$minNormMutAlleleQual,$maxNormalAlleleCount,
-											$minAnalysedQual,$maxUnmatchedNormQualCutoff,$maxUnmatchedNormAlleleCount,$csvNormalList,$keepSW)
+                      $minAnalysedQual,$maxUnmatchedNormQualCutoff,$maxUnmatchedNormAlleleCount,$csvNormalList,$keepSW)
 
 Creates and returns a new CavemanPostProcessor object. $tumBamFile,$normBamFile must be passed. The remainder can be null and will revert to their default values.
 $tumBamFile - path to the tumour bam file.
@@ -796,18 +922,18 @@ Returns the set value of quality. Returns the default 25 if previously unset.
 
 Returns 1 (pass)
 IF
-	at least depthCutoffProportion of mutant alleles are of base quality >= minDepthQual
+  at least depthCutoffProportion of mutant alleles are of base quality >= minDepthQual
 OTHERWISE return 0
 
 =item * $object->getReadPositionResult()
 
 Returns 1 (pass)
 IF
-	coverage >= 10 and at least one mutant allele in the tumour is in the middle third of a read
+  coverage >= 10 and at least one mutant allele in the tumour is in the middle third of a read
 OR
-	coverage < 10 and at least one mutant allele in the tumour is in the first or middle third of a read
+  coverage < 10 and at least one mutant allele in the tumour is in the first or middle third of a read
 OTHERWISE
-	Returns 0 (fail)
+  Returns 0 (fail)
 
 =item * $object->minAnalysedQual(qual)
 
@@ -827,25 +953,24 @@ If unset returns the default 20
 
 Returns 1 (pass)
 IF
-	there are no more than $maxNormalMutAlleleCount mutant alleles of quality >= $minNormalMutAlleleQual in the matched normal.
+  there are no more than $maxNormalMutAlleleCount mutant alleles of quality >= $minNormalMutAlleleQual in the matched normal.
 OTHERWISE
-	Returns 0 (fail)
+  Returns 0 (fail)
 
 =item * $object->getPhasingResult()
 
 Returns 1 (pass)
 IF
-	The mutant is found on both strands,
+  The mutant is found on both strands,
 OR
-	The mutant is found on one strand, but the average mutant base quality > $object->minPassAvgBaseQualPhasing()
+  The mutant is found on one strand, but the average mutant base quality > $object->minPassAvgBaseQualPhasing()
 OTHERWISE
-	Returns 0 (fail)
+  Returns 0 (fail)
 
 
 =item * $object->minPassAvgBaseQualPhasing()
 Sets and returns the minimum average (mean) mutant base quality required for a single stranded mutant to pass the phasing flag.
 Default = 21
-
 
 =item * minPassAvgMapQual
 Sets and returns the minimum average mapping qual to pass the map qual flag.
@@ -854,6 +979,14 @@ Default = 21
 =item * minRdPosStart
 Sets and returns the minimum read pos start for position on read.
 
+=item * getWithinXBpOfDeletion
+Sets and returns the within X BP of deletion parameter. Used in the readgap flag.
+
+=item * minGapPresentInPercentReads
+Sets and returns the minimum gap present in percentage of reads parameter. Used in the readgap flag.
+
+=item * maxGapDistance
+Sets and returns the maximum distance from a read gap in the readgap flag.
 
 =back
 

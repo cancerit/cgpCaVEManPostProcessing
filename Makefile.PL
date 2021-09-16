@@ -43,6 +43,7 @@ WriteMakefile(
                      'LWP::Simple' => 6.00,
                      'Set::IntervalTree' => 0.12,
                      'PerlIO::gzip' => 0.20,
+                     'List::Util'=> 1.56,
                    }
 );
 

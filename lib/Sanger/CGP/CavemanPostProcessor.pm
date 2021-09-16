@@ -29,6 +29,7 @@ use POSIX qw(strftime);
 use Carp;
 use Const::Fast qw(const);
 use Attribute::Abstract;
+use List::Util qw(min max);
 use Data::Dumper;
 use base 'Exporter';
 
@@ -402,6 +403,7 @@ sub _callbackTumFetch{
     $this_read->{qual} = $a->qual;
     $this_read->{start} = $algn->start;
     $this_read->{rdName} = $rdname;
+    $this_read->{gapDist} = _getDistanceFromGapInRead($algn->cigar_array,$rdPosIndexOfInterest);
 
     if(!exists $tum_readnames_hash->{$rdname}){
       push(@$tum_readnames_arr, $rdname);
@@ -425,14 +427,16 @@ sub populate_muts{
     if($read->{xt}){
         $muts->{'indelTCount'} += 1;
     }
-  push(@{$muts->{'completeMutStrands'}},$read->{str});
+    push(@{$muts->{'completeMutStrands'}},$read->{str});
     push(@{$muts->{'allTumBases'}},$read->{qbase});
     push(@{$muts->{'allTumBaseQuals'}},$read->{qscore});
     push(@{$muts->{'allTumStrands'}},$read->{str});
+    push(@{$muts->{'allTumMapQuals'}},$read->{qual});
+    push(@{$muts->{'allMinGapDistances'}},$read->{gapDist});
 
     return if ($keepSW == 0 && defined($read->{xt}) && $read->{xt} eq 'M');
 
-  return if($read->{qscore} < $minAnalysedQual);
+    return if($read->{qscore} < $minAnalysedQual);
 
     $muts->{'tumcvg'} += 1;
 
@@ -487,6 +491,26 @@ sub _get_soft_clip_count_from_cigar{
     }
   }
   return $count;
+}
+
+sub _getDistanceFromGapInRead{
+  my ($cigar_array,$rdPosIndexOfInterest) = @_;
+  my $min_gap_dist = -1;
+  my $currentRp = 0;
+  foreach my $cigSect(@{$cigar_array}){
+    if($cigSect->[0] eq $MATCH_CIG || $cigSect->[0] eq $SKIP_CIG ||
+          $cigSect->[0] eq $INS_CIG || $cigSect->[0] eq $SOFT_CLIP_CIG){
+      $currentRp+=$cigSect->[1];
+    }elsif($cigSect->[0] eq $DEL_CIG){
+      my $dp_start = $currentRp+1;
+      my $dp_end = $currentRp+$cigSect->[1];
+      my $tmp_dist = max(abs($rdPosIndexOfInterest-$dp_start),abs($dp_end-$rdPosIndexOfInterest));
+      if($tmp_dist < $min_gap_dist || $min_gap_dist == -1){
+        $min_gap_dist = $tmp_dist;
+      }
+    }
+  }
+  return $min_gap_dist;
 }
 
 sub _getReadPositionFromAlignment{

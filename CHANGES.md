@@ -1,5 +1,9 @@
 # CHANGES
 
+## Feature circleci
+
+* add circleci support
+
 ## 1.9.3
 
 * Fix bug in caluclating unmatched normal proportion when using VCF not BED.

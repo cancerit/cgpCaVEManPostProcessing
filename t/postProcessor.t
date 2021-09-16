@@ -552,6 +552,11 @@ subtest 'getCavemanMatchedNormalResult' => sub {
 };
 
 subtest 'Read Gap Tests' => sub {
+
+
+chr11:96092222-96092222
+chr18:31873455-3187345
+
   #Fail as more than proportion
   my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
   my $chr = 1;
@@ -576,6 +581,17 @@ subtest 'Read Gap Tests' => sub {
   $processor->_muts->{'allTumBases'} = $allTumBases;
   $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
   ok($processor->getReadGapFlagResult==0,"Fail read gap.");
+
+  #Ensure fail on position being in gap to fail 
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  my $allTumMapQuals = [60,29,60,60];
+  my $allTumBases = ['T','G','G','T'];
+  my $allMinGapDistances = [-1,0,0,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==0,"Fail variants actually within gap.");
 
   #Change to pass on map qualities
   $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);

@@ -499,9 +499,9 @@ sub _getDistanceFromGapInRead{
   my $currentRp = 0;
   foreach my $cigSect(@{$cigar_array}){
     if($cigSect->[0] eq $MATCH_CIG || $cigSect->[0] eq $SKIP_CIG ||
-          $cigSect->[0] eq $INS_CIG || $cigSect->[0] eq $SOFT_CLIP_CIG){
+          $cigSect->[0] eq $SOFT_CLIP_CIG){
       $currentRp+=$cigSect->[1];
-    }elsif($cigSect->[0] eq $DEL_CIG){
+    }elsif($cigSect->[0] eq $DEL_CIG || $cigSect->[0] eq $INS_CIG){
       my $dp_start = $currentRp+1;
       my $dp_end = $currentRp+$cigSect->[1];
       my $tmp_dist = max(abs($rdPosIndexOfInterest-$dp_start),abs($dp_end-$rdPosIndexOfInterest));

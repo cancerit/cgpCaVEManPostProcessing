@@ -707,7 +707,7 @@ sub _checkReadGap{
       }
     }
   }
-  return 1 if($norm_base_dist_count==0); #Pass if zero reference reads with gap
+  return 1 if($norm_base_dist_count==0); #Pass if zero reference showing reads with gap
   my $percentage_reads_present = ($norm_base_dist_count/$total_reads) * 100;
   return 0 if($percentage_reads_present >= $self->minGapPresentInPercentReads);
   return 1;

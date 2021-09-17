@@ -25,7 +25,7 @@ use Data::Dumper;
 use Bio::DB::HTS;
 use Const::Fast qw(const);
 
-use Test::More tests => 22;
+use Test::More tests => 23;
 
 use FindBin qw($Bin);
 my $lib_path = "$Bin/../lib";
@@ -556,6 +556,25 @@ subtest 'getCavemanMatchedNormalResult' => sub {
 
 };
 
+subtest '_getDistanceFromGapInRead' => sub {
+  # create a mock $cigar array
+  my @cig_array = ( ['M', 9], ['D', 1], ['M', 5], );
+  my $rd_pos_of_interest = 10;
+  my $res = Sanger::CGP::CavemanPostProcessor::_getDistanceFromGapInRead(\@cig_array, $rd_pos_of_interest);
+  ok($res==0, "Check deletion is recorded at position of interest. $res!=0");
+  @cig_array = ( ['M', 8], ['I', 1], ['M', 7], );
+  $res = Sanger::CGP::CavemanPostProcessor::_getDistanceFromGapInRead(\@cig_array, $rd_pos_of_interest);
+  ok($res==1, "Check insertion is recorded next to position of interest. $res!=1");
+  # Check nearest deletion used in caclulations
+  @cig_array = ( ['M', 3], ['D', 1], ['M',9], ['D',2], ['M',3], );
+  $res = Sanger::CGP::CavemanPostProcessor::_getDistanceFromGapInRead(\@cig_array, $rd_pos_of_interest);
+  ok($res==3, "Check insertion is recorded next to position of interest. $res!=3");
+  # minus 1 means no deletion/indel
+  @cig_array = ( ['M',15], );
+  $res = Sanger::CGP::CavemanPostProcessor::_getDistanceFromGapInRead(\@cig_array, $rd_pos_of_interest);
+  ok($res==-1, "No indel so -1");
+};
+
 subtest 'Read Gap Tests' => sub {
   #Fail as more than proportion
   my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
@@ -644,21 +663,28 @@ subtest 'Read Gap Tests' => sub {
   $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
   ok($processor->getReadGapFlagResult==1,"Pass on percentage reads.");
 
+  #Use real data to check failed flags
   $chr = "chr11";
   $pos = 96092222;
   $ref = "C";
   $mut = "T";
   $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $GAP_T_BAM, normBam => $GAP_N_BAM]);
+  $processor->minGapPresentInPercentReads(5);
+  $processor->meanMapQualGapFlag(10);
+  $processor->withinXBpOfDeletion(10);
+  ok($processor->minGapPresentInPercentReads==5,"Correct minGapPresentInPercentReads");
+  ok($processor->meanMapQualGapFlag==10,"Correct minMeanMapQualGapFlag");
+  ok($processor->withinXBpOfDeletion==10,"Correct withinXBpOfDeletion");
   $processor->runProcess($chr,$pos,$pos,$ref,$mut);
   ok($processor->getReadGapFlagResult==0,"Fail on real data.");
 
-  $chr = "chr18";
-  $pos = 31873455;
-  $ref = "A";
-  $mut = "C";
-  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $GAP_T_BAM, normBam => $GAP_N_BAM]);
-  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
-  ok($processor->getReadGapFlagResult==0,"Fail on real data 2.");
+  # $chr = "chr18";
+  # $pos = 31873455;
+  # $ref = "A";
+  # $mut = "C";
+  # $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $GAP_T_BAM, normBam => $GAP_N_BAM]);
+  # $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  # ok($processor->getReadGapFlagResult==0,"Fail on real data 2.");
 
   done_testing();
 };

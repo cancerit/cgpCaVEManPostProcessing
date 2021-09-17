@@ -504,7 +504,10 @@ sub _getDistanceFromGapInRead{
     }elsif($cigSect->[0] eq $DEL_CIG || $cigSect->[0] eq $INS_CIG){
       my $dp_start = $currentRp+1;
       my $dp_end = $currentRp+$cigSect->[1];
-      my $tmp_dist = max(abs($rdPosIndexOfInterest-$dp_start),abs($dp_end-$rdPosIndexOfInterest));
+      my $tmp_dist = 0;
+      if($rdPosIndexOfInterest>$dp_end || $rdPosIndexOfInterest<$dp_start){
+        $tmp_dist = min(abs($rdPosIndexOfInterest-$dp_start),abs($dp_end-$rdPosIndexOfInterest));
+      }
       if($tmp_dist < $min_gap_dist || $min_gap_dist == -1){
         $min_gap_dist = $tmp_dist;
       }

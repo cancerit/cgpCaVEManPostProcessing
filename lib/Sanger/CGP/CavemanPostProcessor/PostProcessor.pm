@@ -691,16 +691,16 @@ sub getReadGapFlagResult{
 
 sub _checkReadGap{
   my ($self) = @_;
-  my $meanMapQ = sum($self->_muts->{'allTumMapQuals'})/scalar(@{$self->_muts->{'allTumMapQuals'}});
+  my $meanMapQ = sum(@{$self->_muts->{'allTumMapQuals'}})/scalar(@{$self->_muts->{'allTumMapQuals'}});
   return 1 if($meanMapQ < $self->meanMapQualGapFlag); #Pass as likely mismapping
-  my $total_reads = scalar(@{$self->_muts->{'allTumMapQuals'}});
   my @non_tum_base_dist = [];
   my $norm_base_dist_count = 0;
   foreach (zip($self->_muts->{'allTumBases'},$self->_muts->{'allMinGapDistances'})){
     my ($base, $distance) = @{$_};
-    if($base eq $self->_mutBase){
-      return 1 if($distance != -1);
-    }else{
+    #Pass flag is we find a called variant base within the limits if a deletion 
+    if($base eq $self->_mutBase){ 
+      return 1 if($distance != -1 && $distance <= $self->withinXBpOfDeletion);
+    }else{ #Not a variant base - start counting the reads with an indel
       if($distance != -1 && $distance <= $self->withinXBpOfDeletion){
         push(@non_tum_base_dist, $distance);
         $norm_base_dist_count++;
@@ -708,6 +708,7 @@ sub _checkReadGap{
     }
   }
   return 1 if($norm_base_dist_count==0); #Pass if zero reference showing reads with gap
+  my $total_reads = scalar(@{$self->_muts->{'allTumMapQuals'}});
   my $percentage_reads_present = ($norm_base_dist_count/$total_reads) * 100;
   return 0 if($percentage_reads_present >= $self->minGapPresentInPercentReads);
   return 1;

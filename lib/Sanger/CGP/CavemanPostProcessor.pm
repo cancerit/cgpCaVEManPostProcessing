@@ -645,11 +645,17 @@ sub _callbackMatchedNormFetch{
   my $pos = $a->pos;
   my $cigar_array = $algn->cigar_array; # expensive and reused so save to variable
   #Quick check that were covering the base with this read (skips/indels are ignored)
-  if(_isCurrentPosCoveredFromAlignment($pos, $cigar_array, $currentPos) == 1){
+  my $is_covered = _isCurrentPosCoveredFromAlignment($pos, $cigar_array, $currentPos); #1 is covered, -1 is covered but within indel
+  if($is_covered != 0){
     my $this_read;
-    #Get the correct read position.
-    my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
 
+    if($is_covered == 1){
+      #Get the correct read position.
+        my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
+        $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, 1;
+        $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
+        $this_read->{rdPos} = $rdPosIndexOfInterest;
+    }
     my $rdname = $a->qname;
     #Read strand, faster than using $a->strand
     my $str = 1;
@@ -660,12 +666,9 @@ sub _callbackMatchedNormFetch{
 
     #Read population
     $this_read->{str} = $str;
-    $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, 1;
     $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);
-    $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
     $this_read->{xt} = $a->aux_get('XT');
     $this_read->{ln} = $a->l_qseq;
-    $this_read->{rdPos} = $rdPosIndexOfInterest;
     $this_read->{softclipcount} = 0;
     if ($cig_str =~ m/$SOFT_CLIP_CIG/){
       $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($cigar_array);

@@ -374,10 +374,10 @@ sub _callbackTumFetch{
   my $pos = $a->pos;
   my $cigar_array = $algn->cigar_array; # expensive and reused so save to variable
   #Quick check that were covering the base with this read (skips/indels are ignored)
-  if(_isCurrentPosCoveredFromAlignment($pos, $cigar_array) == 1){
+  my $is_covered = _isCurrentPosCoveredFromAlignment($pos, $cigar_array, $currentPos); #1 is covered, -1 is covered but within indel
+  my $cig_str = $algn->cigar_str;
+  if($is_covered != 0){
     my $this_read;
-    #Get the correct read position.
-    my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
 
     my $rdname = $a->qname;
     #Read strand, faster than using $a->strand
@@ -385,16 +385,23 @@ sub _callbackTumFetch{
     if($algn->reversed){
       $str = -1;
     }
-    my $cig_str = $algn->cigar_str; # expensive and reused so save to variable
-
+    my $cig_str = $algn->cigar_str;
     #Read base
     $this_read->{str} = $str;
-    $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, 1;
+
+
+    $this_read->{gapDist} = 0;
+    if($is_covered == 1){
+      #Get the correct read position.
+      my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
+      $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, 1;
+      $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
+      $this_read->{rdPos} = $rdPosIndexOfInterest;
+      $this_read->{gapDist} = _getDistanceFromGapInRead($algn->cigar_array,$rdPosIndexOfInterest);
+    }
     $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);
-    $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
     $this_read->{xt} = $a->aux_get('XT');
     $this_read->{ln} = $a->l_qseq;
-    $this_read->{rdPos} = $rdPosIndexOfInterest;
     $this_read->{softclipcount} = 0;
     if ($cig_str =~ m/$SOFT_CLIP_CIG/){
       $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
@@ -403,7 +410,6 @@ sub _callbackTumFetch{
     $this_read->{qual} = $a->qual;
     $this_read->{start} = $algn->start;
     $this_read->{rdName} = $rdname;
-    $this_read->{gapDist} = _getDistanceFromGapInRead($algn->cigar_array,$rdPosIndexOfInterest);
 
     if(!exists $tum_readnames_hash->{$rdname}){
       push(@$tum_readnames_arr, $rdname);
@@ -411,8 +417,7 @@ sub _callbackTumFetch{
     }
     $tum_readnames->{$rdname}->{$str} = $this_read;
 
-  } # End of if this is a covered position
-
+  } # End of if this is a covered position, look at deletion event at this location (required for deletion flag)
   return 1;
 }
 
@@ -543,17 +548,18 @@ sub _getReadPositionFromAlignment{
 }
 
 sub _isCurrentPosCoveredFromAlignment{
-  my ($pos, $cigar_array) = @_; # 0-based pos
+  my ($pos, $cigar_array, $pos_of_interest) = @_; # 0-based pos, 1 based current pos
   foreach my $cigSect(@{$cigar_array}){
 
     if($cigSect->[0] eq $MATCH_CIG){
-      if($pos <= $currentPos && ($pos+$cigSect->[1]) >= $currentPos){
+      if($pos_of_interest >= ($pos + 1) && $pos_of_interest <= ($pos+$cigSect->[1])){
         return 1;
       }
       $pos+= $cigSect->[1];
     }elsif($cigSect->[0] eq $DEL_CIG || $cigSect->[0] eq $SKIP_CIG){
-      if($pos <= $currentPos && ($pos+$cigSect->[1]) > $currentPos){
-        return 0;
+      if($pos_of_interest >= ($pos + 1) && $pos_of_interest <= ($pos+$cigSect->[1])){
+        return 0 if ($cigSect->[0] eq $SKIP_CIG);
+        return -1 if ($cigSect->[0] eq $DEL_CIG);
       }
       $pos+= $cigSect->[1];
     }
@@ -639,7 +645,7 @@ sub _callbackMatchedNormFetch{
   my $pos = $a->pos;
   my $cigar_array = $algn->cigar_array; # expensive and reused so save to variable
   #Quick check that were covering the base with this read (skips/indels are ignored)
-  if(_isCurrentPosCoveredFromAlignment($pos, $cigar_array) == 1){
+  if(_isCurrentPosCoveredFromAlignment($pos, $cigar_array, $currentPos) == 1){
     my $this_read;
     #Get the correct read position.
     my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);

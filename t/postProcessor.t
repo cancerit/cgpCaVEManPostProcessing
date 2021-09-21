@@ -25,7 +25,7 @@ use Data::Dumper;
 use Bio::DB::HTS;
 use Const::Fast qw(const);
 
-use Test::More tests => 23;
+use Test::More tests => 24;
 
 use FindBin qw($Bin);
 my $lib_path = "$Bin/../lib";
@@ -575,6 +575,21 @@ subtest '_getDistanceFromGapInRead' => sub {
   ok($res==-1, "No indel so -1");
 };
 
+subtest '_isCurrentPosCoveredFromAlignment Tests' => sub {
+  my @cig_array = ( ['M', 9], ['D', 1], ['M', 5], ['S', 5],);
+  my $pos = 0;# 0 based leftmost position of read
+  my $currentPos = 9;
+  my $res = Sanger::CGP::CavemanPostProcessor::_isCurrentPosCoveredFromAlignment($pos, \@cig_array, $currentPos);
+  ok($res==1, "Position is covered 1 before deletion $res != 1");
+  $currentPos = 10;
+  $res = Sanger::CGP::CavemanPostProcessor::_isCurrentPosCoveredFromAlignment($pos, \@cig_array, $currentPos);
+  ok($res==-1, "Position is not covered in deletion $res != 0");
+  $currentPos = 17;
+  $res = Sanger::CGP::CavemanPostProcessor::_isCurrentPosCoveredFromAlignment($pos, \@cig_array, $currentPos);
+  ok($res==0, "Position is not covered in skipped region (soft clipped) $res != 0");
+  done_testing();
+};
+
 subtest 'Read Gap Tests' => sub {
   #Fail as more than proportion
   my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
@@ -678,14 +693,13 @@ subtest 'Read Gap Tests' => sub {
   $processor->runProcess($chr,$pos,$pos,$ref,$mut);
   ok($processor->getReadGapFlagResult==0,"Fail on real data.");
 
-  # $chr = "chr18";
-  # $pos = 31873455;
-  # $ref = "A";
-  # $mut = "C";
-  # $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $GAP_T_BAM, normBam => $GAP_N_BAM]);
-  # $processor->runProcess($chr,$pos,$pos,$ref,$mut);
-  # ok($processor->getReadGapFlagResult==0,"Fail on real data 2.");
-
+  $chr = "chr18";
+  $pos = 31873455;
+  $ref = "A";
+  $mut = "C";
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $GAP_T_BAM, normBam => $GAP_N_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  ok($processor->getReadGapFlagResult==0,"Fail on real data 2.");
   done_testing();
 };
 
@@ -720,7 +734,7 @@ subtest 'Clipped Read tests' => sub {
 	ok($processor->_mutBase eq $mut,"Mut base changed");
 
 	#Check counts have been filled correctly.
-	$exp_sclp = [0,9,78,0,83,49,104,66,35,0,20,0,0,0,0,0,0];
+	$exp_sclp = [0,9,78,0,83,49,66,35,0,20,0,0,0,0,0,0];
 	is_deeply($processor->_muts->{'sclp'}, $exp_sclp, "softclipcounts");
 
 	#Check real data count results
@@ -766,8 +780,8 @@ subtest 'Alignment score tests' => sub {
 	ok($processor->_currentPos == $pos,"Current pos updated");
 	ok($processor->_refBase eq $ref,"Ref base changed");
 	ok($processor->_mutBase eq $mut,"Mut base changed");
-    my $exp_als = [66,102,56,110,63,61,44,60,80,123,88,123,76,87,118,93,139];
-    my $exp_rln = [151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151];
+  my $exp_als = [66,102,56,110,63,61,60,80,123,88,123,76,87,118,93,139];
+  my $exp_rln = [151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151];
 	is_deeply($processor->_muts->{'alnp'}, $exp_als, "primary alignment scores");
 	is_deeply($processor->_muts->{'trl'}, $exp_rln, "tumor read lengths");
 
@@ -775,7 +789,7 @@ subtest 'Alignment score tests' => sub {
 	$exp_res = sprintf('%.2f',0.58);
 	is($processor->getAlignmentScoreMedianReadAdjusted, $exp_res,"getAlignmentScoreMedianReadAdjusted");
 	#getAlignmentScoreMedian
-	$exp_res = sprintf('%.2f',87);
+	$exp_res = sprintf('%.2f',87.5);
 	is($processor->getAlignmentScoreMedian, $exp_res,"getAlignmentScoreMedian");
 
   done_testing();

@@ -58,6 +58,9 @@ const my %NEW_ALLELE_VCF_FORMAT_INDEX_HASH => ('A'=>[1,5], 'C' =>[2,6], 'G'=>[3,
 const my $WITHIN_XBP_OF_DEL => 10;
 const my $MIN_GAP_IN_PCT_READS => 30;
 const my $MEAN_MAPQ_GAPFLAG => 10;
+const my $MAX_GAP_DIST_FROM_EOR => 0.13;
+const my $MIN_GAP_DIST_PCT => 75;
+
 const my $CAVEMAN_MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
 
 
@@ -89,6 +92,8 @@ sub _init{
   $self->withinXBpOfDeletion($inputs->{'withinXBpOfDeletion'});
   $self->minGapPresentInPercentReads($inputs->{'minGapPresentInReads'});
   $self->meanMapQualGapFlag($inputs->{'minMeanMapQualGapFlag'});
+  $self->maxGapFlagDistFromEndOfReadProp($inputs->{'maxGapFlagDistFromEndOfReadProp'});
+  $self->minGapFlagDistEndOfReadPercent($inputs->{'minGapFlagDistEndOfReadPercent'});
 
   return $self;
 }
@@ -145,6 +150,18 @@ sub maxCavemanMatchedNormalProportion{
 	return $self->{'cmnmmp'};
 }
 
+sub maxGapFlagDistFromEndOfReadProp{
+    my ($self, $p) = @_;
+    if(defined($p)){
+         $self->{'maxGapFlagDistFromEndOfReadProp'} = $p;
+    }else{
+        if(!defined($self->{'maxGapFlagDistFromEndOfReadProp'})){
+            $self->{'maxGapFlagDistFromEndOfReadProp'} = $MAX_GAP_DIST_FROM_EOR;
+        }
+    }
+    return $self->{'maxGapFlagDistFromEndOfReadProp'};
+}
+
 sub withinXBpOfDeletion{
     my ($self, $p) = @_;
     if(defined($p)){
@@ -155,6 +172,18 @@ sub withinXBpOfDeletion{
         }
     }
     return $self->{'getWithinXBpOfDeletion'};
+}
+
+sub minGapFlagDistEndOfReadPercent{
+  my ($self, $p) = @_;
+    if(defined($p)){
+         $self->{'minGapFlagDistEndOfReadPercent'} = $p;
+    }else{
+        if(!defined($self->{'minGapFlagDistEndOfReadPercent'})){
+            $self->{'minGapFlagDistEndOfReadPercent'} = $MIN_GAP_DIST_PCT;
+        }
+    }
+    return $self->{'minGapFlagDistEndOfReadPercent'};
 }
 
 sub minGapPresentInPercentReads{
@@ -337,7 +366,7 @@ sub minRdPosDepth{
 }
 
 #-----------------------------
-#  Post processing tests
+#  Post processing flags
 #-----------------------------
 
 sub getTumIndelReadDepthResult{
@@ -693,13 +722,17 @@ sub _checkReadGap{
   my ($self) = @_;
   my $meanMapQ = sum(@{$self->_muts->{'allTumMapQuals'}})/scalar(@{$self->_muts->{'allTumMapQuals'}});
   return 1 if($meanMapQ < $self->meanMapQualGapFlag); #Pass as likely mismapping
+  my @tum_base_dist_prop = [];
+  my $tum_base_dist_count = 0;  
   my @non_tum_base_dist = [];
   my $norm_base_dist_count = 0;
-  foreach (zip($self->_muts->{'allTumBases'},$self->_muts->{'allMinGapDistances'})){
-    my ($base, $distance) = @{$_};
+  foreach (zip($self->_muts->{'allTumBases'},$self->_muts->{'allMinGapDistances'},$self->_muts->{'allMutDistPropFromEndOfRead'})){
+    my ($base, $distance, $dist_eor) = @{$_};
     #Pass flag is we find a called variant base within the limits if a deletion 
     if($base eq $self->_mutBase){ 
       return 1 if($distance != -1 && $distance <= $self->withinXBpOfDeletion);
+      push(@tum_base_dist_prop, $dist_eor);
+      $tum_base_dist_count++;  
     }else{ #Not a variant base - start counting the reads with an indel
       if($distance != -1 && $distance <= $self->withinXBpOfDeletion){
         push(@non_tum_base_dist, $distance);
@@ -710,6 +743,9 @@ sub _checkReadGap{
   return 1 if($norm_base_dist_count==0); #Pass if zero reference showing reads with gap
   my $total_reads = scalar(@{$self->_muts->{'allTumMapQuals'}});
   my $percentage_reads_present = ($norm_base_dist_count/$total_reads) * 100;
+  my $percent_tum_reads_within_eor_dist = (scalar(grep {$_ != -1 && $_ <= $self->maxGapFlagDistFromEndOfReadProp} @tum_base_dist_prop)/$tum_base_dist_count)*100;
+  #Pass if > minGapFlagDistEndOfReadPercent % reads have a distance from end of read > maxGapFlagDistFromEndOfReadProp
+  return 1 if($percent_tum_reads_within_eor_dist < $self->minGapFlagDistEndOfReadPercent);
   return 0 if($percentage_reads_present >= $self->minGapPresentInPercentReads);
   return 1;
 }
@@ -979,6 +1015,9 @@ Default = 21
 
 =item * minRdPosStart
 Sets and returns the minimum read pos start for position on read.
+
+=item * maxGapFlagDistFromEndOfReadProp
+Sets and returns the maximum gap from end of read allowed in read gap flag.
 
 =item * getWithinXBpOfDeletion
 Sets and returns the within X BP of deletion parameter. Used in the readgap flag.

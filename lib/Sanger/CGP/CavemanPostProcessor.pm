@@ -126,7 +126,6 @@ sub runProcess{
     $hts
   );
   process_hashed_reads(\&populate_norms, $norm_readnames, $norm_readnames_arr);
-
   return 1;
 }
 
@@ -391,6 +390,8 @@ sub _callbackTumFetch{
 
 
     $this_read->{gapDist} = 0;
+    $this_read->{ln} = $a->l_qseq;
+    $this_read->{distFromEnd}=-1;
     if($is_covered == 1){
       #Get the correct read position.
       my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
@@ -398,10 +399,10 @@ sub _callbackTumFetch{
       $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
       $this_read->{rdPos} = $rdPosIndexOfInterest;
       $this_read->{gapDist} = _getDistanceFromGapInRead($algn->cigar_array,$rdPosIndexOfInterest);
+      $this_read->{distFromEnd} = min(($rdPosIndexOfInterest/$this_read->{ln}),(($this_read->{ln}-$rdPosIndexOfInterest)/$this_read->{ln}));
     }
     $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);
     $this_read->{xt} = $a->aux_get('XT');
-    $this_read->{ln} = $a->l_qseq;
     $this_read->{softclipcount} = 0;
     if ($cig_str =~ m/$SOFT_CLIP_CIG/){
       $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
@@ -438,7 +439,7 @@ sub populate_muts{
     push(@{$muts->{'allTumStrands'}},$read->{str});
     push(@{$muts->{'allTumMapQuals'}},$read->{qual});
     push(@{$muts->{'allMinGapDistances'}},$read->{gapDist});
-
+    push(@{$muts->{'allMutDistPropFromEndOfRead'}},$read->{distFromEnd});
     return if ($keepSW == 0 && defined($read->{xt}) && $read->{xt} eq 'M');
 
     return if($read->{qscore} < $minAnalysedQual);

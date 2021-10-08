@@ -601,6 +601,9 @@ subtest 'Read Gap Tests' => sub {
   ok($processor->minGapPresentInPercentReads==30,"Correct minGapPresentInPercentReads");
   ok($processor->meanMapQualGapFlag==10,"Correct minMeanMapQualGapFlag");
   ok($processor->withinXBpOfDeletion==10,"Correct withinXBpOfDeletion");
+  ok($processor->maxGapFlagDistFromEndOfReadProp==0.13,"Correct maxGapFlagDistFromEndOfReadProp");
+  ok($processor->minGapFlagDistEndOfReadPercent==75,"Correct minGapFlagDistEndOfReadPercent");
+  ok($processor->maxGapFlagDistFromEndOfReadProp==0.13,"Correct maxGapFlagDistFromEndOfReadProp");
 
   $processor->runProcess($chr,$pos,$pos,$ref,$mut);
   ok($processor->getReadGapFlagResult==1,"Initially passes read gap flag");
@@ -611,6 +614,12 @@ subtest 'Read Gap Tests' => sub {
   my $allTumMapQuals = [60,29,60,60];
   my $allTumBases = ['T','G','G','T'];
   my $allMinGapDistances = [-1,2,2,-1];
+  my $allMutDistPropFromEndOfRead = [
+          '0.0648148148148148',
+          '0.0555555555555556',
+          '0.0462962962962963',
+          '0.0185185185185185'
+        ];
   $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
   $processor->_muts->{'allTumBases'} = $allTumBases;
   $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
@@ -678,6 +687,62 @@ subtest 'Read Gap Tests' => sub {
   $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
   ok($processor->getReadGapFlagResult==1,"Pass on percentage reads.");
 
+  #Failing only on minGapPresentInPercentReads
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==0,"Fail read gap 4.");
+
+  #Change to make it pass using distance from end of read parameter
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $processor->maxGapFlagDistFromEndOfReadProp(0.063);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==1,"Pass read gap using maxGapFlagDistFromEndOfReadProp.");
+
+
+  #Change back to fail using with distance from end of read percentage
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->maxGapFlagDistFromEndOfReadProp(0.063);
+  $processor->minGapFlagDistEndOfReadPercent(50);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==0,"Fail read gap using minGapFlagDistEndOfReadPercent.");
+
+  #Pass by using different distances for end of read
+  $allMutDistPropFromEndOfRead = [
+          '0.0638148148148148',
+          '0.0455555555555556',
+          '0.0462962962962963',
+          '0.0185185185185185'
+        ];
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->maxGapFlagDistFromEndOfReadProp(0.063);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  $processor->_muts->{'allMutDistPropFromEndOfRead'} = $allMutDistPropFromEndOfRead;
+  ok($processor->getReadGapFlagResult==1,"Pass read gap on proportion of distance from the end.");
+
   #Use real data to check failed flags
   $chr = "chr11";
   $pos = 96092222;
@@ -691,7 +756,7 @@ subtest 'Read Gap Tests' => sub {
   ok($processor->meanMapQualGapFlag==10,"Correct minMeanMapQualGapFlag");
   ok($processor->withinXBpOfDeletion==10,"Correct withinXBpOfDeletion");
   $processor->runProcess($chr,$pos,$pos,$ref,$mut);
-  ok($processor->getReadGapFlagResult==0,"Fail on real data.");
+  ok($processor->getReadGapFlagResult==1,"Pass on real data.");
 
   $chr = "chr18";
   $pos = 31873455;

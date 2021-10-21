@@ -374,7 +374,6 @@ sub _callbackTumFetch{
   my $cigar_array = $algn->cigar_array; # expensive and reused so save to variable
   #Quick check that were covering the base with this read (skips/indels are ignored)
   my $is_covered = _isCurrentPosCoveredFromAlignment($pos, $cigar_array, $currentPos); #1 is covered, -1 is covered but within indel
-  my $cig_str = $algn->cigar_str;
   if($is_covered != 0){
     my $this_read;
 
@@ -647,16 +646,9 @@ sub _callbackMatchedNormFetch{
   my $cigar_array = $algn->cigar_array; # expensive and reused so save to variable
   #Quick check that were covering the base with this read (skips/indels are ignored)
   my $is_covered = _isCurrentPosCoveredFromAlignment($pos, $cigar_array, $currentPos); #1 is covered, -1 is covered but within indel
-  if($is_covered != 0){
+  if($is_covered == 1){
     my $this_read;
 
-    if($is_covered == 1){
-      #Get the correct read position.
-        my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
-        $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, 1;
-        $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
-        $this_read->{rdPos} = $rdPosIndexOfInterest;
-    }
     my $rdname = $a->qname;
     #Read strand, faster than using $a->strand
     my $str = 1;
@@ -664,9 +656,18 @@ sub _callbackMatchedNormFetch{
       $str = -1;
     }
     my $cig_str = $algn->cigar_str; # expensive and reused so save to variable
-
     #Read population
     $this_read->{str} = $str;
+
+    #if($is_covered == 1){
+      #Get the correct read position.
+      my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
+      $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, 1;
+      $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
+      $this_read->{rdPos} = $rdPosIndexOfInterest;
+    #}
+
+    #Read population
     $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);
     $this_read->{xt} = $a->aux_get('XT');
     $this_read->{ln} = $a->l_qseq;

@@ -628,9 +628,9 @@ subtest 'Read Gap Tests' => sub {
   #Ensure fail on position being in gap to fail 
   $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
   $processor->runProcess($chr,$pos,$pos,$ref,$mut);
-  my $allTumMapQuals = [60,29,60,60];
-  my $allTumBases = ['T','G','G','T'];
-  my $allMinGapDistances = [-1,0,0,-1];
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,0,0,-1];
   $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
   $processor->_muts->{'allTumBases'} = $allTumBases;
   $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;

@@ -659,13 +659,11 @@ sub _callbackMatchedNormFetch{
     #Read population
     $this_read->{str} = $str;
 
-    #if($is_covered == 1){
-      #Get the correct read position.
-      my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
-      $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, 1;
-      $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
-      $this_read->{rdPos} = $rdPosIndexOfInterest;
-    #}
+    #Get the correct read position.
+    my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
+    $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, 1;
+    $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
+    $this_read->{rdPos} = $rdPosIndexOfInterest;
 
     #Read population
     $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);

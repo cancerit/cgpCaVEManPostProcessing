@@ -48,7 +48,7 @@
 ##SAMPLE=<ID=NORMAL,Description="Normal",Accession=1234567,Platform=GAII,Protocol=pulldown,SampleName=PDtesta>
 ##SAMPLE=<ID=TUMOUR,Description="Mutant",Accession=1234568,Platform=GAII,Protocol=pulldown,SampleName=PDtestb>
 ##cgpAnalysisProc_20130323.1=123456
-##FILTER=<ID=DTH,Description="Less than 1/3 mutant alleles were >= 25 base quality">
+##FILTER=<ID=DTH,Description="Less than 0.333333 mutant alleles were >= 25 base quality">
 ##FILTER=<ID=RP,Description="Coverage was less than 8 and no mutant alleles were found in the first 2/3 of a read (shifted 0.08 from the start and extended 0.08 more than 2/3 of the read length)">
 ##FILTER=<ID=MN,Description="More than 0.05 of mutant alleles that were >= 15 base quality found in the matched normal">
 ##FILTER=<ID=PT,Description="Mutant alleles all on one direction of read (1rd allowed on opposite strand) and in second half of the read. Second half of read contains the motif GGC[AT]G in sequenced orientation and the mean base quality of all bases after the motif was less than 20">
@@ -63,8 +63,10 @@
 ##INFO=<ID=ASRD,Number=1,Type=Float,Description="A soft flag median (read length adjusted) alignment score of reads showing the variant allele">
 ##INFO=<ID=CLPM,Number=1,Type=Float,Description="A soft flag median number of soft clipped bases in variant supporting reads">
 ##INFO=<ID=ASMD,Number=1,Type=Float,Description="A soft flag median alignement score of reads showing the variant allele">
+##FILTER=<ID=CMNP,Description="Tumour sample mutant allele proportion - normal sample mutant allele proportion < 0.2 (differs from MNP in using only reads seen by CaVEMan as per VCF)">
+##FILTER=<ID=GAP,Description="If variant is within 10 of a deletion/gap seen in reads without the variant, the deletion is present in at least 30 percent of total reads and no variant showing reads show the deletion. ">
 ##FILTER=<ID=CB,Description="Bug in older versions of CaVEMan means this position cannot be flagged">
 ##vcfProcessLog_20130404.1=<InputVCF=<test.oldversion.vcf>,InputVCFSource=<FlagCaVEManVCF.pl>,InputVCFVer=<(18689:18774M)>,InputVCFParam=<sp=.,h=.,g=germline_indel.bed.gz,f=test.oldversion.vcf,t=WGS,loud=.,n=oldversion.wt.bam,sa=.,m=oldversion.wt.bam,v=flag.to.vcf.convert.ini,s=HUMAN,l=2000,ab=testData,p=123456,c=flag.vcf.config.tmp.ini,b=testData,idx=.,o=test.oldversion.flagged.vcf,umv=unmatchedVCF,ref=genome.fa.fai>>
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NORMAL	TUMOUR
 7	131833427	601251715	T	C	.	CB	DP=59;MP=1.0e+00;GP=1.6e-08;TG=TT/CC;TP=9.9e-01;SG=TT/CT;SP=1.1e-02	GT:AA:CA:GA:TA:PM	0/0:0:0:0:33:0.0e+00	1/1:0:15:0:11:5.8e-01
-7	137407167	601251762	C	G	.	SE;MQ;MNP	DP=92;MP=1.0e+00;GP=1.3e-09;TG=CC/CG;TP=1.0e+00;SG=CC/CC;SP=1.3e-04;ASRD=0.00;CLPM=2.00;ASMD=0.00	GT:AA:CA:GA:TA:PM	0/0:0:52:1:0:1.9e-02	0/1:0:34:5:0:1.3e-01
+7	137407167	601251762	C	G	.	CMNP;SE;MQ;MNP	DP=92;MP=1.0e+00;GP=1.3e-09;TG=CC/CG;TP=1.0e+00;SG=CC/CC;SP=1.3e-04;ASRD=0.00;CLPM=2.00;ASMD=0.00	GT:AA:CA:GA:TA:PM	0/0:0:52:1:0:1.9e-02	0/1:0:34:5:0:1.3e-01

@@ -8,31 +8,59 @@ For details of the underlying algorithm please see the [CaVEMan][caveman] site.
 
 | Master                                        | Develop                                         |
 | --------------------------------------------- | ----------------------------------------------- |
-| [![Master Badge][travis-master]][travis-base] | [![Develop Badge][travis-develop]][travis-base] |
+| [![Master Badge][circle-master]][circle-base] | [![Develop Badge][circle-develop]][circle-base] |
+
+- [Docker, Singularity and Dockstore](#docker-singularity-and-dockstore)
+- [Usage](#usage)
+- [Dependencies/Install](#dependenciesinstall)
+- [Creating a release](#creating-a-release)
+  - [Preparation](#preparation)
+  - [Cutting the release](#cutting-the-release)
+- [LICENCE](#licence)
 
 ## Docker, Singularity and Dockstore
 
-There are pre-built images containing this codebase on quay.io.
+cgpCaVEManPostProcessing is available as a separate docker image on quay.io.
 
-* [dockstore-cgpwxs][ds-cgpwxs-git]
-  * Contains tools specific to WXS analysis.
-* [dockstore-cgpwgs][ds-cgpwgs-git]
-  * Contains additional tools for WGS analysis.
+- [cgpcavemanpostprocessing][ds-cg-cpp]
+
+And as part of pre-built full analysis images on quay.io.
+
+- [dockstore-cgpwxs][ds-cgpwxs-git]
+  - Contains tools specific to WXS analysis.
+- [dockstore-cgpwgs][ds-cgpwgs-git]
+  - Contains additional tools for WGS analysis.
 
 These were primarily designed for use with dockstore.org but can be used as normal containers.
 
+## Usage
+
+More detailed instructions can be found on the [wiki]
+
+As of version 1.10.0 cgpCaVEManPostProcessing has new WXS flags available that are not used by default.
+These were developed in conjunction with the Dermatlas project and caution is advised when using them. 
+
+- cavemanMatchNormalProportionFlag
+- withinGapRangeFlag
+
+Full flag definitions can be found [here](config/flag.to.vcf.convert.ini)
+
+Flags can be tuned by modifying their parameters in the species ini file.
+Human example is [here](config/Human/GRCh37d5/flag.vcf.config.ini).
+The parameter names correspond to names in the flag descriptions.
+Further details of flags and parameters are available in the [wiki].
+
 ## Dependencies/Install
-Please install the following first:
 
-* [cgpVcf][cgpvcf]
-* [Bio::DB::HTS][bio-db-hts]
-    * If you have an install of PCAP-core this is already available
+Please ensure the following packages are available. Alternatively use the Docker image.
 
-Please see these for any child dependencies.
+- [cgpVcf][cgpvcf]
+- [Bio::DB::HTS][bio-db-hts]
+  - If you have an install of PCAP-core this is already available
 
 Once complete please run:
 
-```
+```bash
 ./setup.sh /some/install/location
 ```
 
@@ -42,21 +70,22 @@ Once complete please run:
 
 ### Preparation
 
-* Commit/push all relevant changes.
-* Pull a clean version of the repo and use this for the following steps.
+- Commit/push all relevant changes.
+- Pull a clean version of the repo and use this for the following steps.
 
 ### Cutting the release
 
-1. Update `perl/lib/Sanger/CGP/CavemanPostProcessor.pm` to the correct version.
-2. Run `./prerelease.sh`
-3. Check all tests and coverage reports are acceptable.
-4. Commit the updated docs tree and updated module/version.
-5. Push commits.
-6. Use the GitHub tools to draft a release.
+1. Update `lib/Sanger/CGP/CavemanPostProcessor.pm` to the correct version.
+2. Update `CHANGES.md`
+3. Run `./prerelease.sh`
+4. Check all tests and coverage reports are acceptable.
+5. Commit the updated docs tree and updated module/version.
+6. Push commits.
+7. Use the GitHub tools to draft a release.
 
 ## LICENCE
 
-```
+```txt
 Copyright (c) 2014-2018 Genome Research Ltd.
 
 Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
@@ -93,11 +122,18 @@ identical to a statement that reads ‘Copyright (c) 2005, 2006, 2007, 2008,
 [bio-db-hts]: http://search.cpan.org/dist/Bio-DB-HTS
 [ds-cgpwxs-git]: https://github.com/cancerit/dockstore-cgpwxs
 [ds-cgpwgs-git]: https://github.com/cancerit/dockstore-cgpwgs
+[ds-cg-cpp]: https://quay.io/repository/wtsicgp/cgpcavemanpostprocessing
+[wiki]: https://github.com/cancerit/cgpCaVEManPostProcessing/wiki
 
 <!-- Travis -->
 [travis-base]: https://travis-ci.org/cancerit/cgpCaVEManPostProcessing
 [travis-master]: https://travis-ci.org/cancerit/cgpCaVEManPostProcessing.svg?branch=master
 [travis-develop]: https://travis-ci.org/cancerit/cgpCaVEManPostProcessing.svg?branch=dev
+
+<!-- Circle-ci -->
+[circle-base]: https://circleci.com/gh/cancerit/cgpCaVEManPostProcessing.svg?style=shield
+[circle-master]: https://circleci.com/gh/cancerit/cgpCaVEManPostProcessing.svg?style=shield&branch=master;
+[circle-develop]: https://circleci.com/gh/cancerit/cgpCaVEManPostProcessing.svg?style=shield&branch=dev;
 
 <!-- Zenodo -->
 [zenodo-badge]: https://zenodo.org/badge/doi/10.5281/zenodo.18404.svg

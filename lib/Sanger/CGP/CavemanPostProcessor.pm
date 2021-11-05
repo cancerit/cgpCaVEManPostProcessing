@@ -29,10 +29,11 @@ use POSIX qw(strftime);
 use Carp;
 use Const::Fast qw(const);
 use Attribute::Abstract;
+use List::Util qw(min max);
 use Data::Dumper;
 use base 'Exporter';
 
-our $VERSION = '1.9.3';
+our $VERSION = '1.10.0';
 our @EXPORT = qw($VERSION);
 
 const my $MATCH_CIG => 'M';
@@ -125,7 +126,6 @@ sub runProcess{
     $hts
   );
   process_hashed_reads(\&populate_norms, $norm_readnames, $norm_readnames_arr);
-
   return 1;
 }
 
@@ -373,10 +373,9 @@ sub _callbackTumFetch{
   my $pos = $a->pos;
   my $cigar_array = $algn->cigar_array; # expensive and reused so save to variable
   #Quick check that were covering the base with this read (skips/indels are ignored)
-  if(_isCurrentPosCoveredFromAlignment($pos, $cigar_array) == 1){
+  my $is_covered = _isCurrentPosCoveredFromAlignment($pos, $cigar_array, $currentPos); #1 is covered, -1 is covered but within indel
+  if($is_covered != 0){
     my $this_read;
-    #Get the correct read position.
-    my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
 
     my $rdname = $a->qname;
     #Read strand, faster than using $a->strand
@@ -384,16 +383,25 @@ sub _callbackTumFetch{
     if($algn->reversed){
       $str = -1;
     }
-    my $cig_str = $algn->cigar_str; # expensive and reused so save to variable
-
+    my $cig_str = $algn->cigar_str;
     #Read base
     $this_read->{str} = $str;
-    $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, 1;
-    $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);
-    $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
-    $this_read->{xt} = $a->aux_get('XT');
+
+
+    $this_read->{gapDist} = 0;
     $this_read->{ln} = $a->l_qseq;
-    $this_read->{rdPos} = $rdPosIndexOfInterest;
+    $this_read->{distFromEnd}=-1;
+    if($is_covered == 1){
+      #Get the correct read position.
+      my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
+      $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, 1;
+      $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
+      $this_read->{rdPos} = $rdPosIndexOfInterest;
+      $this_read->{gapDist} = _getDistanceFromGapInRead($algn->cigar_array,$rdPosIndexOfInterest);
+      $this_read->{distFromEnd} = min(($rdPosIndexOfInterest/$this_read->{ln}),(($this_read->{ln}-$rdPosIndexOfInterest)/$this_read->{ln}));
+    }
+    $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);
+    $this_read->{xt} = $a->aux_get('XT');
     $this_read->{softclipcount} = 0;
     if ($cig_str =~ m/$SOFT_CLIP_CIG/){
       $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
@@ -409,8 +417,7 @@ sub _callbackTumFetch{
     }
     $tum_readnames->{$rdname}->{$str} = $this_read;
 
-  } # End of if this is a covered position
-
+  } # End of if this is a covered position, look at deletion event at this location (required for deletion flag)
   return 1;
 }
 
@@ -425,14 +432,16 @@ sub populate_muts{
     if($read->{xt}){
         $muts->{'indelTCount'} += 1;
     }
-  push(@{$muts->{'completeMutStrands'}},$read->{str});
+    push(@{$muts->{'completeMutStrands'}},$read->{str});
     push(@{$muts->{'allTumBases'}},$read->{qbase});
     push(@{$muts->{'allTumBaseQuals'}},$read->{qscore});
     push(@{$muts->{'allTumStrands'}},$read->{str});
-
+    push(@{$muts->{'allTumMapQuals'}},$read->{qual});
+    push(@{$muts->{'allMinGapDistances'}},$read->{gapDist});
+    push(@{$muts->{'allMutDistPropFromEndOfRead'}},$read->{distFromEnd});
     return if ($keepSW == 0 && defined($read->{xt}) && $read->{xt} eq 'M');
 
-  return if($read->{qscore} < $minAnalysedQual);
+    return if($read->{qscore} < $minAnalysedQual);
 
     $muts->{'tumcvg'} += 1;
 
@@ -489,6 +498,29 @@ sub _get_soft_clip_count_from_cigar{
   return $count;
 }
 
+sub _getDistanceFromGapInRead{
+  my ($cigar_array,$rdPosIndexOfInterest) = @_;
+  my $min_gap_dist = -1;
+  my $currentRp = 0;
+  foreach my $cigSect(@{$cigar_array}){
+    if($cigSect->[0] eq $MATCH_CIG || $cigSect->[0] eq $SKIP_CIG ||
+          $cigSect->[0] eq $SOFT_CLIP_CIG){
+      $currentRp+=$cigSect->[1];
+    }elsif($cigSect->[0] eq $DEL_CIG || $cigSect->[0] eq $INS_CIG){
+      my $dp_start = $currentRp+1;
+      my $dp_end = $currentRp+$cigSect->[1];
+      my $tmp_dist = 0;
+      if($rdPosIndexOfInterest>$dp_end || $rdPosIndexOfInterest<$dp_start){
+        $tmp_dist = min(abs($rdPosIndexOfInterest-$dp_start),abs($dp_end-$rdPosIndexOfInterest));
+      }
+      if($tmp_dist < $min_gap_dist || $min_gap_dist == -1){
+        $min_gap_dist = $tmp_dist;
+      }
+    }
+  }
+  return $min_gap_dist;
+}
+
 sub _getReadPositionFromAlignment{
   my ($currentRefPos, $cigar_array) = @_; # 0-based pos ($a->pos)
   my $rdPosIndexOfInterest = 0;
@@ -516,17 +548,18 @@ sub _getReadPositionFromAlignment{
 }
 
 sub _isCurrentPosCoveredFromAlignment{
-  my ($pos, $cigar_array) = @_; # 0-based pos
+  my ($pos, $cigar_array, $pos_of_interest) = @_; # 0-based pos, 1 based current pos
   foreach my $cigSect(@{$cigar_array}){
 
     if($cigSect->[0] eq $MATCH_CIG){
-      if($pos <= $currentPos && ($pos+$cigSect->[1]) >= $currentPos){
+      if($pos_of_interest >= ($pos + 1) && $pos_of_interest <= ($pos+$cigSect->[1])){
         return 1;
       }
       $pos+= $cigSect->[1];
     }elsif($cigSect->[0] eq $DEL_CIG || $cigSect->[0] eq $SKIP_CIG){
-      if($pos <= $currentPos && ($pos+$cigSect->[1]) > $currentPos){
-        return 0;
+      if($pos_of_interest >= ($pos + 1) && $pos_of_interest <= ($pos+$cigSect->[1])){
+        return 0 if ($cigSect->[0] eq $SKIP_CIG);
+        return -1 if ($cigSect->[0] eq $DEL_CIG);
       }
       $pos+= $cigSect->[1];
     }
@@ -612,10 +645,9 @@ sub _callbackMatchedNormFetch{
   my $pos = $a->pos;
   my $cigar_array = $algn->cigar_array; # expensive and reused so save to variable
   #Quick check that were covering the base with this read (skips/indels are ignored)
-  if(_isCurrentPosCoveredFromAlignment($pos, $cigar_array) == 1){
+  my $is_covered = _isCurrentPosCoveredFromAlignment($pos, $cigar_array, $currentPos); #1 is covered, -1 is covered but within indel
+  if($is_covered == 1){
     my $this_read;
-    #Get the correct read position.
-    my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
 
     my $rdname = $a->qname;
     #Read strand, faster than using $a->strand
@@ -624,15 +656,19 @@ sub _callbackMatchedNormFetch{
       $str = -1;
     }
     my $cig_str = $algn->cigar_str; # expensive and reused so save to variable
-
     #Read population
     $this_read->{str} = $str;
+
+    #Get the correct read position.
+    my ($rdPosIndexOfInterest,$currentRefPos) = _getReadPositionFromAlignment($pos, $cigar_array);
     $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, 1;
-    $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);
     $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
+    $this_read->{rdPos} = $rdPosIndexOfInterest;
+
+    #Read population
+    $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);
     $this_read->{xt} = $a->aux_get('XT');
     $this_read->{ln} = $a->l_qseq;
-    $this_read->{rdPos} = $rdPosIndexOfInterest;
     $this_read->{softclipcount} = 0;
     if ($cig_str =~ m/$SOFT_CLIP_CIG/){
       $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($cigar_array);

@@ -10,6 +10,14 @@ For details of the underlying algorithm please see the [CaVEMan][caveman] site.
 | --------------------------------------------- | ----------------------------------------------- |
 | [![Master Badge][circle-master]][circle-base] | [![Develop Badge][circle-develop]][circle-base] |
 
+- [Docker, Singularity and Dockstore](#docker-singularity-and-dockstore)
+- [Usage](#usage)
+- [Dependencies/Install](#dependenciesinstall)
+- [Creating a release](#creating-a-release)
+  - [Preparation](#preparation)
+  - [Cutting the release](#cutting-the-release)
+- [LICENCE](#licence)
+
 ## Docker, Singularity and Dockstore
 
 cgpCaVEManPostProcessing is available as a separate docker image on quay.io.
@@ -24,6 +32,23 @@ And as part of pre-built full analysis images on quay.io.
   - Contains additional tools for WGS analysis.
 
 These were primarily designed for use with dockstore.org but can be used as normal containers.
+
+## Usage
+
+More detailed instructions can be found on the [wiki]
+
+As of version 1.10.0 cgpCaVEManPostProcessing has new WXS flags available that are not used by default.
+These were developed in conjunction with the Dermatlas project and caution is advised when using them. 
+
+- cavemanMatchNormalProportionFlag
+- withinGapRangeFlag
+
+Full flag definitions can be found [here](config/flag.to.vcf.convert.ini)
+
+Flags can be tuned by modifying their parameters in the species ini file.
+Human example is [here](config/Human/GRCh37d5/flag.vcf.config.ini).
+The parameter names correspond to names in the flag descriptions.
+Further details of flags and parameters are available in the [wiki].
 
 ## Dependencies/Install
 
@@ -50,12 +75,13 @@ Once complete please run:
 
 ### Cutting the release
 
-1. Update `perl/lib/Sanger/CGP/CavemanPostProcessor.pm` to the correct version.
-2. Run `./prerelease.sh`
-3. Check all tests and coverage reports are acceptable.
-4. Commit the updated docs tree and updated module/version.
-5. Push commits.
-6. Use the GitHub tools to draft a release.
+1. Update `lib/Sanger/CGP/CavemanPostProcessor.pm` to the correct version.
+2. Update `CHANGES.md`
+3. Run `./prerelease.sh`
+4. Check all tests and coverage reports are acceptable.
+5. Commit the updated docs tree and updated module/version.
+6. Push commits.
+7. Use the GitHub tools to draft a release.
 
 ## LICENCE
 
@@ -97,6 +123,7 @@ identical to a statement that reads ‘Copyright (c) 2005, 2006, 2007, 2008,
 [ds-cgpwxs-git]: https://github.com/cancerit/dockstore-cgpwxs
 [ds-cgpwgs-git]: https://github.com/cancerit/dockstore-cgpwgs
 [ds-cg-cpp]: https://quay.io/repository/wtsicgp/cgpcavemanpostprocessing
+[wiki]: https://github.com/cancerit/cgpCaVEManPostProcessing/wiki
 
 <!-- Travis -->
 [travis-base]: https://travis-ci.org/cancerit/cgpCaVEManPostProcessing

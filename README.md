@@ -12,27 +12,30 @@ For details of the underlying algorithm please see the [CaVEMan][caveman] site.
 
 ## Docker, Singularity and Dockstore
 
-There are pre-built images containing this codebase on quay.io.
+cgpCaVEManPostProcessing is available as a separate docker image on quay.io.
 
-* [dockstore-cgpwxs][ds-cgpwxs-git]
-  * Contains tools specific to WXS analysis.
-* [dockstore-cgpwgs][ds-cgpwgs-git]
-  * Contains additional tools for WGS analysis.
+- [cgpcavemanpostprocessing][ds-cg-cpp]
+
+And as part of pre-built full analysis images on quay.io.
+
+- [dockstore-cgpwxs][ds-cgpwxs-git]
+  - Contains tools specific to WXS analysis.
+- [dockstore-cgpwgs][ds-cgpwgs-git]
+  - Contains additional tools for WGS analysis.
 
 These were primarily designed for use with dockstore.org but can be used as normal containers.
 
 ## Dependencies/Install
-Please install the following first:
 
-* [cgpVcf][cgpvcf]
-* [Bio::DB::HTS][bio-db-hts]
-    * If you have an install of PCAP-core this is already available
+Please ensure the following packages are available. Alternatively use the Docker image.
 
-Please see these for any child dependencies.
+- [cgpVcf][cgpvcf]
+- [Bio::DB::HTS][bio-db-hts]
+  - If you have an install of PCAP-core this is already available
 
 Once complete please run:
 
-```
+```bash
 ./setup.sh /some/install/location
 ```
 
@@ -42,8 +45,8 @@ Once complete please run:
 
 ### Preparation
 
-* Commit/push all relevant changes.
-* Pull a clean version of the repo and use this for the following steps.
+- Commit/push all relevant changes.
+- Pull a clean version of the repo and use this for the following steps.
 
 ### Cutting the release
 
@@ -56,7 +59,7 @@ Once complete please run:
 
 ## LICENCE
 
-```
+```txt
 Copyright (c) 2014-2018 Genome Research Ltd.
 
 Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
@@ -93,6 +96,7 @@ identical to a statement that reads ‘Copyright (c) 2005, 2006, 2007, 2008,
 [bio-db-hts]: http://search.cpan.org/dist/Bio-DB-HTS
 [ds-cgpwxs-git]: https://github.com/cancerit/dockstore-cgpwxs
 [ds-cgpwgs-git]: https://github.com/cancerit/dockstore-cgpwgs
+[ds-cg-cpp]: https://quay.io/repository/wtsicgp/cgpcavemanpostprocessing
 
 <!-- Travis -->
 [travis-base]: https://travis-ci.org/cancerit/cgpCaVEManPostProcessing

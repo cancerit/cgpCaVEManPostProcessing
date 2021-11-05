@@ -72,6 +72,7 @@ subtest 'Initialise module (bam params)' => sub {
 	isa_ok($processor->tumBam(), "Bio::DB::HTS", "Test tumour bam");
 	isa_ok($processor->normBam(), "Bio::DB::HTS", "Test normal bam");
 	ok($processor->minDepthQual == 25,"Min depth qual");
+    ok($processor->depthCutoffProportion == (0.333333), "depthCutoffProportion");
 	ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
 	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
 	ok($processor->percentageSamePos == 80,"Same position max pct");
@@ -110,6 +111,7 @@ subtest 'Initialise module (ALL params)' => sub {
 																			'tumBam' => $T_BAM,
 																			'normBam' => $T_BAM,
 																			'minDepthQual' => 2,
+                                                                            'depthCutoffProportion' => (1/2),
 																			'minNormMutAllelequal' => 3,
 																			'minAnalysedQual' => 5,
 																			'samePosMaxPercent' => 8,
@@ -128,6 +130,7 @@ subtest 'Initialise module (ALL params)' => sub {
 																			'minSingleEndCoverage' => 12]);
 
 	ok($processor->minDepthQual == 2,"Min depth qual");
+    ok($processor->depthCutoffProportion == (1/2), "depthCutoffProportion");
 	ok($processor->minNormalMutAlleleQual == 3,"Min normal mut allele qual");
 	ok($processor->minAnalysedQual == 5,"Min analysed qualities");
 	ok($processor->percentageSamePos == 8,"Same position max pct");
@@ -148,6 +151,7 @@ subtest 'Initialise module (ALL params)' => sub {
 																			'tumBam' => $T_BAM,
 																			'normBam' => $T_BAM]);
 	ok($processor->minDepthQual == 25,"Min depth qual");
+    ok($processor->depthCutoffProportion == (0.333333), "depthCutoffProportion");
 	ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
 	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
 	ok($processor->percentageSamePos == 80,"Same position max pct");
@@ -196,6 +200,9 @@ subtest 'Test all getters/setters' => sub {
 	ok($processor->minDepthQual == 25,"Min depth qual");
 	$processor->minDepthQual(17);
 	ok($processor->minDepthQual == 17,"Min depth qual changed");
+    ok($processor->depthCutoffProportion == (0.333333),"depthCutoffProportion");
+	$processor->depthCutoffProportion(1/2);
+	ok($processor->depthCutoffProportion == (1/2),"depthCutoffProportion changed");
 	ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
 	$processor->minNormalMutAlleleQual(19);
 	ok($processor->minNormalMutAlleleQual == 19,"Min normal mut allele qual change");

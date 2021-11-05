@@ -8,7 +8,7 @@ For details of the underlying algorithm please see the [CaVEMan][caveman] site.
 
 | Master                                        | Develop                                         |
 | --------------------------------------------- | ----------------------------------------------- |
-| [![Master Badge][travis-master]][travis-base] | [![Develop Badge][travis-develop]][travis-base] |
+| [![Master Badge][circle-master]][circle-base] | [![Develop Badge][circle-develop]][circle-base] |
 
 ## Docker, Singularity and Dockstore
 
@@ -98,6 +98,11 @@ identical to a statement that reads ‘Copyright (c) 2005, 2006, 2007, 2008,
 [travis-base]: https://travis-ci.org/cancerit/cgpCaVEManPostProcessing
 [travis-master]: https://travis-ci.org/cancerit/cgpCaVEManPostProcessing.svg?branch=master
 [travis-develop]: https://travis-ci.org/cancerit/cgpCaVEManPostProcessing.svg?branch=dev
+
+<!-- Circle-ci -->
+[circle-base]: https://circleci.com/gh/cancerit/cgpCaVEManPostProcessing.svg?style=shield
+[circle-master]: https://circleci.com/gh/cancerit/cgpCaVEManPostProcessing.svg?style=shield&branch=master;
+[circle-develop]: https://circleci.com/gh/cancerit/cgpCaVEManPostProcessing.svg?style=shield&branch=dev;
 
 <!-- Zenodo -->
 [zenodo-badge]: https://zenodo.org/badge/doi/10.5281/zenodo.18404.svg

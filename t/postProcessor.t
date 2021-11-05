@@ -25,7 +25,7 @@ use Data::Dumper;
 use Bio::DB::HTS;
 use Const::Fast qw(const);
 
-use Test::More tests => 20;
+use Test::More tests => 24;
 
 use FindBin qw($Bin);
 my $lib_path = "$Bin/../lib";
@@ -36,6 +36,11 @@ const my $T_BAI => $test_data_path.'test.bam.bai';
 
 const my $PENT_BAM => $test_data_path.'pent.bam';
 const my $PENT_BAI => $test_data_path.'pent.bam.bai';
+
+const my $GAP_N_BAM => $test_data_path.'gap_flag_test_normal.bam';
+const my $GAP_N_BAI => $test_data_path.'gap_flag_test_normal.bam.bai';
+const my $GAP_T_BAI => $test_data_path.'gap_flag_test_tumour.bam.bai';
+const my $GAP_T_BAM => $test_data_path.'gap_flag_test_tumour.bam';
 
 const my $CLIP_M_BAM => $test_data_path.'clip.m.bam';
 const my $CLIP_M_BAI => $test_data_path.'clip.m.bam.bai';
@@ -85,6 +90,7 @@ subtest 'Initialise module (bam params)' => sub {
 	isa_ok($processor->tumBam(), "Bio::DB::HTS", "Test tumour bam");
 	isa_ok($processor->normBam(), "Bio::DB::HTS", "Test normal bam");
 	ok($processor->minDepthQual == 25,"Min depth qual");
+    ok($processor->depthCutoffProportion == 0.333333,"depthCutoffProportion");
 	ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
 	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
 	ok($processor->percentageSamePos == 80,"Same position max pct");
@@ -121,6 +127,7 @@ subtest 'Initialise module (ALL params)' => sub {
 																			'tumBam' => $T_BAM,
 																			'normBam' => $T_BAM,
 																			'minDepthQual' => 2,
+                                                                            'depthCutoffProportion' => (1/2),
 																			'minNormMutAllelequal' => 3,
 																			'minAnalysedQual' => 5,
 																			'samePosMaxPercent' => 8,
@@ -137,6 +144,7 @@ subtest 'Initialise module (ALL params)' => sub {
 																			'minRdPosDepth' => 10]);
 
 	ok($processor->minDepthQual == 2,"Min depth qual");
+    ok($processor->depthCutoffProportion == (1/2),"depthCutoffProportion");
 	ok($processor->minNormalMutAlleleQual == 3,"Min normal mut allele qual");
 	ok($processor->minAnalysedQual == 5,"Min analysed qualities");
 	ok($processor->percentageSamePos == 8,"Same position max pct");
@@ -155,6 +163,7 @@ subtest 'Initialise module (ALL params)' => sub {
 																			'tumBam' => $T_BAM,
 																			'normBam' => $T_BAM]);
 	ok($processor->minDepthQual == 25,"Min depth qual");
+    ok($processor->depthCutoffProportion == 0.333333,"depthCutoffProportion got: ".$processor->depthCutoffProportion." exp: ".0.333333);
 	ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
 	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
 	ok($processor->percentageSamePos == 80,"Same position max pct");
@@ -201,6 +210,9 @@ subtest 'Test all getters/setters' => sub {
 	ok($processor->minDepthQual == 25,"Min depth qual");
 	$processor->minDepthQual(17);
 	ok($processor->minDepthQual == 17,"Min depth qual changed");
+    ok($processor->depthCutoffProportion == (0.333333),"depthCutoffProportion");
+	$processor->depthCutoffProportion(1/2);
+	ok($processor->depthCutoffProportion == (1/2),"depthCutoffProportion changed");
 	ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
 	$processor->minNormalMutAlleleQual(19);
 	ok($processor->minNormalMutAlleleQual == 19,"Min normal mut allele qual change");
@@ -342,6 +354,23 @@ subtest 'getDepthResult' => sub{
 	$processor->clearResults;
 	$processor->minDepthQual(8);
 	ok($processor->getDepthResult == 1,"Pass depth check, changed min depth quality.");
+
+    #Pass
+	$processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+	$processor->_muts->{'tqs'} = [9,8,25,25,25,25,25,25,25];
+	ok($processor->getDepthResult == 1,"Pass depth check");
+	#Fail
+	$processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+	$processor->_muts->{'tqs'} = [9,8,10,21,21,21,21,21,21];
+	ok($processor->getDepthResult == 0,"Fail depth check");
+	#Change depthCutoffProportion
+	$processor->clearResults;
+    $processor->minDepthQual(21);
+	ok($processor->getDepthResult == 1,"Pass depth check, changed min depth quality.");
+    $processor->depthCutoffProportion(0.5);
+    $processor->clearResults;
+    $processor->_muts->{'tqs'} = [9,8,10,21,25,25,25,25,21];
+    ok($processor->getDepthResult == 1,"Pass depth check, changed depthCutoffProportion.");
 	done_testing();
 };
 
@@ -492,17 +521,264 @@ subtest 'Initialise module (bam clip params)' => sub {
   done_testing();
 };
 
+subtest 'getCavemanMatchedNormalResult' => sub {
+    my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
+    my $normal_col = '0/0:90:0:10:0:0.1'; #0.1
+    my $normal_col_fail = '0/0:60:0:40:0:0.4'; #0.4
+    my $tumcol = '1/0:50:0:50:0:0.5'; #0.5
+    my $oldformat = 'GT:AA:CA:GA:TA:PM';
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col,$tumcol,$oldformat)==1,"Pass caveman matched normal check old format");
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$oldformat)==0,"Fail caveman matched normal check old format");
+    $processor->maxCavemanMatchedNormalProportion(0.09);
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$oldformat)==1,"Pass caveman matched normal check old format, modified proportion");
+    $processor->maxCavemanMatchedNormalProportion(0.2);
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$oldformat)==0,"Fail caveman matched normal check old format, modified proportion");
+
+    my $newformat = 'GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM';
+    $normal_col = '0/0:45:0:5:0:45:0:5:0:0.1'; #0.1
+    $normal_col_fail = '0/0:30:0:20:0:30:0:20:0:0.4'; #0.4
+    $tumcol = '1/0:25:0:25:0:25:0:25:0:0.5'; #0.5
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col,$tumcol,$newformat)==1,"Pass caveman matched normal check new format");
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$newformat)==0,"Fail caveman matched normal check new format");
+    #Modify proportion cutoff to pass again
+    $processor->maxCavemanMatchedNormalProportion(0.09);
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$newformat)==1,"Pass caveman matched normal check new format, modified proportion");
+    $processor->maxCavemanMatchedNormalProportion(0.2);
+    $processor->runProcess('6',138186703,138186703,"A","G");
+    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$newformat)==0,"Fail caveman matched normal check new format, modified proportion");
+
+};
+
+subtest '_getDistanceFromGapInRead' => sub {
+  # create a mock $cigar array
+  my @cig_array = ( ['M', 9], ['D', 1], ['M', 5], );
+  my $rd_pos_of_interest = 10;
+  my $res = Sanger::CGP::CavemanPostProcessor::_getDistanceFromGapInRead(\@cig_array, $rd_pos_of_interest);
+  ok($res==0, "Check deletion is recorded at position of interest. $res!=0");
+  @cig_array = ( ['M', 8], ['I', 1], ['M', 7], );
+  $res = Sanger::CGP::CavemanPostProcessor::_getDistanceFromGapInRead(\@cig_array, $rd_pos_of_interest);
+  ok($res==1, "Check insertion is recorded next to position of interest. $res!=1");
+  # Check nearest deletion used in caclulations
+  @cig_array = ( ['M', 3], ['D', 1], ['M',9], ['D',2], ['M',3], );
+  $res = Sanger::CGP::CavemanPostProcessor::_getDistanceFromGapInRead(\@cig_array, $rd_pos_of_interest);
+  ok($res==3, "Check insertion is recorded next to position of interest. $res!=3");
+  # minus 1 means no deletion/indel
+  @cig_array = ( ['M',15], );
+  $res = Sanger::CGP::CavemanPostProcessor::_getDistanceFromGapInRead(\@cig_array, $rd_pos_of_interest);
+  ok($res==-1, "No indel so -1");
+};
+
+subtest '_isCurrentPosCoveredFromAlignment Tests' => sub {
+  my @cig_array = ( ['M', 9], ['D', 1], ['M', 5], ['S', 5],);
+  my $pos = 0;# 0 based leftmost position of read
+  my $currentPos = 9;
+  my $res = Sanger::CGP::CavemanPostProcessor::_isCurrentPosCoveredFromAlignment($pos, \@cig_array, $currentPos);
+  ok($res==1, "Position is covered 1 before deletion $res != 1");
+  $currentPos = 10;
+  $res = Sanger::CGP::CavemanPostProcessor::_isCurrentPosCoveredFromAlignment($pos, \@cig_array, $currentPos);
+  ok($res==-1, "Position is not covered in deletion $res != 0");
+  $currentPos = 17;
+  $res = Sanger::CGP::CavemanPostProcessor::_isCurrentPosCoveredFromAlignment($pos, \@cig_array, $currentPos);
+  ok($res==0, "Position is not covered in skipped region (soft clipped) $res != 0");
+  done_testing();
+};
+
+subtest 'Read Gap Tests' => sub {
+  #Fail as more than proportion
+  my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  my $chr = 1;
+  my $pos = 10011533;
+  my $ref = "G";
+  my $mut = "T";
+
+  ok($processor->minGapPresentInPercentReads==30,"Correct minGapPresentInPercentReads");
+  ok($processor->meanMapQualGapFlag==10,"Correct minMeanMapQualGapFlag");
+  ok($processor->withinXBpOfDeletion==10,"Correct withinXBpOfDeletion");
+  ok($processor->maxGapFlagDistFromEndOfReadProp==0.13,"Correct maxGapFlagDistFromEndOfReadProp");
+  ok($processor->minGapFlagDistEndOfReadPercent==75,"Correct minGapFlagDistEndOfReadPercent");
+  ok($processor->maxGapFlagDistFromEndOfReadProp==0.13,"Correct maxGapFlagDistFromEndOfReadProp");
+
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  ok($processor->getReadGapFlagResult==1,"Initially passes read gap flag");
+
+  #Change to fail 
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  my $allTumMapQuals = [60,29,60,60];
+  my $allTumBases = ['T','G','G','T'];
+  my $allMinGapDistances = [-1,2,2,-1];
+  my $allMutDistPropFromEndOfRead = [
+          '0.0648148148148148',
+          '0.0555555555555556',
+          '0.0462962962962963',
+          '0.0185185185185185'
+        ];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==0,"Fail read gap.");
+
+  #Ensure fail on position being in gap to fail 
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,0,0,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==0,"Fail variants actually within gap.");
+
+  #Change to pass on map qualities
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [5,5,5,6];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  ok($processor->getReadGapFlagResult==1,"Pass read gap on map qualities.");
+
+  #Change to fail
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==0,"Fail read gap 2.");
+
+  #Change to pass on distance from deletion
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,11,11,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==1,"Pass on deletion distance.");
+
+  #Change to fail
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==0,"Fail read gap 3.");
+
+  #Change to pass on percentage reads
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60,60];
+  $allTumBases = ['T','G','G','G','T'];
+  $allMinGapDistances = [-1,11,11,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==1,"Pass on percentage reads.");
+
+  #Failing only on minGapPresentInPercentReads
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==0,"Fail read gap 4.");
+
+  #Change to make it pass using distance from end of read parameter
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $processor->maxGapFlagDistFromEndOfReadProp(0.063);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==1,"Pass read gap using maxGapFlagDistFromEndOfReadProp.");
+
+
+  #Change back to fail using with distance from end of read percentage
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->maxGapFlagDistFromEndOfReadProp(0.063);
+  $processor->minGapFlagDistEndOfReadPercent(50);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  ok($processor->getReadGapFlagResult==0,"Fail read gap using minGapFlagDistEndOfReadPercent.");
+
+  #Pass by using different distances for end of read
+  $allMutDistPropFromEndOfRead = [
+          '0.0638148148148148',
+          '0.0455555555555556',
+          '0.0462962962962963',
+          '0.0185185185185185'
+        ];
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  $processor->maxGapFlagDistFromEndOfReadProp(0.063);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  $allTumMapQuals = [60,29,60,60];
+  $allTumBases = ['T','G','G','T'];
+  $allMinGapDistances = [-1,2,2,-1];
+  $processor->_muts->{'allTumMapQuals'} = $allTumMapQuals;
+  $processor->_muts->{'allTumBases'} = $allTumBases;
+  $processor->_muts->{'allMinGapDistances'} = $allMinGapDistances;
+  $processor->_muts->{'allMutDistPropFromEndOfRead'} = $allMutDistPropFromEndOfRead;
+  ok($processor->getReadGapFlagResult==1,"Pass read gap on proportion of distance from the end.");
+
+  #Use real data to check failed flags
+  $chr = "chr11";
+  $pos = 96092222;
+  $ref = "C";
+  $mut = "T";
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $GAP_T_BAM, normBam => $GAP_N_BAM]);
+  $processor->minGapPresentInPercentReads(5);
+  $processor->meanMapQualGapFlag(10);
+  $processor->withinXBpOfDeletion(10);
+  ok($processor->minGapPresentInPercentReads==5,"Correct minGapPresentInPercentReads");
+  ok($processor->meanMapQualGapFlag==10,"Correct minMeanMapQualGapFlag");
+  ok($processor->withinXBpOfDeletion==10,"Correct withinXBpOfDeletion");
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  ok($processor->getReadGapFlagResult==1,"Pass on real data.");
+
+  $chr = "chr18";
+  $pos = 31873455;
+  $ref = "A";
+  $mut = "C";
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $GAP_T_BAM, normBam => $GAP_N_BAM]);
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  ok($processor->getReadGapFlagResult==0,"Fail on real data 2.");
+  done_testing();
+};
+
 subtest 'Clipped Read tests' => sub {
-	my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
-	my $chr = 1;
-	my $pos = 10437;
-	my $ref = "T";
-	my $mut = "C";
-	$processor->runProcess($chr,$pos,$pos,$ref,$mut);
-	ok($processor->_chromosome eq $chr,"Chromosome correct");
-	ok($processor->_currentPos == $pos,"Current pos updated");
-	ok($processor->_refBase eq $ref,"Ref base changed");
-	ok($processor->_mutBase eq $mut,"Mut base changed");
+  my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
+  my $chr = 1;
+  my $pos = 10437;
+  my $ref = "T";
+  my $mut = "C";
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  ok($processor->_chromosome eq $chr,"Chromosome correct");
+  ok($processor->_currentPos == $pos,"Current pos updated");
+  ok($processor->_refBase eq $ref,"Ref base changed");
+  ok($processor->_mutBase eq $mut,"Mut base changed");
 
 	#Manually set counts
 	my $exp_sclp = [1,2,3,4,5,6,7,8,9,10];
@@ -523,7 +799,7 @@ subtest 'Clipped Read tests' => sub {
 	ok($processor->_mutBase eq $mut,"Mut base changed");
 
 	#Check counts have been filled correctly.
-	$exp_sclp = [0,9,78,0,83,49,104,66,35,0,20,0,0,0,0,0,0];
+	$exp_sclp = [0,9,78,0,83,49,66,35,0,20,0,0,0,0,0,0];
 	is_deeply($processor->_muts->{'sclp'}, $exp_sclp, "softclipcounts");
 
 	#Check real data count results
@@ -569,8 +845,8 @@ subtest 'Alignment score tests' => sub {
 	ok($processor->_currentPos == $pos,"Current pos updated");
 	ok($processor->_refBase eq $ref,"Ref base changed");
 	ok($processor->_mutBase eq $mut,"Mut base changed");
-    my $exp_als = [66,102,56,110,63,61,44,60,80,123,88,123,76,87,118,93,139];
-    my $exp_rln = [151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151];
+  my $exp_als = [66,102,56,110,63,61,60,80,123,88,123,76,87,118,93,139];
+  my $exp_rln = [151,151,151,151,151,151,151,151,151,151,151,151,151,151,151,151];
 	is_deeply($processor->_muts->{'alnp'}, $exp_als, "primary alignment scores");
 	is_deeply($processor->_muts->{'trl'}, $exp_rln, "tumor read lengths");
 
@@ -578,7 +854,7 @@ subtest 'Alignment score tests' => sub {
 	$exp_res = sprintf('%.2f',0.58);
 	is($processor->getAlignmentScoreMedianReadAdjusted, $exp_res,"getAlignmentScoreMedianReadAdjusted");
 	#getAlignmentScoreMedian
-	$exp_res = sprintf('%.2f',87);
+	$exp_res = sprintf('%.2f',87.5);
 	is($processor->getAlignmentScoreMedian, $exp_res,"getAlignmentScoreMedian");
 
   done_testing();

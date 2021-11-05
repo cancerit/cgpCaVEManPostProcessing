@@ -142,6 +142,7 @@ CavemanPostProcessor - Perl module for post processing CaVEMan data.
 
   #Optional...
   											'minDepthQual' => 25,
+                                            'depthCutoffProportion' => 0.333333
   											'minNormMutAllelequal' => 20,
   											'maxNormalMutAlleleCount' => 1,
   											'minAnalysedQual' => 10,

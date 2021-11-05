@@ -33,7 +33,7 @@ use List::Util qw(min max);
 use Data::Dumper;
 use base 'Exporter';
 
-our $VERSION = '1.9.3';
+our $VERSION = '1.10.0';
 our @EXPORT = qw($VERSION);
 
 const my $MATCH_CIG => 'M';

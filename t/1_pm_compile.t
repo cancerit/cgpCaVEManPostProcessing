@@ -40,7 +40,7 @@ my $test_data_path = "$Bin/../testData/";
 # Add modules here that cannot be instantiated (should be extended and have no 'new')
 # or need a set of inputs - these should be tested in own test script
 use constant MODULE_SKIP => qw( Sanger::CGP::CavemanPostProcessor Sanger::CGP::CavemanPostProcessor::PostProcessor Sanger::CGP::CavemanPostProcessing);
-
+use constant VER_MODULE_SKIP => qw ( Sanger::CGP::CavemanPostProcessor::ConfigParser );
 
 my $init_cwd = getcwd;
 
@@ -58,7 +58,7 @@ for my $mod(@modules) {
 }
 
 for my $mod(@modules) {
-  ok($mod->VERSION, "Check version inheritance exists ($mod)");
+  ok($mod->VERSION, "Check version inheritance exists ($mod)") unless (first {$mod eq $_} VER_MODULE_SKIP);
   if($mod->can('new')) { # only try new on things that have new defined
     new_ok($mod => [tumBam=> $test_data_path."test.bam",normBam => $test_data_path."test.bam"]) unless( first {$mod eq $_} MODULE_SKIP );
   }

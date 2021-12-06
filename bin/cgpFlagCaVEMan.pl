@@ -34,7 +34,6 @@ use English qw( -no_match_vars );
 use Data::Dumper;
 
 use Vcf;
-use YAML::XS;
 use Getopt::Long qw(:config pass_through);
 use Sanger::CGP::CavemanPostProcessor;
 use Sanger::CGP::CavemanPostProcessor::ConfigParser;
@@ -712,7 +711,7 @@ sub getDescriptionWithParams{
 sub setupFromConfig{
   my ($opts) = @_;
   #Load in config file.
-  my ($configParams,$flagList,$bedFileParams) = Sanger::CGP::CavemanPostProcessor::ConfigParser::getConfigParams($opts);
+  my ($configParams,$flagList,$bedFileParams) = Sanger::CGP::CavemanPostProcessor::ConfigParser::getConfigParams($opts,$flagopts);
   #Use the parameters and do some sanity checks for flag/bed file requirements.
   my ($centBed,$simpBed,$snpBed,$indelBed,$annoBed,$codingBed,$hsdBed) = undef;
   my @errs = ();

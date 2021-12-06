@@ -46,7 +46,7 @@ sub new {
 }
 
 sub _get_cfg_ini_config_params{
-  my ($file, $species, $seq_type) = @_;
+  my ($file, $species, $seq_type, $flagopts) = @_;
   my $cfg = Config::IniFiles->new( -file => $file, -allowcontinue => 1, -default => $CONFIG_DEFAULT );
   #Get parameter group.
   my $alternate = "";
@@ -65,7 +65,7 @@ sub _get_cfg_ini_config_params{
     $paramSectName = $sppTypeCombo." ".$CONFIG_FLAGLIST;
     @flagList = $cfg->val($paramSectName,$FLAG_PARAMETER);
     if(!@flagList){
-      croak("No flagList found in ".$opts->{'c'}." for section $paramSectName. No flagging will be done.");
+      croak("No flagList found in ".$file." for section $paramSectName. No flagging will be done.");
       @flagList = ();
       return ($sectParams,\@flagList,$bedFileParams);
     }
@@ -84,7 +84,6 @@ sub _get_cfg_ini_config_params{
   if(!defined($bedFileParams)){
     croak("No bed file parameters found in ".$opts->{'c'}." for section $paramSectName");
   }
-  print Dumper($sectParams, \@flagList, $bedFileParams);
   return ($sectParams, \@flagList, $bedFileParams);
 }
 
@@ -111,13 +110,13 @@ sub _get_yml_config_params{
 }
 
 sub getConfigParams{
-  my ($opts) = @_;
+  my ($opts, $flagopts) = @_;
   #Determine input config type
   my($base, $dir, $ext) = fileparse($opts->{'c'}, qw{ .ini .yaml .yml});
   if($ext eq '.yaml' || $ext eq '.yml'){ # Just in case we encounter a .yml rather than yaml suffix
     return _get_yml_config_params($opts->{'c'},$opts->{'s'},$opts->{'t'});
   }elsif($ext eq '.ini'){
-    return _get_cfg_ini_config_params($opts->{'c'},$opts->{'s'},$opts->{'t'});
+    return _get_cfg_ini_config_params($opts->{'c'},$opts->{'s'},$opts->{'t'}, $flagopts);
   }else{
     croak("Incorrect file extension for ini file '".$opts->{'c'}."'. Expected .yaml or .ini but got '$ext'");
   }

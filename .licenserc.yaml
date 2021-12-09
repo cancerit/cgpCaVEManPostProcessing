@@ -71,7 +71,9 @@ header:
     - '**/*.yaml'
     - 'testData/*'
     - 'build/'
-    - '.gitlab-ci.yml'
+    - '.*.yml'
     - 'MANIFEST*'
+    - 'config/**/*.ini'
+    - 'config/flag.to.vcf.convert.ini'
 
   comment: on-failure

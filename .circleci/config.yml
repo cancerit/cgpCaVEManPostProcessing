@@ -1,15 +1,15 @@
-# 1. Set your GitHub default branch to dev/develop
-# 2. In circleci project settings->advanced set:
-#    - GitHub Status Updates (this should be on already)
-#    - Only build pull requests
-#    - Auto-cancel redundant builds
-#    - Free and Open Source (this should be on already)
-# 3. If existing project with quay.io, remove the quay build triggers.
-#    - as circleci is pusing the image
-#    - reevaluate when/if quay.io adds ability to authenticate pulls
-
 version: 2.1
 jobs:
+  license_chk:
+    machine:
+      # need machine as want to mount a volume
+      image: ubuntu-2004:202107-02
+    steps:
+      - checkout
+      - run:
+          name: Execute skywalking-eyes check of licenses
+          command: |
+            docker run --rm -v $(pwd):/github/workspace apache/skywalking-eyes header check
   build:
     environment:
       IMAGE_NAME: quay.io/wtsicgp/cgpcavemanpostprocessing
@@ -46,6 +46,10 @@ workflows:
   version: 2.1
   build_test:
     jobs:
+      - license_chk:
+          filters:
+            tags:
+              only: /.+/
       - build:
           context:
             - dockerhub-casmservice

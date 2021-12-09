@@ -77,7 +77,7 @@ sub validateInput {
 
   croak( "Unknown parameter: ".$ARGV[0]) if(scalar(@ARGV) > 0);
   pod2usage("Missing parameter 'input'") if(!defined($opts->{'f'}));
-  pod2usage("Missing parameter 'outFile'") if(!defined($opts->{'o'}));
+  pod2usage("Missing parameter 'outfile'") if(!defined($opts->{'o'}));
   unless(-e $opts->{'f'} && -r $opts->{'f'}){
     pod2usage("Inpit .ini file does not exist or has incorrect permissions: ".$opts->{'f'}."\n");
   }
@@ -102,7 +102,7 @@ cavemanPostProcessing_ini_to_yaml.pl [-h] -f flag_config.ini -o flag_config.yml
 
     --input                (-i)       The VCF input file to flag.
 
-    --outFile              (-o)       The VCF output file to write.
+    --outfile              (-o)       The VCF output file to write.
 
   Examples:
 

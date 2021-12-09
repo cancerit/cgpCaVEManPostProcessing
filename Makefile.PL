@@ -30,7 +30,7 @@ install_share dist => 'config';
 WriteMakefile(
   NAME          => 'cgpCaVEManPostProcessing',
   VERSION_FROM  => 'lib/Sanger/CGP/CavemanPostProcessor.pm',
-  EXE_FILES     => [qw( bin/cgpFlagCaVEMan.pl bin/convertVCFUnmatchedToBed.pl)],
+  EXE_FILES     => [qw( bin/cgpFlagCaVEMan.pl bin/convertVCFUnmatchedToBed.pl bin/cavemnaPostProcessing_ini_to_yaml.pl )],
   PREREQ_PM     => {
                      'Const::Fast' => 0.014,
                      'Attribute::Abstract' => 1.02,
@@ -44,6 +44,7 @@ WriteMakefile(
                      'Set::IntervalTree' => 0.12,
                      'PerlIO::gzip' => 0.20,
                      'List::Util'=> 1.56,
+                     'YAML::XS' => 0.83,
                    }
 );
 

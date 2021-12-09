@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ##########LICENCE##########
-# Copyright (c) 2014-2019 Genome Research Ltd.
+# Copyright (c) 2014-2021 Genome Research Ltd.
 #
 # Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
@@ -98,8 +98,6 @@ my $umformat = $UNMATCHED_FORMAT_VCF;
 my $opts = option_builder();
 validateInput($opts);
 my $checkSize = 0;
-
-my ($db,$env);
 
 if(defined($opts->{'idx'})){
   $index = $opts->{'idx'};

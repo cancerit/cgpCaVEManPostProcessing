@@ -179,12 +179,17 @@ sub convert_ini_to_yaml{
       $paramSectName = $key." ".$CONFIG_BEDFILES;
       @parameterNames = $cfg->Parameters($paramSectName);
       foreach my $pName(@parameterNames){
-        $yaml_out->{$species}->{$seq_type}->{$CONFIG_BEDFILES}->{$paramName} = $cfg->val($paramSectName,$paramName);
+        $val = $cfg->val($paramSectName,$pName);
+        if ($val eq ''){
+          $val = undef 
+        }
+        $yaml_out->{$species}->{$seq_type}->{$CONFIG_BEDFILES}->{$pName} = $val;
       }
     }
   }
   #Print yaml to file
-  DumpFile($output_yaml_file, $yaml_out);
+  DumpFile($output_yaml_file,$yaml_out);
+  return;
 }
 
 return 1;

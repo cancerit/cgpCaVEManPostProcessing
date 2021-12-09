@@ -155,7 +155,7 @@ subtest 'convert_ini_to_yaml' => sub {
   Sanger::CGP::CavemanPostProcessor::ConfigParser::convert_ini_to_yaml($INI_CONFIG, $test_output_yaml);
   compare_files($test_output_yaml, $exp_out_yaml);
   #Delete output file
-  unlink($test_output_yaml);
+  ok(unlink($test_output_yaml)==1);
   done_testing();
 };
 

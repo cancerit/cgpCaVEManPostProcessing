@@ -38,6 +38,7 @@ use English qw( -no_match_vars );
 use Data::Dumper;
 
 use Getopt::Long qw(:config pass_through);
+use Pod::Usage;
 use Sanger::CGP::CavemanPostProcessor;
 use Sanger::CGP::CavemanPostProcessor::ConfigParser;
 

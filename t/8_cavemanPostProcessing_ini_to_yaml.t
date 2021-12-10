@@ -28,59 +28,48 @@
 # 2009, 2010, 2011, 2012’.
 #
 
-package Sanger::CGP::CavemanPostProcessor::ExomePostProcessor;
-
 use strict;
+use Test::More tests => 2;
+use strict;
+use warnings FATAL => 'all';
 use Carp;
-use Const::Fast qw(const);
+use Data::Dumper;
+use Capture::Tiny qw(capture);
+use YAML::XS qw(LoadFile);
 
-use Sanger::CGP::CavemanPostProcessor;
-our $VERSION = Sanger::CGP::CavemanPostProcessor->VERSION;
+use FindBin qw($Bin);
 
-use base qw(Sanger::CGP::CavemanPostProcessor::PostProcessor);
+my $script_path = "$Bin/../bin/";
+my $test_data_path = "$Bin/../testData/";
+my $script = $script_path.'cavemanPostProcessing_ini_to_yaml.pl';
 
-const my $MAX_MATCHED_NORM_MUT_ALLELE_PROP => 0.05;
-const my $MAX_PHASING_MINORITY_STRAND_PROP => 0.04;
-const my $RD_POS_BEGINNING_OF_RD_PROP => 0.08;
-const my $RD_POS_END_OF_TWOTHIRDS_EXTEND_PROP => 0.08;
-const my $MIN_PASS_AVG_QUAL_PENTAMER => 20;
-const my $SAME_RD_POS_PERCENT => 80;
-const my $MAX_TUM_INDEL_PROP => 10;
-const my $MAX_NORM_INDEL_PROP => 10;
-const my $MIN_AVG_MAP_QUAL => 21;
-const my $MIN_AVG_PHASING_BASE_QUAL => 21;
-const my $MIN_DEPTH_QUAL => 25;
-const my $MIN_NORM_MUT_ALLELE_BASE_QUAL => 15;
-const my $MIN_RD_POS_DEPTH => 8;
+my $test_out_file = $test_data_path.'test_config_output.yaml';
+my $test_input_file = $test_data_path.'flag.vcf.config_test.ini';
+my $expect_output = $test_data_path.'test_config.yaml';
 
-#---------------
-#	Init methods
-#---------------
+my $perl_exec = "$^X -I ".(join ':', @INC);
 
-sub _init{
-	my ($self,$inputs) = @_;
-	$self->SUPER::_init($inputs);
-	return $self;
+main(@ARGV);
+
+sub main{
+  run_flag();
+  compare($test_out_file, $expect_output, __LINE__);
+  unlink($test_out_file);
 }
 
-#-----------------------------
-#	Post processing filter methods
-#-----------------------------
-
-
-#-----------------
-#	Getters/setters
-#-----------------
-
-
-#----------
-#	DESTROY!
-#----------
-
-sub DESTROY{
-	my $self = shift;
-	#warn "ExomePostProcessor::DESTROY\n";
-	$self->SUPER::DESTROY;
+sub run_flag{
+  my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file";
+  my ($out, $err, $exit) = capture{ system($cmd) };
+  if($exit!=0){
+    warn Dumper($err, $out, $exit);
+  }
+  is($exit, 0,'Conversion from ini to yaml ran correctly');
 }
 
-return 1;
+sub compare{
+  my ($test_out_file, $expect_output, $line_no) = @_;
+  #Read new file
+  my $new = LoadFile($test_out_file);
+  my $exp = LoadFile($expect_output);
+  is_deeply($new,$exp);
+}

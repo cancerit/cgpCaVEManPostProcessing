@@ -28,46 +28,50 @@
 # 2009, 2010, 2011, 2012’.
 #
 
-package Sanger::CGP::CavemanPostProcessor::ExomePostProcessor;
+package Sanger::CGP::CavemanPostProcessor::MNVPostProcessor;
 
 use strict;
+use Bio::DB::HTS;
+use Bio::DB::HTS::Constants;
+use Bio::DB::HTS::Alignment;
+use POSIX qw(strftime ceil);
+use List::Util qw (sum zip);
 use Carp;
 use Const::Fast qw(const);
 
 use Sanger::CGP::CavemanPostProcessor;
 our $VERSION = Sanger::CGP::CavemanPostProcessor->VERSION;
 
-use base qw(Sanger::CGP::CavemanPostProcessor::PostProcessor);
-
-
-#---------------
-#	Init methods
-#---------------
-
 sub _init{
-	my ($self,$inputs) = @_;
-	$self->SUPER::_init($inputs);
-	return $self;
+  my ($self,$inputs) = @_;
+
+  $self->SUPER::_init($inputs);
+
+  return $self;
 }
 
-#-----------------------------
-#	Post processing filter methods
-#-----------------------------
-
-
-#-----------------
-#	Getters/setters
-#-----------------
-
-
-#----------
-#	DESTROY!
-#----------
-
-sub DESTROY{
-	my $self = shift;
-	#warn "ExomePostProcessor::DESTROY\n";
-	$self->SUPER::DESTROY;
+sub clearResults{
+  my ($self) = @_;
+  $self->{'depth'} = undef;
+  $self->{'pos'} = undef;
+  $self->{'norm'} = undef;
+  $self->{'other'} = undef;
+  $self->{'dpos'} = undef;
+  $self->{'indelTum'} = undef;
+  $self->{'indelNorm'} = undef;
+  $self->{'motif'} = undef;
+  $self->{'mapQ'} = undef;
+  $self->{'otherOLD'} = undef;
+  $self->{'phase'} = undef;
+  $self->{'XTCheck'} = undef;
+  $self->{'single'} = undef;
+  $self->{'umpropres'} = undef;
+  $self->{'clipmed'} = undef;
+  $self->{'alnmedrd'} = undef;
+  $self->{'algnmed'} = undef;
+  $self->{'cmnp'} = undef;
+  $self->{'gapflg'} = undef;
+  return 1;
 }
 
 return 1;

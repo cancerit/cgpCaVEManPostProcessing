@@ -42,37 +42,14 @@ use Const::Fast qw(const);
 use Data::Dumper;
 
 use Sanger::CGP::CavemanPostProcessor;
+use Sanger::CGP::CavemanPostProcessor::Constants;
 our $VERSION = Sanger::CGP::CavemanPostProcessor->VERSION;
 
 use base qw(Sanger::CGP::CavemanPostProcessor);
 
+my $const = Sanger::CGP::CavemanPostProcessor::Constants;
+
 #Defaults for this post processing module
-const my $MAX_MATCHED_NORM_MUT_ALLELE_PROP => 0.05;
-const my $MAX_PHASING_MINORITY_STRAND_PROP => 0.04;
-const my $RD_POS_BEGINNING_OF_RD_PROP => 0.08;
-const my $RD_POS_END_OF_TWOTHIRDS_EXTEND_PROP => 0.08;
-const my $MIN_PASS_AVG_QUAL_PENTAMER => 20;
-const my $SAME_RD_POS_PERCENT => 80;
-const my $MAX_TUM_INDEL_PROP => 10;
-const my $MAX_NORM_INDEL_PROP => 10;
-const my $MIN_AVG_MAP_QUAL => 21;
-const my $MIN_AVG_PHASING_BASE_QUAL => 21;
-const my $MIN_DEPTH_QUAL => 25;
-const my $MIN_NORM_MUT_ALLELE_BASE_QUAL => 15;
-const my $MIN_RD_POS_DEPTH => 8;
-const my $DEPTH_CUTOFF_PROP => 0.333333;
-const my $OLD_ALLELE_VCF_FORMAT => 'GT:AA:CA:GA:TA:PM';
-const my $NEW_ALLELE_VCF_FORMAT => 'GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM';
-const my %OLD_ALLELE_VCF_FORMAT_INDEX_HASH => ('A' => [1], 'C' => [2], 'G' => [3], 'T' => [4], );
-const my %NEW_ALLELE_VCF_FORMAT_INDEX_HASH => ('A'=>[1,5], 'C' =>[2,6], 'G'=>[3,7], 'T'=>[4,8], );
-const my $WITHIN_XBP_OF_DEL => 10;
-const my $MIN_GAP_IN_PCT_READS => 30;
-const my $MEAN_MAPQ_GAPFLAG => 10;
-const my $MAX_GAP_DIST_FROM_EOR => 0.13;
-const my $MIN_GAP_DIST_PCT => 75;
-
-const my $CAVEMAN_MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
-
 
 my $is_stranded_format = 1;
 
@@ -104,6 +81,7 @@ sub _init{
   $self->meanMapQualGapFlag($inputs->{'minMeanMapQualGapFlag'});
   $self->maxGapFlagDistFromEndOfReadProp($inputs->{'maxGapFlagDistFromEndOfReadProp'});
   $self->minGapFlagDistEndOfReadPercent($inputs->{'minGapFlagDistEndOfReadPercent'});
+  $self->minSingleEndCoverage($inputs->{'minSingleEndCoverage'});
 
   return $self;
 }
@@ -142,7 +120,7 @@ sub meanMapQualGapFlag{
     $self->{'minMeanMapQualGapFlag'} = $p;
   }else{
     if(!defined($self->{'minMeanMapQualGapFlag'})){
-      $self->{'minMeanMapQualGapFlag'} = $MEAN_MAPQ_GAPFLAG;
+      $self->{'minMeanMapQualGapFlag'} = $const->default_flag_values('MEAN_MAPQ_GAPFLAG');
     }
   }
   return $self->{'minMeanMapQualGapFlag'};
@@ -154,7 +132,7 @@ sub maxCavemanMatchedNormalProportion{
 		 $self->{'cmnmmp'} = $val;
 	}else{
 		if(!defined($self->{'cmnmmp'})){
-			$self->{'cmnmmp'} = $CAVEMAN_MATCHED_NORMAL_MAX_MUT_PROP;
+			$self->{'cmnmmp'} = $const->default_flag_values('CAVEMAN_MATCHED_NORMAL_MAX_MUT_PROP');
 		}
 	}
 	return $self->{'cmnmmp'};
@@ -166,7 +144,7 @@ sub maxGapFlagDistFromEndOfReadProp{
          $self->{'maxGapFlagDistFromEndOfReadProp'} = $p;
     }else{
         if(!defined($self->{'maxGapFlagDistFromEndOfReadProp'})){
-            $self->{'maxGapFlagDistFromEndOfReadProp'} = $MAX_GAP_DIST_FROM_EOR;
+            $self->{'maxGapFlagDistFromEndOfReadProp'} = $const->default_flag_values('MAX_GAP_DIST_FROM_EOR');
         }
     }
     return $self->{'maxGapFlagDistFromEndOfReadProp'};
@@ -178,7 +156,7 @@ sub withinXBpOfDeletion{
          $self->{'getWithinXBpOfDeletion'} = $p;
     }else{
         if(!defined($self->{'getWithinXBpOfDeletion'})){
-            $self->{'getWithinXBpOfDeletion'} = $WITHIN_XBP_OF_DEL;
+            $self->{'getWithinXBpOfDeletion'} = $const->default_flag_values('WITHIN_XBP_OF_DEL');
         }
     }
     return $self->{'getWithinXBpOfDeletion'};
@@ -190,7 +168,7 @@ sub minGapFlagDistEndOfReadPercent{
          $self->{'minGapFlagDistEndOfReadPercent'} = $p;
     }else{
         if(!defined($self->{'minGapFlagDistEndOfReadPercent'})){
-            $self->{'minGapFlagDistEndOfReadPercent'} = $MIN_GAP_DIST_PCT;
+            $self->{'minGapFlagDistEndOfReadPercent'} = $const->default_flag_values('MIN_GAP_DIST_PCT');
         }
     }
     return $self->{'minGapFlagDistEndOfReadPercent'};
@@ -202,7 +180,7 @@ sub minGapPresentInPercentReads{
          $self->{'minGapPresentInReads'} = $p;
     }else{
         if(!defined($self->{'minGapPresentInReads'})){
-            $self->{'minGapPresentInReads'} = $MIN_GAP_IN_PCT_READS;
+            $self->{'minGapPresentInReads'} = $const->default_flag_values('MIN_GAP_IN_PCT_READS');
         }
     }
     return $self->{'minGapPresentInReads'};
@@ -214,7 +192,7 @@ sub maxMatchedNormalAlleleProportion{
      $self->{'maxMatchedNormalAlleleProportion'} = $p;
   }else{
     if(!defined($self->{'maxMatchedNormalAlleleProportion'})){
-      $self->{'maxMatchedNormalAlleleProportion'} = $MAX_MATCHED_NORM_MUT_ALLELE_PROP;
+      $self->{'maxMatchedNormalAlleleProportion'} = $const->default_flag_values('MAX_MATCHED_NORM_MUT_ALLELE_PROP');
     }
   }
   return $self->{'maxMatchedNormalAlleleProportion'};
@@ -226,7 +204,7 @@ sub maxPhasingMinorityStrandReadProportion{
     $self->{'maxPhasingMinorityStrandReadProportion'} = $p;
   }else{
     if(!defined($self->{'maxPhasingMinorityStrandReadProportion'})){
-      $self->{'maxPhasingMinorityStrandReadProportion'} = $MAX_PHASING_MINORITY_STRAND_PROP;
+      $self->{'maxPhasingMinorityStrandReadProportion'} = $const->default_flag_values('MAX_PHASING_MINORITY_STRAND_PROP');
     }
   }
   return $self->{'maxPhasingMinorityStrandReadProportion'};
@@ -238,7 +216,7 @@ sub readPosBeginningOfReadIgnoreProportion{
      $self->{'readPosBeginningOfReadIgnoreProportion'} = $p;
   }else{
     if(!defined($self->{'readPosBeginningOfReadIgnoreProportion'})){
-      $self->{'readPosBeginningOfReadIgnoreProportion'} = $RD_POS_BEGINNING_OF_RD_PROP;
+      $self->{'readPosBeginningOfReadIgnoreProportion'} = $const->default_flag_values('RD_POS_BEGINNING_OF_RD_PROP');
     }
   }
   return $self->{'readPosBeginningOfReadIgnoreProportion'};
@@ -250,7 +228,7 @@ sub readPosTwoThirdsOfReadExtendProportion{
      $self->{'readPosTwoThirdsOfReadExtendProportion'} = $p;
   }else{
     if(!defined($self->{'readPosTwoThirdsOfReadExtendProportion'})){
-      $self->{'readPosTwoThirdsOfReadExtendProportion'} = $RD_POS_END_OF_TWOTHIRDS_EXTEND_PROP;
+      $self->{'readPosTwoThirdsOfReadExtendProportion'} = $const->default_flag_values('RD_POS_END_OF_TWOTHIRDS_EXTEND_PROP');
     }
   }
   return $self->{'readPosTwoThirdsOfReadExtendProportion'};
@@ -263,7 +241,7 @@ sub pentamerMinPassAvgQual{
      $self->{'pentamerMinPassAvgQual'} = $p;
   }else{
     if(!defined($self->{'pentamerMinPassAvgQual'})){
-      $self->{'pentamerMinPassAvgQual'} = $MIN_PASS_AVG_QUAL_PENTAMER;
+      $self->{'pentamerMinPassAvgQual'} = $const->default_flag_values('MIN_PASS_AVG_QUAL_PENTAMER');
     }
   }
   return $self->{'pentamerMinPassAvgQual'};
@@ -275,7 +253,7 @@ sub percentageSamePos{
     $self->{'pctSamePos'} = $p;
   }else{
     if(!defined($self->{'pctSamePos'})){
-      $self->{'pctSamePos'} = $SAME_RD_POS_PERCENT;
+      $self->{'pctSamePos'} = $const->default_flag_values('SAME_RD_POS_PERCENT');
     }
   }
   return $self->{'pctSamePos'};
@@ -287,7 +265,7 @@ sub maxTumIndelProportion{
     $self->{'maxTumIndelProp'} = $p;
   }else{
     if(!defined($self->{'maxTumIndelProp'})){
-      $self->{'maxTumIndelProp'} = $MAX_TUM_INDEL_PROP;
+      $self->{'maxTumIndelProp'} = $const->default_flag_values('MAX_TUM_INDEL_PROP');
     }
   }
   return $self->{'maxTumIndelProp'};
@@ -299,7 +277,7 @@ sub maxNormIndelProportion{
     $self->{'maxNormIndelProp'} = $p;
   }else{
     if(!defined($self->{'maxNormIndelProp'})){
-      $self->{'maxNormIndelProp'} = $MAX_NORM_INDEL_PROP;
+      $self->{'maxNormIndelProp'} = $const->default_flag_values('MAX_NORM_INDEL_PROP');
     }
   }
   return $self->{'maxNormIndelProp'};
@@ -311,7 +289,7 @@ sub minPassAvgMapQual{
     $self->{'minAvgMq'} = $p;
   }else{
     if(!defined($self->{'minAvgMq'})){
-      $self->{'minAvgMq'} = $MIN_AVG_MAP_QUAL;
+      $self->{'minAvgMq'} = $const->default_flag_values('MIN_AVG_MAP_QUAL');
     }
   }
   return $self->{'minAvgMq'};
@@ -322,7 +300,7 @@ sub minPassAvgBaseQualPhasing{
   if(defined($bq)){
     $self->{'phaseQual'} = $bq;
   }elsif(!defined($self->{'phaseQual'})){
-    $self->{'phaseQual'} = $MIN_AVG_PHASING_BASE_QUAL;
+    $self->{'phaseQual'} = $const->default_flag_values('MIN_AVG_PHASING_BASE_QUAL');
   }
   return $self->{'phaseQual'};
 }
@@ -333,7 +311,7 @@ sub depthCutoffProportion{
     $self->{'dc'} = $dp;
   }else{
     if(!defined($self->{'dc'})){
-      $self->{'dc'} = $DEPTH_CUTOFF_PROP;
+      $self->{'dc'} = $const->default_flag_values('DEPTH_CUTOFF_PROP');
     }
   }
   return $self->{'dc'};
@@ -345,7 +323,7 @@ sub minDepthQual{
     $self->{'d'} = $q;
   }else{
     if(!defined($self->{'d'})){
-      $self->{'d'} = $MIN_DEPTH_QUAL;
+      $self->{'d'} = $const->default_flag_values('MIN_DEPTH_QUAL');
     }
   }
   return $self->{'d'};
@@ -357,7 +335,7 @@ sub minNormalMutAlleleQual{
     $self->{'q'} = $q;
   }else{
     if(!defined($self->{'q'})){
-      $self->{'q'} = $MIN_NORM_MUT_ALLELE_BASE_QUAL;
+      $self->{'q'} = $const->default_flag_values('MIN_NORM_MUT_ALLELE_BASE_QUAL');
     }
   }
   return $self->{'q'};
@@ -369,7 +347,7 @@ sub minRdPosDepth{
     $self->{'minRdPsDpth'} = $q;
   }else{
     if(!defined($self->{'minRdPsDpth'})){
-      $self->{'minRdPsDpth'} = $MIN_RD_POS_DEPTH;
+      $self->{'minRdPsDpth'} = $const->default_flag_values('MIN_RD_POS_DEPTH');
     }
   }
   return $self->{'minRdPsDpth'};
@@ -691,17 +669,17 @@ sub _checkCavemanMatchedNormal{
   my @splitnorm = split(/:/,$normal_col);
   my @splittum = split(/:/,$tumour_col);
   my @splitformat = split(/:/,$format);
-  if($format !~ m/$OLD_ALLELE_VCF_FORMAT/ && $format !~ m/$NEW_ALLELE_VCF_FORMAT/){
+  if($format !~ m/$conts->allele_format('OLD_ALLELE_VCF_FORMAT')/ && $format !~ m/$conts->allele_format('NEW_ALLELE_VCF_FORMAT')/){
     croak("VCF input format $format for cavemanMatchedNormal doesn't match a known CaVEMan VCF output format");
   }
-  $is_stranded_format = 0 if($format =~ m/$OLD_ALLELE_VCF_FORMAT/);
+  $is_stranded_format = 0 if($format =~ m/$conts->allele_format('OLD_ALLELE_VCF_FORMAT')/);
   my $total_norm_cvg = 0;
   my $mut_allele_cvg = 0;
   my $total_tumm_cvg = 0;
   my $mut_allele_tum_cvg = 0;
-  my %decode_hash = %OLD_ALLELE_VCF_FORMAT_INDEX_HASH;
+  my %decode_hash = $conts->allele_format_idx('OLD_ALLELE_VCF_FORMAT_INDEX_HASH');
   if($is_stranded_format==1){
-    %decode_hash = %NEW_ALLELE_VCF_FORMAT_INDEX_HASH;
+    %decode_hash = $conts->allele_format_idx('NEW_ALLELE_VCF_FORMAT_INDEX_HASH');
     $total_norm_cvg = sum(@splitnorm[1..8]);
     $total_tumm_cvg = sum(@splittum[1..8]);
   }else{

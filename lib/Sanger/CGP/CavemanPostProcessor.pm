@@ -31,6 +31,7 @@
 package Sanger::CGP::CavemanPostProcessor;
 
 use strict;
+use Sanger::CGP::CavemanPostProcessor::Constants;
 use Bio::DB::HTS;
 use Bio::DB::HTS::Constants;
 use Bio::DB::HTS::Alignment;
@@ -45,15 +46,7 @@ use base 'Exporter';
 our $VERSION = '1.10.0';
 our @EXPORT = qw($VERSION);
 
-const my $MATCH_CIG => 'M';
-const my $SKIP_CIG => 'N';
-const my $INS_CIG => 'I';
-const my $DEL_CIG => 'D';
-const my $SOFT_CLIP_CIG => 'S';
-const my $HARD_CLIP_CIG => 'H';
-
-const my $MIN_SINGLE_END_CVG => 10;
-const my $MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
+my $const = Sanger::CGP::CavemanPostProcessor::Constants;
 
 my $muts;
 my $norms;
@@ -97,10 +90,13 @@ sub _init_base{
 }
 
 
-=item _init
-  _init method required by inheriting classes.
-=cut
-sub _init : Abstract;
+sub _init{
+  my ($self,$inputs) = @_;
+
+  $self->SUPER::_init($inputs);
+
+  return $self;
+}
 
 sub runProcess{
   my ($self,$chr,$start,$stop,$refBase,$mutBase) = @_;
@@ -187,7 +183,7 @@ sub minSingleEndCoverage{
      $self->{'sec'} = $p;
   }else{
     if(!defined($self->{'sec'})){
-      $self->{'sec'} = $MIN_SINGLE_END_CVG;
+      $self->{'sec'} = $const->default_flag_values('MIN_SINGLE_END_CVG');
     }
   }
   return $self->{'sec'};
@@ -224,7 +220,7 @@ sub matchedNormalMaxMutProportion{
      $self->{'mnmmp'} = $p;
   }else{
     if(!defined($self->{'mnmmp'})){
-      $self->{'mnmmp'} = $MATCHED_NORMAL_MAX_MUT_PROP;
+      $self->{'mnmmp'} = $const->default_flag_values('MATCHED_NORMAL_MAX_MUT_PROP');
     }
   }
   return $self->{'mnmmp'};
@@ -412,7 +408,7 @@ sub _callbackTumFetch{
     $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);
     $this_read->{xt} = $a->aux_get('XT');
     $this_read->{softclipcount} = 0;
-    if ($cig_str =~ m/$SOFT_CLIP_CIG/){
+    if ($cig_str =~ m/$const->cigar_types('SOFT_CLIP_CIG')/){
       $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
     }
     $this_read->{primaryalnscore} = $a->aux_get('AS');# $algn->get_tag_values('AS');
@@ -500,7 +496,7 @@ sub _get_soft_clip_count_from_cigar{
   my ($cig_arr) = @_;
   my $count = 0;
   foreach my $cigentry(@$cig_arr){
-    if($cigentry->[0] eq $SOFT_CLIP_CIG){
+    if($cigentry->[0] eq $const->cigar_types('SOFT_CLIP_CIG')){
       $count += $cigentry->[1];
     }
   }
@@ -512,10 +508,10 @@ sub _getDistanceFromGapInRead{
   my $min_gap_dist = -1;
   my $currentRp = 0;
   foreach my $cigSect(@{$cigar_array}){
-    if($cigSect->[0] eq $MATCH_CIG || $cigSect->[0] eq $SKIP_CIG ||
-          $cigSect->[0] eq $SOFT_CLIP_CIG){
+    if($cigSect->[0] eq $const->cigar_types('MATCH_CIG') || $cigSect->[0] eq $const->cigar_types('SKIP_CIG') ||
+          $cigSect->[0] eq $const->cigar_types('SOFT_CLIP_CIG')){
       $currentRp+=$cigSect->[1];
-    }elsif($cigSect->[0] eq $DEL_CIG || $cigSect->[0] eq $INS_CIG){
+    }elsif($cigSect->[0] eq $const->cigar_types('DEL_CIG') || $cigSect->[0] eq $const->cigar_types('INS_CIG')){
       my $dp_start = $currentRp+1;
       my $dp_end = $currentRp+$cigSect->[1];
       my $tmp_dist = 0;
@@ -534,7 +530,7 @@ sub _getReadPositionFromAlignment{
   my ($currentRefPos, $cigar_array) = @_; # 0-based pos ($a->pos)
   my $rdPosIndexOfInterest = 0;
   foreach my $cigSect(@{$cigar_array}){
-    if($cigSect->[0] eq $MATCH_CIG){
+    if($cigSect->[0] eq $const->cigar_types('MATCH_CIG')){
       my $op_len = $cigSect->[1];
       if($currentRefPos <= $currentPos && ($currentRefPos+$op_len) >= $currentPos){
         for(0..($op_len - 1)) {
@@ -548,9 +544,9 @@ sub _getReadPositionFromAlignment{
         $rdPosIndexOfInterest += $op_len;
         $currentRefPos += $op_len;
       }
-    }elsif($cigSect->[0] eq $DEL_CIG || $cigSect->[0] eq $SKIP_CIG){
+    }elsif($cigSect->[0] eq $const->cigar_types('DEL_CIG') || $cigSect->[0] eq $const->cigar_types('SKIP_CIG')){
       $currentRefPos += $cigSect->[1];
-    }elsif($cigSect->[0] eq $INS_CIG || $cigSect->[0] eq $SOFT_CLIP_CIG){
+    }elsif($cigSect->[0] eq $const->cigar_types('INS_CIG') || $cigSect->[0] eq $const->cigar_types('SOFT_CLIP_CIG')){
       $rdPosIndexOfInterest += $cigSect->[1];
     }
   }
@@ -560,15 +556,15 @@ sub _isCurrentPosCoveredFromAlignment{
   my ($pos, $cigar_array, $pos_of_interest) = @_; # 0-based pos, 1 based current pos
   foreach my $cigSect(@{$cigar_array}){
 
-    if($cigSect->[0] eq $MATCH_CIG){
+    if($cigSect->[0] eq $const->cigar_types('MATCH_CIG')){
       if($pos_of_interest >= ($pos + 1) && $pos_of_interest <= ($pos+$cigSect->[1])){
         return 1;
       }
       $pos+= $cigSect->[1];
-    }elsif($cigSect->[0] eq $DEL_CIG || $cigSect->[0] eq $SKIP_CIG){
+    }elsif($cigSect->[0] eq $const->cigar_types('DEL_CIG') || $cigSect->[0] eq $const->cigar_types('SKIP_CIG')){
       if($pos_of_interest >= ($pos + 1) && $pos_of_interest <= ($pos+$cigSect->[1])){
-        return 0 if ($cigSect->[0] eq $SKIP_CIG);
-        return -1 if ($cigSect->[0] eq $DEL_CIG);
+        return 0 if ($cigSect->[0] eq $const->cigar_types('SKIP_CIG'));
+        return -1 if ($cigSect->[0] eq $const->cigar_types('DEL_CIG'));
       }
       $pos+= $cigSect->[1];
     }
@@ -707,8 +703,8 @@ sub DESTROY{
   $minAnalysedQual = 11;
   $muts = undef;
   $norms = undef;
-    $tum_readnames = undef;
-    $norm_readnames = undef;
+  $tum_readnames = undef;
+  $norm_readnames = undef;
   #warn "Base::DESTROY\n";
 }
 

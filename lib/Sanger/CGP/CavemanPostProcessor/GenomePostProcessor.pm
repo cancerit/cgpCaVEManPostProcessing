@@ -40,7 +40,7 @@ our $VERSION = Sanger::CGP::CavemanPostProcessor->VERSION;
 
 use base qw(Sanger::CGP::CavemanPostProcessor::PostProcessor);
 
-my $const = Sanger::CGP::CavemanPostProcessor::Constants;
+my $const = 'Sanger::CGP::CavemanPostProcessor::Constants';
 
 #---------------
 #	Init methods

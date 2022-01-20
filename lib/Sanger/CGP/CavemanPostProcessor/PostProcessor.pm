@@ -669,10 +669,12 @@ sub _checkCavemanMatchedNormal{
   my @splitnorm = split(/:/,$normal_col);
   my @splittum = split(/:/,$tumour_col);
   my @splitformat = split(/:/,$format);
-  if($format !~ m/$const->allele_format('OLD_ALLELE_VCF_FORMAT')/ && $format !~ m/$const->allele_format('NEW_ALLELE_VCF_FORMAT')/){
+  my $old_format = $const->allele_format('OLD_ALLELE_VCF_FORMAT');
+  my $new_format = $const->allele_format('NEW_ALLELE_VCF_FORMAT');
+  if($format !~ m/$old_format/ && $format !~ m/$new_format/){
     croak("VCF input format $format for cavemanMatchedNormal doesn't match a known CaVEMan VCF output format");
   }
-  $is_stranded_format = 0 if($format =~ m/$const->allele_format('OLD_ALLELE_VCF_FORMAT')/);
+  $is_stranded_format = 0 if($format =~ m/$old_format/);
   my $total_norm_cvg = 0;
   my $mut_allele_cvg = 0;
   my $total_tumm_cvg = 0;

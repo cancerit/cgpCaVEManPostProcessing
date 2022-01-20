@@ -675,7 +675,7 @@ sub _callbackMatchedNormFetch{
     $this_read->{xt} = $a->aux_get('XT');
     $this_read->{ln} = $a->l_qseq;
     $this_read->{softclipcount} = 0;
-    if ($cig_str =~ m/$SOFT_CLIP_CIG/){
+    if ($cig_str =~ m/$const->cigar_types('SOFT_CLIP_CIG')/){
       $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($cigar_array);
     }
     $this_read->{primaryalnscore} = $a->aux_get('AS');# $algn->get_tag_values('AS');

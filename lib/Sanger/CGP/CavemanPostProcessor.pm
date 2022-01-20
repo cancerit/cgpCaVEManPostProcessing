@@ -46,7 +46,7 @@ use base 'Exporter';
 our $VERSION = '1.10.0';
 our @EXPORT = qw($VERSION);
 
-my $const = Sanger::CGP::CavemanPostProcessor::Constants;
+my $const = 'Sanger::CGP::CavemanPostProcessor::Constants';
 
 my $muts;
 my $norms;

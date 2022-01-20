@@ -36,15 +36,6 @@ use warnings FATAL => 'all';
 use autodie qw(:all);
 use Const::Fast qw(const);
 
-=head1 README - MIGRATE TO OBJECT
-
-If you need to add a constant consider if it is possible to move groups to a functional approach.  For example:
-
-  my $const = 'Sanger::CGP::CanPipe::Constants';
-  $const->job_status_id('PEND');
-
-=cut
-
 const my %DEFAULT_FLAG_VALUES => (
   'MATCHED_NORMAL_ALLELE_HICVG_CUTOFF' => 2,
   'MAX_MATCHED_NORMAL_ALLELE_HICVG_PROPORTION' => 0.03,

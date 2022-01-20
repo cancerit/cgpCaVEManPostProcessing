@@ -47,7 +47,7 @@ our $VERSION = Sanger::CGP::CavemanPostProcessor->VERSION;
 
 use base qw(Sanger::CGP::CavemanPostProcessor);
 
-my $const = Sanger::CGP::CavemanPostProcessor::Constants;
+my $const = 'Sanger::CGP::CavemanPostProcessor::Constants';
 
 #Defaults for this post processing module
 

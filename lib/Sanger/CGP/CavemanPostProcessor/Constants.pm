@@ -99,7 +99,7 @@ const my %ALLELE_FORMAT_IDX => (
 
 sub allele_format_idx{
   my ($class,$item) = @_;
-  return %ALLELE_FORMAT_IDX{$item};
+  return \{%ALLELE_FORMAT_IDX{$item}};
 }
 
 1;

@@ -681,18 +681,18 @@ sub _checkCavemanMatchedNormal{
   my $mut_allele_cvg = 0;
   my $total_tumm_cvg = 0;
   my $mut_allele_tum_cvg = 0;
-  my %decode_hash = $const->allele_format_idx('OLD_ALLELE_VCF_FORMAT_INDEX_HASH');
+  my $decode_hash = $const->allele_format_idx('OLD_ALLELE_VCF_FORMAT_INDEX_HASH');
   if($is_stranded_format==1){
-    %decode_hash = $const->allele_format_idx('NEW_ALLELE_VCF_FORMAT_INDEX_HASH');
+    $decode_hash = $const->allele_format_idx('NEW_ALLELE_VCF_FORMAT_INDEX_HASH');
     $total_norm_cvg = sum(@splitnorm[1..8]);
     $total_tumm_cvg = sum(@splittum[1..8]);
   }else{
     $total_norm_cvg = sum(@splitnorm[1..4]);
     $total_tumm_cvg = sum(@splittum[1..4]);
   }
-  warn Dumper(\%decode_hash);
+  warn Dumper($decode_hash);
   my $mutbase = $self->_mutBase();
-  for my $idx(@{$decode_hash{$mutbase}}){
+  for my $idx(@{$decode_hash->{$mutbase}}){
     $mut_allele_cvg += $splitnorm[$idx];
     $mut_allele_tum_cvg += $splittum[$idx];
   }

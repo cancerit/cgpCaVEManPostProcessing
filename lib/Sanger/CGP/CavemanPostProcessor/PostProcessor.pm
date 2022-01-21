@@ -675,6 +675,8 @@ sub _checkCavemanMatchedNormal{
     croak("VCF input format $format for cavemanMatchedNormal doesn't match a known CaVEMan VCF output format");
   }
   $is_stranded_format = 0 if($format =~ m/$old_format/);
+
+  warn ('************* IS STRANDED FORMAT: ',$is_stranded_format,"\n");
   my $total_norm_cvg = 0;
   my $mut_allele_cvg = 0;
   my $total_tumm_cvg = 0;
@@ -688,6 +690,7 @@ sub _checkCavemanMatchedNormal{
     $total_norm_cvg = sum(@splitnorm[1..4]);
     $total_tumm_cvg = sum(@splittum[1..4]);
   }
+  warn Dumper(\%decode_hash);
   my $mutbase = $self->_mutBase();
   for my $idx(@{$decode_hash{$mutbase}}){
     $mut_allele_cvg += $splitnorm[$idx];

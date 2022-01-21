@@ -99,6 +99,9 @@ const my %ALLELE_FORMAT_IDX => (
 
 sub allele_format_idx{
   my ($class,$item) = @_;
+  warn (\%ALLELE_FORMAT_IDX);
+  warn (%ALLELE_FORMAT_IDX{$item})
+  warn (\{%ALLELE_FORMAT_IDX{$item}})
   return \{%ALLELE_FORMAT_IDX{$item}};
 }
 

@@ -92,17 +92,28 @@ sub allele_format{
   return %ALLELE_FORMAT{$item};
 }
 
-const my %ALLELE_FORMAT_IDX => (
-  'OLD_ALLELE_VCF_FORMAT_INDEX_HASH' => ('A' => [1], 'C' => [2], 'G' => [3], 'T' => [4], ),
-  'NEW_ALLELE_VCF_FORMAT_INDEX_HASH' => ('A'=>[1,5], 'C' =>[2,6], 'G'=>[3,7], 'T'=>[4,8], ),
+const my %ALLELE_FORMAT_IDX_OLD => (
+  'A'=>[1,5], 
+  'C'=>[2,6], 
+  'G'=>[3,7], 
+  'T'=>[4,8],
 );
 
-sub allele_format_idx{
+const my %ALLELE_FORMAT_IDX_NEW => (
+  'A'=>[1,5],
+  'C' =>[2,6],
+  'G'=>[3,7],
+  'T'=>[4,8],
+);
+
+sub allele_format_idx_old{
   my ($class,$item) = @_;
-  warn (\%ALLELE_FORMAT_IDX);
-  warn (%ALLELE_FORMAT_IDX{$item})
-  warn (\{%ALLELE_FORMAT_IDX{$item}})
-  return \{%ALLELE_FORMAT_IDX{$item}};
+  return %ALLELE_FORMAT_IDX_OLD{$item};
+}
+
+sub allele_format_idx_new{
+  my ($class,$item) = @_;
+  return %ALLELE_FORMAT_IDX_NEW{$item};
 }
 
 1;

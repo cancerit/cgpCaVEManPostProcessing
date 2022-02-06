@@ -156,7 +156,7 @@ sub run_flag{
 			"-u $unmatched_vcf -ref $ref";
 	my ($out, $err, $exit) = capture{ system($cmd) };
 	if($exit!=0){
-		warn Dumper($err);
+		die Dumper($cmd,"\n\n",$err);
 	}
 	is($exit, 0,'Flagging ran correctly');
 }

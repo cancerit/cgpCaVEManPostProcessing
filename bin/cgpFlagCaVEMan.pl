@@ -46,6 +46,7 @@ use Sanger::CGP::CavemanPostProcessor;
 use Sanger::CGP::CavemanPostProcessor::ConfigParser;
 use Sanger::CGP::CavemanPostProcessor::ExomePostProcessor;
 use Sanger::CGP::CavemanPostProcessor::GenomePostProcessor;
+use Sanger::CGP::CavemanPostProcessor::MNVPostProcessor;
 use Pod::Usage;
 use FindBin qw($Bin);
 use Set::IntervalTree;
@@ -262,10 +263,20 @@ sub main{
       $$x[7]=$vcf->add_info_field($$x[7],'SNP'=>undef,'coding'=>undef,'ASRD'=>undef,
                                                         'CLPM'=>undef,'ASMD'=>undef,'SR'=>undef);
       #Files are sorted by chr/pos, so we can open the tabix index once per vcf file.
-      if($unmatchedVCFFlag==1 && exists($umNormVcf->{$$x[0]})){
-        $isInUmVCF = getUnmatchedVCFIntersectMatch($$x[0],$$x[1],$umNormVcf->{$$x[0]},$UNMATCHED_VCF_KEY);
+      my $this_flagger;
+      if (length($$x[3]) > 1) {
+        # if($unmatchedVCFFlag==1 && exists($umNormVcf->{$$x[0]})){
+        #   $isInUmVCF = getUnmatchedVCFIntersectMatch($$x[0],$$x[1],$umNormVcf->{$$x[0]},$UNMATCHED_VCF_KEY);
+        # }
+        $this_flagger = $flagger->{'MNV'};
+      }else{
+        if($unmatchedVCFFlag==1 && exists($umNormVcf->{$$x[0]})){
+          $isInUmVCF = getUnmatchedVCFIntersectMatch($$x[0],$$x[1],$umNormVcf->{$$x[0]},$UNMATCHED_VCF_KEY);
+        }
+        $this_flagger = $flagger->{'SNV'};
       }
-      my $results = getVCFToAddResultsOfFilters($$x[0],$$x[1],$$x[3],$$x[4],$flagList,$flagger,$cfg,$x,$vcf,$configParams,$isInUmVCF,$tabixList);
+      warn Dumper (ref($flagger->{'SNV'}));
+      my $results = getVCFToAddResultsOfFilters($$x[0],$$x[1],$$x[3],$$x[4],$flagList,$this_flagger,$cfg,$x,$vcf,$configParams,$isInUmVCF,$tabixList);
       #Add the relevant filters or PASS to the filter section.
       $$x[6]=$vcf->add_filter($$x[6],%$results);
       #Validate this line and append this line to the output file;
@@ -805,13 +816,16 @@ sub setupFromConfig{
 
 sub initFlagModuleForSpeciesType{
   my ($params,$type) = @_;
+  my $flag_mods;
   if(lc($type) eq lc("pulldown") || lc($type) eq lc("followup") || $type eq "WXS" || $type eq "AMPLICON" || $type eq "TARGETED"){
-    return Sanger::CGP::CavemanPostProcessor::ExomePostProcessor->new(%$params);
+    $flag_mods->{'SNV'} = Sanger::CGP::CavemanPostProcessor::ExomePostProcessor->new(%$params);
   }elsif($type eq "WGS" || $type eq "RNASEQ"){
-    return Sanger::CGP::CavemanPostProcessor::GenomePostProcessor->new(%$params);
+    $flag_mods->{'SNV'} = Sanger::CGP::CavemanPostProcessor::GenomePostProcessor->new(%$params);
   }else{
     croak("No flagging module for type: $type\n");
   }
+  $flag_mods->{'MNV'} = Sanger::CGP::CavemanPostProcessor::MNVPostProcessor->new(%$params);
+  return $flag_mods;
 }
 
 sub get_version {

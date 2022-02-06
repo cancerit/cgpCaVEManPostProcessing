@@ -55,123 +55,124 @@ subtest 'Initialise module (no params)' => sub {
 };
 
 subtest 'Initialise module (bam params 1)' => sub {
-	my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::ExomePostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
-	isa_ok($processor->tumBam(), "Bio::DB::HTS", "Test tumour bam");
-	isa_ok($processor->normBam(), "Bio::DB::HTS", "Test normal bam");
-	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
-	ok($processor->keepSW == 0,"Keep SW off by default");
+  my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::ExomePostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  isa_ok($processor->tumBam(), "Bio::DB::HTS", "Test tumour bam");
+  isa_ok($processor->normBam(), "Bio::DB::HTS", "Test normal bam");
+  ok($processor->minAnalysedQual() == 11,"Min analysed qualities");
+  ok($processor->keepSW == 0,"Keep SW off by default");
   done_testing();
 };
 
 subtest 'Min analysed qual and keep SW getters/setters' => sub{
-	my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::ExomePostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
-	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
-	ok($processor->keepSW == 0,"Keep SW off by default");
-	$processor->minAnalysedQual(0);
-	$processor->keepSW(1);
-	ok($processor->minAnalysedQual == 0,"Min analysed quality changed");
-	$processor->minAnalysedQual(11);
-	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
-	ok($processor->keepSW == 1,"Keep SW on after switch");
-	$processor->keepSW(0);
-	ok($processor->keepSW == 0,"Keep SW off by default");
-	done_testing();
+  my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::ExomePostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  ok($processor->minAnalysedQual == 11,"Min analysed qualities");
+  ok($processor->keepSW == 0,"Keep SW off by default");
+  $processor->minAnalysedQual(0);
+  $processor->keepSW(1);
+  ok($processor->minAnalysedQual == 0,"Min analysed quality changed");
+  $processor->minAnalysedQual(11);
+  ok($processor->minAnalysedQual == 11,"Min analysed qualities");
+  ok($processor->keepSW == 1,"Keep SW on after switch");
+  $processor->keepSW(0);
+  ok($processor->keepSW == 0,"Keep SW off by default");
+  done_testing();
 };
 
 subtest 'Initialise module (all params)' => sub {
-	my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::ExomePostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
-	isa_ok($processor->tumBam(), "Bio::DB::HTS", "Test tumour bam");
-	isa_ok($processor->normBam(), "Bio::DB::HTS", "Test normal bam");
-	ok($processor->minDepthQual == 25,"Min depth qual");
-    ok($processor->depthCutoffProportion == 0.333333, "depthCutoffProportion got: ".$processor->depthCutoffProportion." exp: 0.333333");
-	ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
-	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
-	ok($processor->percentageSamePos == 80,"Same position max pct");
-	ok($processor->maxTumIndelProportion == 10,"Max tumour indel proportion");
-	ok($processor->pentamerMinPassAvgQual == 20,"Pentamer minimum pass average quality");
-	ok($processor->maxNormIndelProportion == 10,"Max normal indel proportion");
-	ok($processor->minPassAvgBaseQualPhasing == 21,"Min pass phase ");
-	ok($processor->minPassAvgMapQual == 21,"Min pass avg map quality");
-	ok($processor->keepSW == 0,"Keep SW off by default");
-	ok($processor->maxPhasingMinorityStrandReadProportion == 0.04,"maxPhasingMinorityStrandReadProportion");
-	ok($processor->maxMatchedNormalAlleleProportion == 0.05,"maxMatchedNormalAlleleProportion");
-	ok($processor->readPosBeginningOfReadIgnoreProportion == 0.08,"readPosBeginningOfReadIgnoreProportion");
-	ok($processor->readPosTwoThirdsOfReadExtendProportion == 0.08,"readPosTwoThirdsOfReadExtendProportion");
-	ok($processor->minRdPosDepth == 8,"Min rd pos depth default");
+  my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::ExomePostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  isa_ok($processor->tumBam(), "Bio::DB::HTS", "Test tumour bam");
+  isa_ok($processor->normBam(), "Bio::DB::HTS", "Test normal bam");
+  ok($processor->minDepthQual == 25,"Min depth qual");
+  ok($processor->depthCutoffProportion == 0.333333, "depthCutoffProportion got: ".$processor->depthCutoffProportion." exp: 0.333333");
+  ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
+  ok($processor->minAnalysedQual() == 11,"Min analysed qualities");
+  ok($processor->percentageSamePos == 80,"Same position max pct");
+  ok($processor->maxTumIndelProportion == 10,"Max tumour indel proportion");
+  ok($processor->pentamerMinPassAvgQual == 20,"Pentamer minimum pass average quality");
+  ok($processor->maxNormIndelProportion == 10,"Max normal indel proportion");
+  ok($processor->minPassAvgBaseQualPhasing == 21,"Min pass phase ");
+  ok($processor->minPassAvgMapQual == 21,"Min pass avg map quality");
+  ok($processor->keepSW == 0,"Keep SW off by default");
+  ok($processor->maxPhasingMinorityStrandReadProportion == 0.04,"maxPhasingMinorityStrandReadProportion");
+  ok($processor->maxMatchedNormalAlleleProportion == 0.05,"maxMatchedNormalAlleleProportion");
+  ok($processor->readPosBeginningOfReadIgnoreProportion == 0.08,"readPosBeginningOfReadIgnoreProportion");
+  ok($processor->readPosTwoThirdsOfReadExtendProportion == 0.08,"readPosTwoThirdsOfReadExtendProportion");
+  ok($processor->minRdPosDepth == 8,"Min rd pos depth default");
   done_testing();
 };
 
 subtest 'Test runProcess & related storage methods' => sub{
-	my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::ExomePostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
-	my $chr = 1;
-	my $pos = 10011533;
-	my $ref = "G";
-	my $mut = "T";
-	$processor->runProcess($chr,$pos,$pos,$ref,$mut);
-	ok($processor->_chromosome eq $chr,"Chromosome correct");
-	ok($processor->_currentPos == $pos,"Current pos updated");
-	ok($processor->_refBase eq $ref,"Ref base changed");
-	ok($processor->_mutBase eq $mut,"Mut base changed");
-	done_testing();
+  my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::ExomePostProcessor' => [tumBam => $T_BAM, normBam => $T_BAM]);
+  my $chr = 1;
+  my $pos = 10011533;
+  my $ref = "G";
+  my $mut = "T";
+  $processor->runProcess($chr,$pos,$pos,$ref,$mut);
+  ok($processor->_chromosome() eq $chr,"Chromosome correct");
+  ok($processor->_currentPos() == $pos,"Current pos updated");
+  ok($processor->_refBase() eq $ref,"Ref base changed");
+  ok($processor->_mutBase() eq $mut,"Mut base changed");
+  done_testing();
 };
 
 subtest 'Initialise module (ALL params 2)' => sub {
-	my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::ExomePostProcessor' => [
-																			'tumBam' => $T_BAM,
-																			'normBam' => $T_BAM,
-																			'minDepthQual' => 2,
-                                                                            'depthCutoffProportion' => (1/2),
-																			'minNormMutAllelequal' => 3,
-																			'minAnalysedQual' => 5,
-																			'samePosMaxPercent' => 8,
-																			'keepSW' => 1,
-																			'maxTumIndelProportion' => 9,
-																			'maxNormIndelProportion' => 12 ,
-																			'pentamerMinPassAvgQual'  => 11,
-																			'minPassPhaseQual'=> 13,
-																			'minPassAvgMapQual' => 14,
-																			'maxPhasingMinorityStrandReadProportion' => 0.01,
-																			'maxMatchedNormalAlleleProportion' => 0.08,
-																			'readPosBeginningOfReadIgnoreProportion' => 0.03,
-																			'readPosTwoThirdsOfReadExtendProportion' => 0.07,
-																			'minRdPosDepth' => 10]);
+  my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::ExomePostProcessor' => [
+                          'tumBam' => $T_BAM,
+                          'normBam' => $T_BAM,
+                          'minDepthQual' => 2,
+                          'depthCutoffProportion' => (1/2),
+                          'minNormMutAllelequal' => 3,
+                          'minAnalysedQual' => 5,
+                          'samePosMaxPercent' => 8,
+                          'keepSW' => 1,
+                          'maxTumIndelProportion' => 9,
+                          'maxNormIndelProportion' => 12 ,
+                          'pentamerMinPassAvgQual'  => 11,
+                          'minPassPhaseQual'=> 13,
+                          'minPassAvgMapQual' => 14,
+                          'maxPhasingMinorityStrandReadProportion' => 0.01,
+                          'maxMatchedNormalAlleleProportion' => 0.08,
+                          'readPosBeginningOfReadIgnoreProportion' => 0.03,
+                          'readPosTwoThirdsOfReadExtendProportion' => 0.07,
+                          'minRdPosDepth' => 10]);
 
-	ok($processor->minDepthQual == 2,"Min depth qual");
-    is($processor->depthCutoffProportion, (1/2),"depthCutoffProportion");
-	ok($processor->minNormalMutAlleleQual == 3,"Min normal mut allele qual");
-	ok($processor->minAnalysedQual == 5,"Min analysed qualities");
-	ok($processor->percentageSamePos == 8,"Same position max pct");
-	ok($processor->maxTumIndelProportion == 9,"Max tumour indel proportion");
-	ok($processor->pentamerMinPassAvgQual == 11,"Pentamer minimum pass average quality");
-	ok($processor->maxNormIndelProportion == 12,"Max normal indel proportion");
-	ok($processor->minPassAvgBaseQualPhasing == 13,"Min pass phase ");
-	ok($processor->minPassAvgMapQual == 14,"Min pass avg map quality");
-	ok($processor->keepSW == 1,"Keep smith waterman reads on");
-	ok($processor->maxPhasingMinorityStrandReadProportion == 0.01,"maxPhasingMinorityStrandReadProportion reset");
-	ok($processor->maxMatchedNormalAlleleProportion == 0.08,"maxMatchedNormalAlleleProportion reset");
-	ok($processor->readPosBeginningOfReadIgnoreProportion == 0.03,"readPosBeginningOfReadIgnoreProportion reset");
-	ok($processor->readPosTwoThirdsOfReadExtendProportion == 0.07,"readPosTwoThirdsOfReadExtendProportion reset");
-	ok($processor->minRdPosDepth == 10,"Min rd pos depth changed");
-	$processor = new_ok('Sanger::CGP::CavemanPostProcessor::ExomePostProcessor' => [
-																			'tumBam' => $T_BAM,
-																			'normBam' => $T_BAM]);
-	ok($processor->minDepthQual == 25,"Min depth qual");
-    ok($processor->depthCutoffProportion == (0.333333),"depthCutoffProportion");
-	ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
-	ok($processor->minAnalysedQual == 11,"Min analysed qualities");
-	ok($processor->percentageSamePos == 80,"Same position max pct");
-	ok($processor->maxTumIndelProportion == 10,"Max tumour indel proportion");
-	ok($processor->pentamerMinPassAvgQual == 20,"Pentamer minimum pass average quality");
-	ok($processor->maxNormIndelProportion == 10,"Max normal indel proportion");
-	ok($processor->minPassAvgBaseQualPhasing == 21,"Min pass phase ");
-	ok($processor->minPassAvgMapQual == 21,"Min pass avg map quality");
-	ok($processor->keepSW == 0,"Keep SW off by default");
-	ok($processor->maxPhasingMinorityStrandReadProportion == 0.04,"maxPhasingMinorityStrandReadProportion");
-	ok($processor->maxMatchedNormalAlleleProportion == 0.05,"maxMatchedNormalAlleleProportion");
-	ok($processor->readPosBeginningOfReadIgnoreProportion == 0.08,"readPosBeginningOfReadIgnoreProportion");
-	ok($processor->readPosTwoThirdsOfReadExtendProportion == 0.08,"readPosTwoThirdsOfReadExtendProportion");
-	ok($processor->minRdPosDepth == 8,"Min rd pos depth default");
-	done_testing();
+  ok($processor->minDepthQual == 2,"Min depth qual");
+  is($processor->depthCutoffProportion, (1/2),"depthCutoffProportion");
+  ok($processor->minNormalMutAlleleQual == 3,"Min normal mut allele qual");
+  ok($processor->minAnalysedQual() == 5,"Min analysed qualities");
+  ok($processor->percentageSamePos == 8,"Same position max pct");
+  ok($processor->maxTumIndelProportion == 9,"Max tumour indel proportion");
+  ok($processor->pentamerMinPassAvgQual == 11,"Pentamer minimum pass average quality");
+  ok($processor->maxNormIndelProportion == 12,"Max normal indel proportion");
+  ok($processor->minPassAvgBaseQualPhasing == 13,"Min pass phase ");
+  ok($processor->minPassAvgMapQual == 14,"Min pass avg map quality");
+  ok($processor->keepSW == 1,"Keep smith waterman reads on");
+  ok($processor->maxPhasingMinorityStrandReadProportion == 0.01,"maxPhasingMinorityStrandReadProportion reset");
+  ok($processor->maxMatchedNormalAlleleProportion == 0.08,"maxMatchedNormalAlleleProportion reset");
+  ok($processor->readPosBeginningOfReadIgnoreProportion == 0.03,"readPosBeginningOfReadIgnoreProportion reset");
+  ok($processor->readPosTwoThirdsOfReadExtendProportion == 0.07,"readPosTwoThirdsOfReadExtendProportion reset");
+  ok($processor->minRdPosDepth == 10,"Min rd pos depth changed");
+  $processor = new_ok('Sanger::CGP::CavemanPostProcessor::ExomePostProcessor' => [
+                                      'tumBam' => $T_BAM,
+                                      'normBam' => $T_BAM]);
+  ok($processor->minDepthQual == 25,"Min depth qual");
+  ok($processor->depthCutoffProportion == (0.333333),"depthCutoffProportion");
+  ok($processor->minNormalMutAlleleQual == 15,"Min normal mut allele qual");
+  $processor->minAnalysedQual(11);
+  ok($processor->minAnalysedQual == 11,"Min analysed qualities");
+  ok($processor->percentageSamePos == 80,"Same position max pct");
+  ok($processor->maxTumIndelProportion == 10,"Max tumour indel proportion");
+  ok($processor->pentamerMinPassAvgQual == 20,"Pentamer minimum pass average quality");
+  ok($processor->maxNormIndelProportion == 10,"Max normal indel proportion");
+  ok($processor->minPassAvgBaseQualPhasing == 21,"Min pass phase ");
+  ok($processor->minPassAvgMapQual == 21,"Min pass avg map quality");
+  ok($processor::keepSW == 0,"Keep SW off by default");
+  ok($processor->maxPhasingMinorityStrandReadProportion == 0.04,"maxPhasingMinorityStrandReadProportion");
+  ok($processor->maxMatchedNormalAlleleProportion == 0.05,"maxMatchedNormalAlleleProportion");
+  ok($processor->readPosBeginningOfReadIgnoreProportion == 0.08,"readPosBeginningOfReadIgnoreProportion");
+  ok($processor->readPosTwoThirdsOfReadExtendProportion == 0.08,"readPosTwoThirdsOfReadExtendProportion");
+  ok($processor->minRdPosDepth == 8,"Min rd pos depth default");
+  done_testing();
 };
 
 #----------------

@@ -36,22 +36,37 @@ use Const::Fast qw(const);
 
 use Sanger::CGP::CavemanPostProcessor;
 use Sanger::CGP::CavemanPostProcessor::Constants;
-our $VERSION = Sanger::CGP::CavemanPostProcessor->VERSION;
 
-use base qw(Sanger::CGP::CavemanPostProcessor::PostProcessor);
+use parent qw(Sanger::CGP::CavemanPostProcessor::PostProcessor);
 
 my $const = 'Sanger::CGP::CavemanPostProcessor::Constants';
+
+sub new{
+  my ($proto) = shift;
+  my $class = ref($proto) || $proto;
+  my %inputs = @_;
+  my $self = $class->SUPER::new(%inputs);
+  bless $self, $class;
+  return $self;
+}
 
 #---------------
 #	Init methods
 #---------------
-
 sub _init{
 	my ($self,$inputs) = @_;
-	$self->matchedNormalAlleleHiCvgCutoff($inputs->{'matchedNormalAlleleHiCvgCutoff'});
-	$self->maxMatchedNormalAlleleHiCvgProportion($inputs->{'maxMatchedNormalAlleleHiCvgProportion'});
-	$self->SUPER::_init($inputs);
-	return $self;
+  my ($self,$inputs) = @_;
+  if(!defined($inputs->{'tumBam'}) || !defined($inputs->{'normBam'})){
+    croak("tumBam and normBam are required for initialisation.\n");
+  }
+  $self->tumBam($inputs->{'tumBam'}, $inputs->{'ref'});
+  $self->normBam($inputs->{'normBam'}, $inputs->{'ref'});
+  $self->keepSW($inputs->{'keepSW'}) if exists $inputs->{'keepSW'};
+  $self->minAnalysedQual($inputs->{'minAnalysedQual'}) if exists $inputs->{'minAnalysedQual'};
+  $self->matchedNormalAlleleHiCvgCutoff($inputs->{'matchedNormalAlleleHiCvgCutoff'});
+  $self->maxMatchedNormalAlleleHiCvgProportion($inputs->{'maxMatchedNormalAlleleHiCvgProportion'});
+  $self->SUPER::_init($inputs);
+  return $self;
 }
 
 sub clearResults{
@@ -136,33 +151,19 @@ CavemanPostProcessor - Perl module for post processing CaVEMan data.
   my $processor = CavemanPostProcessor->new(tumBam => 'tumBamPath', normBam => 'normBamPath'); #Required
 
   #Optional...
-  											'minDepthQual' => 25,
-                                            'depthCutoffProportion' => 0.333333
-  											'minNormMutAllelequal' => 20,
-  											'maxNormalMutAlleleCount' => 1,
-  											'minAnalysedQual' => 10,
-  											'samePosMaxPercent' => 80,
-  											'keepSW' => 1,
-  											'maxTumIndelProportion' => 10,
-  											'maxNormIndelProportion' => 10 ,
-  											'pentamerMinPassAvgQual'  => 20,
-  											'minPassPhaseQual'=> 21,
-  											'minPassAvgMapQual' =>	,
-  											'maxMatchedNormalAlleleProportion' => 0.05
-
-	foreach (chromosome){
-		foreach(mutant position){
-			$processor->runProcess($chr,$start,$stop,$refBase,$mutBase);
-			if($processor->getDepthResult == 1 &&
-						$processor->getReadPositionResult == 1 &&
-						$processor->getNormMutsAllelesResult == 1 &&
-						$postProcessor->getUnmatchedNormalResult == 1){
-				$pass = 1;
-			}
-		}
-	}
-
-
+                        'minDepthQual' => 25,
+                        'depthCutoffProportion' => 0.333333
+                        'minNormMutAllelequal' => 20,
+                        'maxNormalMutAlleleCount' => 1,
+                        'minAnalysedQual' => 10,
+                        'samePosMaxPercent' => 80,
+                        'keepSW' => 1,
+                        'maxTumIndelProportion' => 10,
+                        'maxNormIndelProportion' => 10 ,
+                        'pentamerMinPassAvgQual'  => 20,
+                        'minPassPhaseQual'=> 21,
+                        'minPassAvgMapQual' =>	,
+                        'maxMatchedNormalAlleleProportion' => 0.05
 
 =head1 DESCRIPTION
 

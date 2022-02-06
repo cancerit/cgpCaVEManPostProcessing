@@ -35,7 +35,7 @@ use Bio::DB::HTS;
 use Bio::DB::HTS::Constants;
 use Bio::DB::HTS::Alignment;
 use POSIX qw(strftime ceil);
-use List::Util qw (sum zip);
+use List::Util qw (sum zip min max);
 use Carp;
 use Const::Fast qw(const);
 
@@ -43,23 +43,52 @@ use Data::Dumper;
 
 use Sanger::CGP::CavemanPostProcessor;
 use Sanger::CGP::CavemanPostProcessor::Constants;
-our $VERSION = Sanger::CGP::CavemanPostProcessor->VERSION;
 
-use base qw(Sanger::CGP::CavemanPostProcessor);
+use parent qw(Sanger::CGP::CavemanPostProcessor);
 
 my $const = 'Sanger::CGP::CavemanPostProcessor::Constants';
+my $muts;
+my $norms;
+my $muts_rds;
+my $norms_rds;
+my $refBase;
+my $mutBase;
+my $chromosome;
+my $tum_readnames;
+my $norm_readnames;
+my $tum_readnames_arr;
+my $norm_readnames_arr;
+my $tum_readnames_hash;
+my $norm_readnames_hash;
 
 #Defaults for this post processing module
 
 my $is_stranded_format = 1;
 
+sub new{
+  my ($proto) = shift;
+  my $class = ref($proto) || $proto;
+  my %inputs = @_;
+  my $self = $class->SUPER::new(%inputs);
+  bless $self, $class;
+  return $self;
+}
+
 sub _init{
   my ($self,$inputs) = @_;
+  
+  return $self;
+}
 
+sub _init{
+  my ($self,$inputs) = @_;
   if(!defined($inputs->{'tumBam'}) || !defined($inputs->{'normBam'})){
     croak("tumBam and normBam are required for initialisation.\n");
   }
-
+  $self->tumBam($inputs->{'tumBam'}, $inputs->{'ref'});
+  $self->normBam($inputs->{'normBam'}, $inputs->{'ref'});
+  $self->keepSW($inputs->{'keepSW'}) if exists $inputs->{'keepSW'};
+  $self->minAnalysedQual($inputs->{'minAnalysedQual'}) if exists $inputs->{'minAnalysedQual'};
   $self->minDepthQual($inputs->{'minDepthQual'});
   $self->depthCutoffProportion($inputs->{'depthCutoffProportion'});
   $self->minNormalMutAlleleQual($inputs->{'minNormMutAllelequal'});
@@ -85,6 +114,684 @@ sub _init{
 
   return $self;
 }
+
+sub runProcess{
+  my ($self,$chr,$start,$stop,$refBase,$mBase) = @_;
+  $muts = undef;
+  $norms = undef;
+  $muts_rds = {};
+  $norms_rds = {};
+  $self->clearResults();
+  $self->_chromosome($chr);
+  $self->_currentPos($start);
+  $self->_refBase($refBase);
+  $self->_mutBase($mBase);
+  $tum_readnames = undef;
+  $tum_readnames_arr = undef;
+  $tum_readnames_hash = undef;
+  my $hts = $self->{'tb'};
+  $hts->hts_index->fetch(
+    $hts->hts_file,
+    $hts->header->parse_region($chr.':'.$start.'-'.$stop),
+    sub{$self->_callbackTumFetch(@_);},
+    $hts
+  );
+  $self->process_hashed_reads(sub{$self->populate_muts(@_);}, $tum_readnames, $tum_readnames_arr);
+  $norm_readnames = undef;
+  $norm_readnames_arr = undef;
+  $norm_readnames_hash = undef;
+  $hts = $self->{'nb'};
+  $hts->hts_index->fetch(
+    $hts->hts_file,
+    $hts->header->parse_region($chr.':'.$start.'-'.$stop),
+    sub{$self->_callbackMatchedNormFetch(@_);},
+    $hts
+  );
+  $self->process_hashed_reads(sub{$self->populate_norms(@_);}, $norm_readnames, $norm_readnames_arr);
+  return 1;
+}
+
+=item keepSW
+    Whether to include Smith-Waterman aligned reads in post processing
+=cut
+sub keepSW{
+  my ($self,$keep) = @_;
+  if(defined($keep) && ($keep == 1 || $keep == 0)){
+    $self->{'keepSW'} = $keep;
+  }
+  if(! defined $self->{'keepSW'}){
+    $self->{'keepSW'} = $const->default_flag_values('KEEPSW');
+  }
+  return $self->{'keepSW'};
+}
+
+sub getSingleEndResult{
+  my ($self) = @_;
+  if(!defined($self->{'single'})){
+    $self->{'single'} = $self->_calculateSingleEndResult();
+  }
+  return $self->{'single'};
+}
+
+sub _calculateSingleEndResult{
+  my ($self) = @_;
+  return 1 if($self->_muts->{'pcvg'} < $self->minSingleEndCoverage() || $self->_muts->{'ncvg'} < $self->minSingleEndCoverage());
+  my $hasPos = 0;
+  my $hasNeg = 0;
+  foreach my $str(@{$self->_muts->{'tstr'}}){
+    if($str == -1){
+      $hasNeg++;
+    }elsif($str == 1){
+      $hasPos++;
+    }
+    return 1 if($hasNeg > 0 && $hasPos > 0);
+  }
+  if($hasNeg == 0 || $hasPos == 0){
+    return 0;
+  }
+  return 1;
+}
+
+sub minSingleEndCoverage{
+  my ($self,$p) = @_;
+  if(defined($p)){
+     $self->{'sec'} = $p;
+  }else{
+    if(!defined($self->{'sec'})){
+      $self->{'sec'} = $const->default_flag_values('MIN_SINGLE_END_CVG');
+    }
+  }
+  return $self->{'sec'};
+}
+
+sub getMatchedNormalProportionResult{
+  my ($self) = @_;
+  if(!defined($self->{'umpropres'})){
+    $self->{'umpropres'} = $self->_calculateMatchedNormalProportion();
+  }
+  return $self->{'umpropres'};
+}
+
+sub _calculateMatchedNormalProportion{
+  my ($self) = @_;
+  #Calculate tumour proportion of mut allele
+  my $tumProp = 0;
+  if(scalar(@{$self->_muts->{'tqs'}}) > 0){
+    $tumProp = scalar(@{$self->_muts->{'tqs'}})/$self->_muts->{'tumcvg'};
+  }
+  #Calculate normal proportion of mut allele
+  my $normProp = 0;
+  if(exists($self->_muts->{'nqs'}) && scalar(@{$self->_muts->{'nqs'}}) > 0){
+    $normProp = scalar(@{$self->_muts->{'nqs'}})/$self->_muts->{'normcvg'};
+  }
+  #Fail if the difference is less than the given proportion/percentage
+  return 0 if($normProp > 0 && ($tumProp - $normProp) < $self->matchedNormalMaxMutProportion());
+  return 1;
+}
+
+sub matchedNormalMaxMutProportion{
+  my ($self,$p) = @_;
+  if(defined($p)){
+     $self->{'mnmmp'} = $p;
+  }else{
+    if(!defined($self->{'mnmmp'})){
+      $self->{'mnmmp'} = $const->default_flag_values('MATCHED_NORMAL_MAX_MUT_PROP');
+    }
+  }
+  return $self->{'mnmmp'};
+}
+
+=item minAnalysedQual
+  Holds the minimum base quality of reads to be used in analysis.
+=cut
+sub minAnalysedQual{
+  my ($self,$q) = @_;
+  if(defined($q)){
+    $self->{'minaq'} = $q;
+  }else{
+    if(!defined($self->{'minaq'})){
+      $self->{'minaq'} = $const->default_flag_values('MIN_ANALYSED_QUAL');
+    }
+  }
+  return $self->{'minaq'};
+}
+
+sub _currentPos{
+  my ($self,$pos) = @_;
+  if(defined($pos)){
+    $self->{'currPos'} = $pos;
+  }
+  return $self->{'currPos'};
+}
+
+sub _chromosome{
+  my ($self,$c) = @_;
+  if(defined($c)){
+    $chromosome = $c;
+  }
+  return $chromosome;
+}
+
+sub _refBase{
+  my ($self,$b) = @_;
+  if(defined($b)){
+    $refBase = $b;
+  }
+  return $refBase;
+}
+
+sub refBase{
+  return $refBase;
+}
+
+sub mutBase{
+  return $mutBase;
+}
+
+sub _mutBase{
+  my ($self,$b) = @_;
+  if(defined($b)){
+    $mutBase = $b;
+  }
+  return $mutBase;
+}
+
+sub _tum_readnames_hash{
+  my ($self,$h) = @_;
+  if(defined($h)){
+    $tum_readnames_hash = $h;
+  }
+  return $tum_readnames_hash;
+}
+
+sub _tum_readnames_arr{
+  my ($self,$a) = @_;
+  if(defined($a)){
+    $tum_readnames_arr = $a;
+  }
+  return $tum_readnames_arr;
+}
+
+sub _tum_readnames{
+  my ($self,$r) = @_;
+  if(defined($r)){
+    $tum_readnames = $r
+  }
+  return $tum_readnames;
+}
+
+sub _norm_readnames_hash{
+  my ($self,$h) = @_;
+  if(defined($h)){
+    $norm_readnames_hash = $h;
+  }
+  return $norm_readnames_hash;
+}
+
+sub _norm_readnames_arr{
+  my ($self,$a) = @_;
+  if(defined($a)){
+    $norm_readnames_arr = $a;
+  }
+  return $norm_readnames_arr;
+}
+
+sub _norm_readnames{
+  my ($self,$r) = @_;
+  if(defined($r)){
+    $norm_readnames = $r
+  }
+  return $norm_readnames;
+}
+
+sub tumBam{
+  my ($self,$bam,$fasta) = @_;
+  if(defined($bam)){
+    $self->{'tb'} = Bio::DB::HTS->new(-bam=>$bam, -fasta=>$fasta);
+  }
+  return $self->{'tb'};
+}
+
+sub normBam{
+  my ($self,$bam,$fasta) = @_;
+  if(defined($bam)){
+    $self->{'nb'} = Bio::DB::HTS->new(-bam=>$bam, -fasta=>$fasta);
+  }
+  return $self->{'nb'};
+}
+
+sub _muts{
+  if(!defined($muts)){
+    $muts = {};
+  }
+  return $muts;
+}
+
+sub _norms{
+  my ($self,$new) = @_;
+  if(defined($new)){
+    $norms = $new;
+  }
+  if(!defined($norms)){
+    $norms = {};
+  }
+  return $norms;
+}
+
+sub process_hashed_reads{
+  my ($self, $code, $hashed_reads, $readname_arr) = @_;
+
+  my %loc_counts = (
+    1  => {A => 0, C => 0, G => 0, T => 0},
+    -1 => {A => 0, C => 0, G => 0, T => 0},
+  );
+
+  foreach my $readnom(@$readname_arr){
+    my $read = $hashed_reads->{$readnom};
+    my ($read_to_use, $read_to_use_2);
+    if(exists $read->{1} && exists $read->{-1}) {
+      # if change is different have to include both versions
+      if( $read->{1}->{qbase} ne $read->{-1}->{qbase}) {
+        $read_to_use = $read->{1};
+        $read_to_use_2 = $read->{-1};
+        $loc_counts{1}{$read->{1}->{qbase}}++;
+        $loc_counts{-1}{$read->{-1}->{qbase}}++;
+      }
+      # score is same check loc counts for that allele to determine where to put
+      elsif($read->{1}->{qscore} == $read->{-1}->{qscore}) {
+        if($loc_counts{1}{$read->{1}->{qbase}} <= $loc_counts{-1}{$read->{-1}->{qbase}}) {
+          $read_to_use = $read->{1};
+          $loc_counts{1}{$read->{1}->{qbase}}++;
+        }
+        else {
+          $read_to_use = $read->{-1};
+          $loc_counts{-1}{$read->{-1}->{qbase}}++;
+        }
+      }
+      elsif($read->{1}->{qscore} > $read->{-1}->{qscore}) {
+        $read_to_use = $read->{1};
+        $loc_counts{1}{$read->{1}->{qbase}}++;
+      }
+      else{
+        $read_to_use = $read->{-1};
+        $loc_counts{-1}{$read->{-1}->{qbase}}++;
+      }
+    }
+    else {
+      if(exists $read->{1}) {
+        $read_to_use = $read->{1};
+        $loc_counts{1}{$read->{1}->{qbase}}++;
+      }
+      else {
+        $read_to_use = $read->{-1};
+        $loc_counts{-1}{$read->{-1}->{qbase}}++;
+      }
+    }
+    &$code($read_to_use);
+    if(defined $read_to_use_2){
+      &$code($read_to_use_2);
+    }
+    delete $hashed_reads->{$readnom};
+  }
+}
+
+sub _callbackTumFetch{
+  my ($self, $a, $hts) = @_;
+  my $flagValue = $a->flag;
+  #Check read and mate are mapped. If not return.
+  return if((int($flagValue) & 2) != 2); # Proper pair
+  return if((int($flagValue) & 3852) != 0);
+  # Ensure that we keep
+  return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
+  return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
+
+  my $algn = Bio::DB::HTS::AlignWrapper->new($a,$hts);
+  my $pos = $a->pos;
+  my $cigar_array = $algn->cigar_array; # expensive and reused so save to variable
+  #Quick check that were covering the base with this read (skips/indels are ignored)
+  my $is_covered = _isCurrentPosCoveredFromAlignment($pos, $cigar_array, $self->_currentPos()); #1 is covered, -1 is covered but within indel
+  if($is_covered != 0){
+    my $this_read;
+
+    my $rdname = $a->qname;
+    #Read strand, faster than using $a->strand
+    my $str = 1;
+    if($algn->reversed){
+      $str = -1;
+    }
+    my $cig_str = $algn->cigar_str;
+    #Read base
+    $this_read->{str} = $str;
+
+
+    $this_read->{gapDist} = 0;
+    $this_read->{ln} = $a->l_qseq;
+    $this_read->{distFromEnd}=-1;
+    if($is_covered == 1){
+      #Get the correct read position.
+      my ($rdPosIndexOfInterest,$currentRefPos) = $self->_getReadPositionFromAlignment($pos, $cigar_array);
+      $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, length($self->_mutBase());
+      $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, length($self->_mutBase())));
+      $this_read->{rdPos} = $rdPosIndexOfInterest;
+      $this_read->{gapDist} = _getDistanceFromGapInRead($algn->cigar_array,$rdPosIndexOfInterest);
+      $this_read->{distFromEnd} = min(($rdPosIndexOfInterest/$this_read->{ln}),(($this_read->{ln}-$rdPosIndexOfInterest)/$this_read->{ln}));
+    }
+    $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);
+    $this_read->{xt} = $a->aux_get('XT');
+    $this_read->{softclipcount} = 0;
+    my $type = $const->cigar_types('SOFT_CLIP_CIG');
+    if ($cig_str =~ m/$type/){
+      $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
+    }
+    $this_read->{primaryalnscore} = $a->aux_get('AS');# $algn->get_tag_values('AS');
+    $this_read->{qual} = $a->qual;
+    $this_read->{start} = $algn->start;
+    $this_read->{rdName} = $rdname;
+  
+    my $this_tum_read_nams_hash = $self->_tum_readnames_hash();
+    my $this_tum_readnames_arr = $self->_tum_readnames_arr();
+    if(!exists $this_tum_read_nams_hash->{$rdname}){
+      push(@$this_tum_readnames_arr, $rdname);
+      $this_tum_read_nams_hash->{$rdname} = 0;
+    }
+    my $this_tum_readnames = $self->_tum_readnames();
+    $this_tum_readnames->{$rdname}->{$str} = $this_read;
+    $self->_tum_readnames_hash($this_tum_read_nams_hash);
+    $self->_tum_readnames_arr($this_tum_readnames_arr);
+    $self->_tum_readnames($this_tum_readnames);
+
+  } # End of if this is a covered position, look at deletion event at this location (required for deletion flag)
+  return 1;
+}
+
+sub populate_muts{
+    my ($self, $read) = @_;
+    $muts->{'totalTCoverage'} += 1;
+    if($read->{str} == 1){
+        $muts->{'totalTCoveragePos'} += 1;
+    }else{
+        $muts->{'totalTCoverageNeg'} += 1;
+    }
+    if($read->{xt}){
+        $muts->{'indelTCount'} += 1;
+    }
+    push(@{$muts->{'completeMutStrands'}},$read->{str});
+    push(@{$muts->{'allTumBases'}},$read->{qbase});
+    push(@{$muts->{'allTumBaseQuals'}},$read->{qscore});
+    push(@{$muts->{'allTumStrands'}},$read->{str});
+    push(@{$muts->{'allTumMapQuals'}},$read->{qual});
+    push(@{$muts->{'allMinGapDistances'}},$read->{gapDist});
+    push(@{$muts->{'allMutDistPropFromEndOfRead'}},$read->{distFromEnd});
+    return if ($self->keepSW() == 0 && defined($read->{xt}) && $read->{xt} eq 'M');
+
+    return if($read->{qscore} < $self->minAnalysedQual());
+
+    $muts->{'tumcvg'} += 1;
+
+    if($read->{str} == 1){
+    $muts->{'pcvg'} += 1;
+  }else{
+    $muts->{'ncvg'} += 1;
+    $read->{rdPos} = ($read->{ln} - $read->{rdPos}) + 1;
+  }
+
+  return if(uc($read->{qbase}) ne uc($mutBase));
+
+    #Tum quals
+    push(@{$muts->{'tqs'}},$read->{qscore});
+
+    #Tum Rd Pos
+    push(@{$muts->{'trp'}},$read->{rdPos});
+
+    #Tum rd length
+    push(@{$muts->{'trl'}},$read->{ln});
+
+    #Tum XT tags
+    push(@{$muts->{'txt'}},$read->{xt});
+
+    #Tum rd start
+    push(@{$muts->{'trdst'}},$read->{start});
+
+    #Strands
+    push(@{$muts->{'tstr'}},$read->{str});
+
+    #RdNames
+    push(@{$muts->{'trn'}},$read->{rdName});
+
+    #Mapping quals
+    push(@{$muts->{'tmq'}},$read->{qual});
+
+    #AlnScoresPrm
+    push(@{$muts->{'alnp'}},$read->{primaryalnscore});
+
+    #Softclipping
+    push(@{$muts->{'sclp'}},$read->{softclipcount});
+
+    return;
+}
+
+sub _get_soft_clip_count_from_cigar{
+  my ($cig_arr) = @_;
+  my $count = 0;
+  foreach my $cigentry(@$cig_arr){
+    if($cigentry->[0] eq $const->cigar_types('SOFT_CLIP_CIG')){
+      $count += $cigentry->[1];
+    }
+  }
+  return $count;
+}
+
+sub _getDistanceFromGapInRead{
+  my ($cigar_array,$rdPosIndexOfInterest) = @_;
+  my $min_gap_dist = -1;
+  my $currentRp = 0;
+  foreach my $cigSect(@{$cigar_array}){
+    if($cigSect->[0] eq $const->cigar_types('MATCH_CIG') || $cigSect->[0] eq $const->cigar_types('SKIP_CIG') ||
+          $cigSect->[0] eq $const->cigar_types('SOFT_CLIP_CIG')){
+      $currentRp+=$cigSect->[1];
+    }elsif($cigSect->[0] eq $const->cigar_types('DEL_CIG') || $cigSect->[0] eq $const->cigar_types('INS_CIG')){
+      my $dp_start = $currentRp+1;
+      my $dp_end = $currentRp+$cigSect->[1];
+      my $tmp_dist = 0;
+      if($rdPosIndexOfInterest>$dp_end || $rdPosIndexOfInterest<$dp_start){
+        $tmp_dist = min(abs($rdPosIndexOfInterest-$dp_start),abs($dp_end-$rdPosIndexOfInterest));
+      }
+      if($tmp_dist < $min_gap_dist || $min_gap_dist == -1){
+        $min_gap_dist = $tmp_dist;
+      }
+    }
+  }
+  return $min_gap_dist;
+}
+
+sub _getReadPositionFromAlignment{
+  my ($self, $currentRefPos, $cigar_array) = @_; # 0-based pos ($a->pos)
+  my $rdPosIndexOfInterest = 0;
+  foreach my $cigSect(@{$cigar_array}){
+    if($cigSect->[0] eq $const->cigar_types('MATCH_CIG')){
+      my $op_len = $cigSect->[1];
+      if($currentRefPos <= $self->_currentPos() && ($currentRefPos+$op_len) >= $self->_currentPos()){
+        for(0..($op_len - 1)) {
+          $rdPosIndexOfInterest++;
+          $currentRefPos++;
+          if($self->_currentPos() == $currentRefPos){
+            return ($rdPosIndexOfInterest,$currentRefPos);
+          }
+        }
+      }else{
+        $rdPosIndexOfInterest += $op_len;
+        $currentRefPos += $op_len;
+      }
+    }elsif($cigSect->[0] eq $const->cigar_types('DEL_CIG') || $cigSect->[0] eq $const->cigar_types('SKIP_CIG')){
+      $currentRefPos += $cigSect->[1];
+    }elsif($cigSect->[0] eq $const->cigar_types('INS_CIG') || $cigSect->[0] eq $const->cigar_types('SOFT_CLIP_CIG')){
+      $rdPosIndexOfInterest += $cigSect->[1];
+    }
+  }
+}
+
+sub _isCurrentPosCoveredFromAlignment{
+  my ($pos, $cigar_array, $pos_of_interest) = @_; # 0-based pos, 1 based current pos
+  foreach my $cigSect(@{$cigar_array}){
+
+    if($cigSect->[0] eq $const->cigar_types('MATCH_CIG')){
+      if($pos_of_interest >= ($pos + 1) && $pos_of_interest <= ($pos+$cigSect->[1])){
+        return 1;
+      }
+      $pos+= $cigSect->[1];
+    }elsif($cigSect->[0] eq $const->cigar_types('DEL_CIG') || $cigSect->[0] eq $const->cigar_types('SKIP_CIG')){
+      if($pos_of_interest >= ($pos + 1) && $pos_of_interest <= ($pos+$cigSect->[1])){
+        return 0 if ($cigSect->[0] eq $const->cigar_types('SKIP_CIG'));
+        return -1 if ($cigSect->[0] eq $const->cigar_types('DEL_CIG'));
+      }
+      $pos+= $cigSect->[1];
+    }
+  }
+  return 0;
+}
+
+sub populate_norms{
+    my ($self, $read) = @_;
+    if(!defined($muts->{'totalNCoverage'})){
+        $muts->{'totalNCoverage'} = 0;
+    }
+    $muts->{'totalNCoverage'} += 1;
+
+    if(!defined($muts->{'allNormBases'})){
+        $muts->{'allNormBases'} = [];
+    }
+    push(@{$muts->{'allNormBases'}},$read->{qbase});
+
+    if(!defined($muts->{'allNormBaseQuals'})){
+        $muts->{'allNormBaseQuals'} = [];
+    }
+    push(@{$muts->{'allNormBaseQuals'}},$read->{qscore});
+
+    if(!defined($muts->{'allNormStrands'})){
+        $muts->{'allNormStrands'} = [];
+    }
+    push(@{$muts->{'allNormStrands'}},$read->{str});
+
+    return if ($self->keepSW == 0 && defined($read->{xt}) && $read->{xt} eq 'M');
+
+  return if($read->{qscore} < $self->minAnalysedQual());
+
+    if(!defined($muts->{'normcvg'})){
+        $muts->{'normcvg'} = 0;
+    }
+    $muts->{'normcvg'} += 1;
+
+    if($read->{str} == +1){
+        $muts->{'npcvg'} += 1;
+    }else{
+        $muts->{'nncvg'} += 1;
+        $read->{rdPos} = ($read->{ln} - $read->{rdPos}) + 1;
+    }
+
+  return if(uc($read->{qbase}) ne uc($mutBase));
+
+    #Tum quals
+    if(!defined($muts->{'nqs'})){
+        my @empty = ();
+        $muts->{'nqs'} = \@empty;
+    }
+    push(@{$muts->{'nqs'}},$read->{qscore});
+
+    #Tum Rd Pos
+    if(!defined($muts->{'nrp'})){
+        my @empty = ();
+        $muts->{'nrp'} = \@empty;
+    }
+    push(@{$muts->{'nrp'}},$read->{rdPos});
+
+    #Tum rd length
+    if(!defined($muts->{'nrl'})){
+        my @empty = ();
+        $muts->{'nrl'} = \@empty;
+    }
+    push(@{$muts->{'nrl'}},$read->{ln});
+
+    return;
+}
+
+sub _callbackMatchedNormFetch{
+  my ($self, $a, $hts) = @_;
+  my $flagValue = $a->flag;
+  #Check read and mate are mapped.
+  return if((int($flagValue) & 2) != 2); # Proper pair check
+  return if((int($flagValue) & 3852) != 0);
+  # Ensure that we keep
+  return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
+  return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
+
+  my $algn = Bio::DB::HTS::AlignWrapper->new($a,$hts);
+  my $pos = $a->pos;
+  my $cigar_array = $algn->cigar_array; # expensive and reused so save to variable
+  #Quick check that were covering the base with this read (skips/indels are ignored)
+  my $is_covered = _isCurrentPosCoveredFromAlignment($pos, $cigar_array, $self->_currentPos()); #1 is covered, -1 is covered but within indel
+  if($is_covered == 1){
+    my $this_read;
+
+    my $rdname = $a->qname;
+    #Read strand, faster than using $a->strand
+    my $str = 1;
+    if($algn->reversed){
+      $str = -1;
+    }
+    my $cig_str = $algn->cigar_str; # expensive and reused so save to variable
+    #Read population
+    $this_read->{str} = $str;
+
+    #Get the correct read position.
+    my ($rdPosIndexOfInterest,$currentRefPos) = $self->_getReadPositionFromAlignment($pos, $cigar_array);
+    $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, 1;
+    $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, 1));
+    $this_read->{rdPos} = $rdPosIndexOfInterest;
+
+    #Read population
+    $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);
+    $this_read->{xt} = $a->aux_get('XT');
+    $this_read->{ln} = $a->l_qseq;
+    $this_read->{softclipcount} = 0;
+    my $type = $const->cigar_types('SOFT_CLIP_CIG');
+    if ($cig_str =~ m/$type/){
+      $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($cigar_array);
+    }
+    $this_read->{primaryalnscore} = $a->aux_get('AS');# $algn->get_tag_values('AS');
+    $this_read->{qual} = $a->qual;
+    $this_read->{start} = $algn->start;
+    $this_read->{rdName} = $rdname;
+
+    my $this_norm_read_nams_hash = $self->_norm_readnames_hash();
+    my $this_norm_readnames_arr = $self->_norm_readnames_arr();
+    if(!exists $this_norm_read_nams_hash->{$rdname}){
+      push(@$this_norm_readnames_arr, $rdname);
+      $this_norm_read_nams_hash->{$rdname} = 0;
+    }
+    my $this_norm_readnames = $self->_norm_readnames();
+    $norm_readnames->{$rdname}->{$str} = $this_read;
+    $self->_norm_readnames_hash($this_norm_read_nams_hash);
+    $self->_norm_readnames_arr($this_norm_readnames_arr);
+    $self->_norm_readnames($this_norm_readnames);
+  } # End of if this is a position covered by this alignment
+  return 1;
+}
+
+sub DESTROY{
+  my $self = shift;
+  $refBase = undef;
+  $mutBase = undef;
+  $muts = undef;
+  $norms = undef;
+  $tum_readnames = undef;
+  $norm_readnames = undef;
+  $tum_readnames_hash = undef;
+  $norm_readnames_hash = undef;
+  $tum_readnames_arr = undef;
+  $norm_readnames_arr = undef;
+  #warn "Base::DESTROY\n";
+}
+
 
 sub clearResults{
   my ($self) = @_;
@@ -542,7 +1249,7 @@ sub _evaluatePentamerCheck{
   my $t_bam = $self->{'tb'};
   $t_bam->hts_index->fetch(
     $t_bam->hts_file,
-    $t_bam->header->parse_region($self->_chromosome.":".$self->_currentPos."-".$self->_currentPos),
+    $t_bam->header->parse_region($self->_chromosome().":".$self->_currentPos()."-".$self->_currentPos()),
     sub{
       my $a = shift;
       if(exists $want_rds{$a->qname}) {
@@ -563,7 +1270,7 @@ sub _evaluatePentamerCheck{
     my $rd = $aligns{$rdName};
 
     my $isReversed = $rd->reversed;
-    my $readPosOfMut = ($self->_currentPos - ($rd->pos + 1)) + 1;
+    my $readPosOfMut = ($self->_currentPos() - ($rd->pos + 1)) + 1;
     my $seq = $rd->qseq;
     my $quals = $rd->qscore();
     my @matches = ();
@@ -679,17 +1386,15 @@ sub _checkCavemanMatchedNormal{
   my $mut_allele_cvg = 0;
   my $total_tumm_cvg = 0;
   my $mut_allele_tum_cvg = 0;
-  my $mutbase = $self->_mutBase();
-  my $decode = $const->allele_format_idx_old($mutbase);
+  my $decode = $const->allele_format_idx_old($mutBase);
   if($is_stranded_format==1){
-    $decode = $const->allele_format_idx_new($mutbase);
+    $decode = $const->allele_format_idx_new($mutBase);
     $total_norm_cvg = sum(@splitnorm[1..8]);
     $total_tumm_cvg = sum(@splittum[1..8]);
   }else{
     $total_norm_cvg = sum(@splitnorm[1..4]);
     $total_tumm_cvg = sum(@splittum[1..4]);
   }
-  my $mutbase = $self->_mutBase();
   for my $idx(@{$decode}){
     $mut_allele_cvg += $splitnorm[$idx];
     $mut_allele_tum_cvg += $splittum[$idx];
@@ -720,7 +1425,7 @@ sub _checkReadGap{
   foreach (zip($self->_muts->{'allTumBases'},$self->_muts->{'allMinGapDistances'},$self->_muts->{'allMutDistPropFromEndOfRead'})){
     my ($base, $distance, $dist_eor) = @{$_};
     #Pass flag is we find a called variant base within the limits if a deletion 
-    if($base eq $self->_mutBase){ 
+    if($base eq $mutBase){ 
       return 1 if($distance != -1 && $distance <= $self->withinXBpOfDeletion);
       push(@tum_base_dist_prop, $dist_eor);
       $tum_base_dist_count++;  
@@ -880,20 +1585,6 @@ CavemanPostProcessor - Perl module for post processing CaVEMan data.
                         'pentamerMinPassAvgQual'  => 20,
                         'minPassPhaseQual'=> 21,
                         'minPassAvgMapQual' =>
-
-  foreach (chromosome){
-    foreach(mutant position){
-      $processor->runProcess($chr,$start,$stop,$refBase,$mutBase);
-      if($processor->getDepthResult == 1 &&
-            $processor->getReadPositionResult == 1 &&
-            $processor->getNormMutsAllelesResult == 1 &&
-            $postProcessor->getUnmatchedNormalResult == 1){
-        $pass = 1;
-      }
-    }
-  }
-
-
 
 =head1 DESCRIPTION
 

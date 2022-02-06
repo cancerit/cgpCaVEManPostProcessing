@@ -61,6 +61,8 @@ const my %DEFAULT_FLAG_VALUES => (
   'MIN_NORM_MUT_ALLELE_BASE_QUAL' => 15,
   'MIN_RD_POS_DEPTH' => 8,
   'DEPTH_CUTOFF_PROP' => 0.333333,
+  'MIN_ANALYSED_QUAL' => 11,
+  'KEEPSW' => 0,
 );
 
 sub default_flag_values {

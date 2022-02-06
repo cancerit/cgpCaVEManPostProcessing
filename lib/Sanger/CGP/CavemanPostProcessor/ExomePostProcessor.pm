@@ -32,22 +32,38 @@ package Sanger::CGP::CavemanPostProcessor::ExomePostProcessor;
 
 use strict;
 use Carp;
+use Data::Dumper;
 use Const::Fast qw(const);
 
 use Sanger::CGP::CavemanPostProcessor;
-our $VERSION = Sanger::CGP::CavemanPostProcessor->VERSION;
 
-use base qw(Sanger::CGP::CavemanPostProcessor::PostProcessor);
+use parent qw(Sanger::CGP::CavemanPostProcessor::PostProcessor);
 
+sub new{
+  my ($proto) = shift;
+  my $class = ref($proto) || $proto;
+  my %inputs = @_;
+  my $self = $class->SUPER::new(%inputs);
+  bless $self, $class;
+  return $self;
+}
 
 #---------------
 #	Init methods
 #---------------
 
 sub _init{
-	my ($self,$inputs) = @_;
-	$self->SUPER::_init($inputs);
-	return $self;
+  my ($self,$inputs) = @_;
+  if(!defined($inputs->{'tumBam'}) || !defined($inputs->{'normBam'})){
+    croak("tumBam and normBam are required for initialisation.\n");
+  }
+  $self->tumBam($inputs->{'tumBam'}, $inputs->{'ref'});
+  $self->normBam($inputs->{'normBam'}, $inputs->{'ref'});
+  $self->keepSW($inputs->{'keepSW'}) if exists $inputs->{'keepSW'};
+  $self->minAnalysedQual($inputs->{'minAnalysedQual'}) if exists $inputs->{'minAnalysedQual'};
+  $self->SUPER::_init($inputs);
+
+  return $self;
 }
 
 #-----------------------------

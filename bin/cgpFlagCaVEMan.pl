@@ -264,19 +264,22 @@ sub main{
                                                         'CLPM'=>undef,'ASMD'=>undef,'SR'=>undef);
       #Files are sorted by chr/pos, so we can open the tabix index once per vcf file.
       my $this_flagger;
+      my $results = ();
       if (length($$x[3]) > 1) {
         # if($unmatchedVCFFlag==1 && exists($umNormVcf->{$$x[0]})){
         #   $isInUmVCF = getUnmatchedVCFIntersectMatch($$x[0],$$x[1],$umNormVcf->{$$x[0]},$UNMATCHED_VCF_KEY);
         # }
         $this_flagger = $flagger->{'MNV'};
+        if(0 && $opts->{'flagmnv'}){ # Temporarily ensure we skip MNVs
+          $results = getVCFToAddResultsOfFilters($$x[0],$$x[1],$$x[3],$$x[4],$flagList,$this_flagger,$cfg,$x,$vcf,$configParams,$isInUmVCF,$tabixList);
+        }
       }else{
         if($unmatchedVCFFlag==1 && exists($umNormVcf->{$$x[0]})){
           $isInUmVCF = getUnmatchedVCFIntersectMatch($$x[0],$$x[1],$umNormVcf->{$$x[0]},$UNMATCHED_VCF_KEY);
         }
         $this_flagger = $flagger->{'SNV'};
+        $results = getVCFToAddResultsOfFilters($$x[0],$$x[1],$$x[3],$$x[4],$flagList,$this_flagger,$cfg,$x,$vcf,$configParams,$isInUmVCF,$tabixList);
       }
-      warn Dumper (ref($flagger->{'SNV'}));
-      my $results = getVCFToAddResultsOfFilters($$x[0],$$x[1],$$x[3],$$x[4],$flagList,$this_flagger,$cfg,$x,$vcf,$configParams,$isInUmVCF,$tabixList);
       #Add the relevant filters or PASS to the filter section.
       $$x[6]=$vcf->add_filter($$x[6],%$results);
       #Validate this line and append this line to the output file;
@@ -891,6 +894,7 @@ sub option_builder {
     'sp|sampleToIgnoreInUnmatched=s' => \$opts{'sp'},
     'b|bedFileLoc=s' => \$opts{'b'},
     'f|flags=s' => \@{$opts{'flags'}},
+    'r|flag-mnv' => \$opts{'flagmnv'},
     'version' => \$opts{'version'},
   );
   return \%opts;
@@ -1038,6 +1042,8 @@ cgpFlagCaVEMan.pl [-h] -f vcfToFlag.vcf -o flaggedVCF.vcf -c configFile.ini -s h
                                          ../config/flag.to.vcf.convert.ini for example
 
     --studyType            (-t)       Study type, used to decide parameters in file (genome|genomic|WGS|pulldown|exome|WXS|followup|AMPLICON|targeted|RNA_seq).
+
+    --flag-mnv             (-r)       Include flagging of MNVs (currently disabled)
 
   Examples:
 

@@ -51,18 +51,6 @@ sub new {
   return $self;
 }
 
-sub _init{
-  my ($self,$inputs) = @_;
-  if(!defined($inputs->{'tumBam'}) || !defined($inputs->{'normBam'})){
-    croak("tumBam and normBam are required for initialisation.\n");
-  }
-  $self->tumBam($inputs->{'tumBam'}, $inputs->{'ref'});
-  $self->normBam($inputs->{'normBam'}, $inputs->{'ref'});
-  $self->keepSW($inputs->{'keepSW'}) if exists $inputs->{'keepSW'};
-  $self->minAnalysedQual($inputs->{'minAnalysedQual'}) if exists $inputs->{'minAnalysedQual'};
-  return $self;
-}
-
 sub VERSION{
   return $VERSION;
 }

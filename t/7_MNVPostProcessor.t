@@ -1,4 +1,4 @@
-# Copyright (c) 2014-2021
+# Copyright (c) 2014-2022
 #
 # Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
@@ -34,7 +34,7 @@ use Data::Dumper;
 use Bio::DB::HTS;
 use Const::Fast qw(const);
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 use Test::MockObject;
 
 use FindBin qw($Bin);
@@ -56,6 +56,10 @@ const my $CLIP_M_BAM => $test_data_path.'clip.m.bam';
 const my $CLIP_M_BAI => $test_data_path.'clip.m.bam.bai';
 const my $CLIP_N_BAM => $test_data_path.'clip.n.bam';
 const my $CLIP_N_BAI => $test_data_path.'clip.n.bam.bai';
+
+const my $MNV_VCF => $test_data_path.'mnv.vcf';
+const my $MNV_T_BAM => $test_data_path.'test_MNV_tum.bam';
+const my $MNV_N_BAM => $test_data_path.'test_MNV_norm.bam';
 
 my $processor;
 
@@ -195,77 +199,40 @@ subtest 'Initialise module (ALL params)' => sub {
   done_testing();
 };
 
-subtest 'Initialise module (ALL params)' => sub {
-  my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::MNVPostProcessor' => [
-                                                                'tumBam' => $T_BAM,
-                                                                'normBam' => $T_BAM,]);
-  my $test_name = 'TEST_NAME';
-  my $mock_aln = Test::MockObject->new();
-  $mock_aln->mock('flag', sub {return 34});
-  # $mock_aln->mock('qname', sub {return $test_name});
-  my $mock_hts = Test::MockObject->new();
-  $processor->_callbackTumFetch($mock_aln, $mock_hts);
-
-# sub _callbackTumFetch{
-#   my ($a, $hts) = @_;
-#   my $flagValue = $a->flag;
-#   #Check read and mate are mapped. If not return.
-#   return if((int($flagValue) & 2) != 2); # Proper pair
-#   return if((int($flagValue) & 3852) != 0);
-#   # Ensure that we keep
-#   return if((int($flagValue) & 16) != 0 && (int($flagValue) & 32) != 0);
-#   return if((int($flagValue) & 16) == 0 && (int($flagValue) & 32) == 0);
-
-#   my $algn = Bio::DB::HTS::AlignWrapper->new($a,$hts);
-#   my $pos = $a->pos;
-#   my $cigar_array = $algn->cigar_array; # expensive and reused so save to variable
-#   #Quick check that were covering the base with this read (skips/indels are ignored)
-#   my $is_covered = _isCurrentPosCoveredFromAlignment($pos, $cigar_array, $currentPos); #1 is covered, -1 is covered but within indel
-#   if($is_covered != 0){
-#     my $this_read;
-
-#     my $rdname = $a->qname;
-#     #Read strand, faster than using $a->strand
-#     my $str = 1;
-#     if($algn->reversed){
-#       $str = -1;
-#     }
-#     my $cig_str = $algn->cigar_str;
-#     #Read base
-#     $this_read->{str} = $str;
-
-
-#     $this_read->{gapDist} = 0;
-#     $this_read->{ln} = $a->l_qseq;
-#     $this_read->{distFromEnd}=-1;
-#     if($is_covered == 1){
-#       #Get the correct read position.
-#       my ($rdPosIndexOfInterest,$currentRefPos) = $self->_getReadPositionFromAlignment($pos, $cigar_array);
-#       $this_read->{qbase} = substr $a->qseq, $rdPosIndexOfInterest-1, length($mutBase);
-#       $this_read->{qscore} = unpack('C*', substr($a->_qscore, $rdPosIndexOfInterest-1, length($mutBase)));
-#       $this_read->{rdPos} = $rdPosIndexOfInterest;
-#       $this_read->{gapDist} = _getDistanceFromGapInRead($algn->cigar_array,$rdPosIndexOfInterest);
-#       $this_read->{distFromEnd} = min(($rdPosIndexOfInterest/$this_read->{ln}),(($this_read->{ln}-$rdPosIndexOfInterest)/$this_read->{ln}));
-#     }
-#     $this_read->{matchesindel} = ($cig_str =~ m/[ID]/);
-#     $this_read->{xt} = $a->aux_get('XT');
-#     $this_read->{softclipcount} = 0;
-#     my $type = $const->cigar_types('SOFT_CLIP_CIG');
-#     if ($cig_str =~ m/$type/){
-#       $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
-#     }
-#     $this_read->{primaryalnscore} = $a->aux_get('AS');# $algn->get_tag_values('AS');
-#     $this_read->{qual} = $a->qual;
-#     $this_read->{start} = $algn->start;
-#     $this_read->{rdName} = $rdname;
-
-#     if(!exists $tum_readnames_hash->{$rdname}){
-#       push(@$tum_readnames_arr, $rdname);
-#       $tum_readnames_hash->{$rdname} = 0;
-#     }
-#     $tum_readnames->{$rdname}->{$str} = $this_read;
-
-#   } # End of if this is a covered position, look at deletion event at this location (required for deletion flag)
-#   return 1;
-# }
+subtest '_isCurrentPosCoveredFromAlignment' => sub {
+  my @cig_array = ( ['M', 10], ['D', 2], ['M', 5], ['S', 5],);
+  my $pos = 0;# 0 based leftmost position of read
+  my $currentPos_start = 9;
+  my $currentPos_end = 10;
+  my $res = Sanger::CGP::CavemanPostProcessor::MNVPostProcessor::_isCurrentPosCoveredFromAlignment(
+                                                      $pos, 
+                                                      \@cig_array, 
+                                                      $currentPos_start, 
+                                                      $currentPos_end);
+  ok($res==1, "Position is covered 1 before deletion $res != 1");
+  $currentPos_start = 10;
+  $currentPos_end = 11;
+  $res = Sanger::CGP::CavemanPostProcessor::MNVPostProcessor::_isCurrentPosCoveredFromAlignment(
+                                                      $pos, 
+                                                      \@cig_array, 
+                                                      $currentPos_start, 
+                                                      $currentPos_end);
+  ok($res==-1, "Position is not covered - overlaps deletion $res != 0");
+  $currentPos_start = 11;
+  $currentPos_end = 12;
+  $res = Sanger::CGP::CavemanPostProcessor::MNVPostProcessor::_isCurrentPosCoveredFromAlignment(
+                                                      $pos, 
+                                                      \@cig_array, 
+                                                      $currentPos_start, 
+                                                      $currentPos_end);
+  ok($res==-1, "Position is not covered in deletion $res != 0");
+  $currentPos_start = 17;
+  $currentPos_end = 18;
+  $res = Sanger::CGP::CavemanPostProcessor::MNVPostProcessor::_isCurrentPosCoveredFromAlignment(
+                                                      $pos, 
+                                                      \@cig_array, 
+                                                      $currentPos_start, 
+                                                      $currentPos_end);
+  ok($res==0, "Position is not covered in skipped region (soft clipped) $res != 0");
+  done_testing();
 };

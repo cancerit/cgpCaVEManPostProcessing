@@ -29,7 +29,7 @@
 #
 
 use strict;
-use Test::More tests => 28;
+use Test::More tests => 31;
 use strict;
 use warnings FATAL => 'all';
 use Carp;
@@ -63,6 +63,13 @@ my $oldVersionMutBam = $test_data_path.'oldversion.wt.bam';
 my $oldVersionVcf = $test_data_path.'test.oldversion.vcf';
 my $test_out_oldVersionVCF = $test_data_path.'test.oldversion.flagged.vcf';
 my $expected_out_oldVersionVCF = $test_data_path.'expected_output_oldVersion_flagged.vcf';
+my $test_input_mnv_file = $test_data_path.'mnv_test_input.vcf';
+my $test_out_mnv_file = $test_data_path.'mnv_test_output.vcf';
+my $test_mut_mnv_bam = $test_data_path.'mnv_sample.bam';
+my $test_norm_mnv_bam = $test_data_path.'mnv_normal.bam';
+my $test_germ_indel_mnv_bed = $test_data_path.'mnv_pindel.germline.gz';
+my $expected_output_mnv = $test_data_path.'mnv_exp_out.vcf';
+
 my $unmatched_vcf = $test_data_path.'unmatchedVCF/';
 my $ref = $test_data_path.'genome.fa.fai';
 
@@ -83,10 +90,13 @@ sub main{
 	rmdir($test_new_dir) or croak("Error trying to rmdir $test_new_dir");
 	# Test flaglist at cmdline single
 	run_flag_one_cmdline_flag();
-	compare($test_out_file, $expect_output_oneflag ,$index, __LINE__);
+	compare($test_out_file, $expect_output_oneflag, $index, __LINE__);
 	# Test flaglist at cmdline multi
 	run_flag_multi_cmdline_flag();
-	compare($test_out_file, $expect_output_multiflag ,$index, __LINE__);
+	compare($test_out_file, $expect_output_multiflag, $index, __LINE__);
+  # Test mnv flagging
+  run_mnv_flag();
+  compare($test_out_mnv_file, $expected_output_mnv, undef, __LINE__);
 	checkSupportedButNoFlags();
 	checkUnsupportedOption();
 	run_old_flag();
@@ -153,6 +163,19 @@ sub run_flag{
 			" -s human -t genome -m $test_mut_bam -n $test_norm_bam".
 			" -g $test_germ_indel_bed -v $test_vcf_convert_config ".
 			"--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
+			"-u $unmatched_vcf -ref $ref";
+	my ($out, $err, $exit) = capture{ system($cmd) };
+	if($exit!=0){
+		die Dumper($cmd,"\n\n",$err);
+	}
+	is($exit, 0,'Flagging ran correctly');
+}
+
+sub run_mnv_flag{
+	my $cmd = "$perl_exec $script -i $test_input_mnv_file -o $test_out_mnv_file -c $test_config".
+			" -s human -t genome -m $test_mut_mnv_bam -n $test_norm_mnv_bam".
+			" -g $test_germ_indel_mnv_bed -v $test_vcf_convert_config ".
+			"-b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
 			"-u $unmatched_vcf -ref $ref";
 	my ($out, $err, $exit) = capture{ system($cmd) };
 	if($exit!=0){
@@ -281,4 +304,5 @@ sub remove_created_files{
 	#config created
 	unlink($test_config);
 	unlink($test_out_oldVersionVCF);
+  unlink($test_out_mnv_file);
 }

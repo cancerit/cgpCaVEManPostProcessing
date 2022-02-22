@@ -35,7 +35,6 @@ use Bio::DB::HTS;
 use Const::Fast qw(const);
 
 use Test::More tests => 5;
-use Test::MockObject;
 
 use FindBin qw($Bin);
 my $lib_path = "$Bin/../lib";

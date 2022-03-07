@@ -75,6 +75,7 @@ const my $ANNOTATABLE_HIT_KEY => 'ANN';
 const my $CODING_ANNOTATION_HIT_KEY => 'COD';
 const my $HIGH_SEQ_DEPTH_HIT_KEY => 'HSD';
 const my $UNMATCHED_VCF_KEY => 'UMK';
+const my $SMARTPHASE_SCORE_INFO => 'SPCONF';
 
 const my $CENTROMERIC_REP_BED_PARAMETER => 'centromericRepeatBed';
 const my $SIMPLE_REP_BED_PARAMETER => 'simpleRepeatBed';

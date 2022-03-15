@@ -12,6 +12,9 @@ For details of the underlying algorithm please see the [CaVEMan][caveman] site.
 
 - [Docker, Singularity and Dockstore](#docker-singularity-and-dockstore)
 - [Usage](#usage)
+  - [Flagging CaVEMan Files](#flagging-caveman-files)
+  - [Utility Scripts](#utility-scripts)
+    - [cavemanPostProcessing_ini_to_yaml.pl](#cavemanpostprocessing_ini_to_yamlpl)
 - [Dependencies/Install](#dependenciesinstall)
 - [Creating a release](#creating-a-release)
   - [Preparation](#preparation)
@@ -49,6 +52,93 @@ Flags can be tuned by modifying their parameters in the species ini file.
 Human example is [here](config/Human/GRCh37d5/flag.vcf.config.ini).
 The parameter names correspond to names in the flag descriptions.
 Further details of flags and parameters are available in the [wiki].
+
+### Flagging CaVEMan Files
+
+Flag/Post Process CaVEMan files.
+
+```bash
+cgpFlagCaVEMan.pl [-h] -f vcfToFlag.vcf -o flaggedVCF.vcf -c
+    configFile.yaml -s human -t pulldown -v vcfFlagNames.ini -n norm.bam -m
+    tum.bam [-u unmatchedStore.tmp]
+
+      General Options:
+
+        --help                 (-h)       Brief documentation
+
+        --version              (-version) Output the version number and exit
+
+        --input                (-i)       The VCF input file to flag.
+
+        --outFile              (-o)       The VCF output file to write.
+
+        --species              (-s)       Species associated with this vcf file to use.
+
+        --species-assembly     (-sa)      Species assembly for (output in VCF)
+
+        --tumBam               (-m)       Tumour bam file
+
+        --normBam              (-n)       Normal bam file
+
+        --bedFileLoc           (-b)       Path to a folder containing the centromeric, snp, hi sequence depth,
+                                          and simple repeat sorted (gzipped and tabixed) bed files (if required) i.e. the non annotation bed files.
+                                          Names of files will be taken from the config file.
+
+        --indelBed             (-g)       A bed file containing germline indels to filter on
+
+        --unmatchedVCFLoc      (-umv)     Path to a directory containing the unmatched VCF normal files listed in the
+                                          config file or unmatchedNormal.bed.gz (bed file is used in preference).
+
+        --annoBedLoc           (-ab)      Path to bed files containing annotatable regions and coding regions.
+
+        --reference            (-ref)     Reference index (fai) file corresponding to the mapping of the data being processed.
+                                            (must have corresponding fasta file co-located)
+
+        --index                (-idx)     Index of the job (to override LSB_JOBINDEX as used on LSF farms)
+
+        --verbose
+
+      OPTIONAL:
+
+        --sampleToIgnoreInUnmatched    (-sp) Unmatched normal to ignore (to be used if the sample is one of those with a normal in the panel).
+
+        --processid                    (-p)  Id anaylsis process to be added at a CGP specific header.
+
+        --flagConfig                   (-c)  Config ini file to use for flag list and settings.
+
+        --flagToVcfConfig             (-v)  Config::Inifiles style config file containing VCF flag code to flag name conversions see
+                                             ../config/flag.to.vcf.convert.ini for example
+
+        --studyType            (-t)       Study type, used to decide parameters in file (genome|genomic|WGS|pulldown|exome|WXS|followup|AMPLICON|targeted|RNA_seq).
+
+      Examples:
+
+        cgpFlagCaVEMan.pl [-h] -f vcfToFlag.vcf -o flaggedVCF.vcf -c configFile.ini -s human -t pulldown
+```
+
+### Utility Scripts
+
+#### cavemanPostProcessing_ini_to_yaml.pl
+
+Convert old .ini file to .yaml format.
+
+```bash
+cavemanPostProcessing_ini_to_yaml.pl [-h] -f flag_config.ini -o flag_config.yml 
+
+  General Options:
+
+    --help                 (-h)       Brief documentation
+
+    --version              (-version) Output the version number and exit
+
+    --input                (-i)       The VCF input file to flag.
+
+    --outfile              (-o)       The VCF output file to write.
+
+  Examples:
+
+    cavemanPostProcessing_ini_to_yaml.pl [-h] -f flag_config.ini -o flag_config.yml
+```
 
 ## Dependencies/Install
 

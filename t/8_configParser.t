@@ -121,7 +121,7 @@ subtest 'Initialise module' => sub {
 };
 
 subtest '_get_yml_config_params' => sub {
-  my ($sectParams, $flagList, $bedFileParams) = 
+  my ($sectParams, $flagList, $bedFileParams, $mnv_flaglist) = 
   Sanger::CGP::CavemanPostProcessor::ConfigParser::_get_yml_config_params($YAML_CONFIG, $SPECIES, $SEQ_TYPE);
   is_deeply($sectParams,\%EXP_SECT_PARAMS, '_get_yml_config_params'." sectParams");
   is_deeply($flagList,\@EXP_FLAGLIST, '_get_yml_config_params'." flagList");
@@ -130,8 +130,8 @@ subtest '_get_yml_config_params' => sub {
 };
 
 subtest '_get_cfg_ini_config_params' => sub {
-  my ($sectParams, $flagList, $bedFileParams) = 
-  Sanger::CGP::CavemanPostProcessor::ConfigParser::_get_cfg_ini_config_params($INI_CONFIG, $SPECIES, $SEQ_TYPE);
+  my ($sectParams, $flagList, $bedFileParams, $mnv_flaglist) = 
+  Sanger::CGP::CavemanPostProcessor::ConfigParser::_get_cfg_ini_config_params($INI_CONFIG, $SPECIES, $SEQ_TYPE, undef);
   is_deeply($sectParams,\%EXP_SECT_PARAMS, '_get_cfg_ini_config_params'." sectParams");
   is_deeply($flagList,\@EXP_FLAGLIST, '_get_cfg_ini_config_params'." flagList");
   is_deeply($bedFileParams,\%EXP_BED_PARAMS_INI, '_get_cfg_ini_config_params'." bedFileParams");
@@ -144,7 +144,7 @@ subtest 'getConfigParams' => sub {
           's' => $SPECIES,
           't' => $SEQ_TYPE,
           );
-  my ($sectParams, $flagList, $bedFileParams) = 
+  my ($sectParams, $flagList, $bedFileParams, $mnv_flaglist) = 
   Sanger::CGP::CavemanPostProcessor::ConfigParser::getConfigParams(\%opts);
   is_deeply($sectParams,\%EXP_SECT_PARAMS, 'getConfigParams_ini'." sectParams");
   is_deeply($flagList,\@EXP_FLAGLIST, 'getConfigParams_ini'." flagList");

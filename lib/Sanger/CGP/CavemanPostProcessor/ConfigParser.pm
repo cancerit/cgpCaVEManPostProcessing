@@ -30,6 +30,7 @@
 
 package Sanger::CGP::CavemanPostProcessor::ConfigParser;
 
+use Sanger::CGP::CavemanPostProcessor::Constants;
 
 use YAML::XS qw(LoadFile DumpFile);
 use Config::IniFiles;
@@ -39,11 +40,7 @@ use List::Util qw(first);
 use Data::Dumper;
 use Carp;
 
-const my $CONFIG_FLAGLIST => "FLAGLIST";
-const my $CONFIG_PARAMETERS => "PARAMS";
-const my $CONFIG_BEDFILES => "BEDFILES";
-const my $FLAG_PARAMETER => 'flagList';
-const my $CONFIG_DEFAULT => 'DEFAULT';
+my $const = 'Sanger::CGP::CavemanPostProcessor::Constants';
 
 sub new {
   my ($proto) = shift;
@@ -56,11 +53,11 @@ sub new {
 
 sub _get_cfg_ini_config_params{
   my ($file, $species, $seq_type, $flagopts) = @_;
-  my $cfg = Config::IniFiles->new( -file => $file, -allowcontinue => 1, -default => $CONFIG_DEFAULT );
+  my $cfg = Config::IniFiles->new( -file => $file, -allowcontinue => 1);
   #Get parameter group.
   my $alternate = "";
   my $sppTypeCombo = "".$species."_".$seq_type;
-  my $paramSectName = $sppTypeCombo." ".$CONFIG_PARAMETERS;
+  my $paramSectName = $sppTypeCombo." ".$const->config_param_names('CONFIG_PARAMETERS');
   my @parameterNames = $cfg->Parameters($paramSectName);
   #iterate through each parameter name and load into a hash for module setup.
   my ($sectParams,$bedFileParams);
@@ -71,12 +68,13 @@ sub _get_cfg_ini_config_params{
   my @flagList;
   if(! defined($flagopts)){
     #Get the flaglist group
-    $paramSectName = $sppTypeCombo." ".$CONFIG_FLAGLIST;
-    @flagList = $cfg->val($paramSectName,$FLAG_PARAMETER);
+    $paramSectName = $sppTypeCombo." ".$const->config_param_names('CONFIG_FLAGLIST');
+    my $prm = $const->config_param_names('FLAG_PARAMETER');
+    @flagList = $cfg->val($paramSectName,$prm);
     if(!@flagList){
       croak("No flagList found in ".$file." for section $paramSectName. No flagging will be done.");
       @flagList = ();
-      return ($sectParams,\@flagList,$bedFileParams);
+      return ($sectParams,\@flagList,$bedFileParams,undef);
     }
   }else{
     @flagList = @$flagopts;
@@ -85,7 +83,7 @@ sub _get_cfg_ini_config_params{
     croak("No config found in ".$opts->{'c'}." for section $paramSectName");
   }
   #Get the bedfiles
-  $paramSectName = $sppTypeCombo." ".$CONFIG_BEDFILES;
+  $paramSectName = $sppTypeCombo." ".$const->config_param_names('CONFIG_BEDFILES');
   @parameterNames = $cfg->Parameters($paramSectName);
   foreach my $pName(@parameterNames){
     $bedFileParams->{$pName} = $cfg->val($paramSectName,$pName);
@@ -93,7 +91,17 @@ sub _get_cfg_ini_config_params{
   if(!defined($bedFileParams)){
     croak("No bed file parameters found in ".$opts->{'c'}." for section $paramSectName");
   }
-  return ($sectParams, \@flagList, $bedFileParams);
+  #Get the MNV flaglist group. This COULD be non existant
+  my @mnv_flaglist;
+  $paramSectName = $sppTypeCombo." ".$const->config_param_names('CONFIG_MNVFLAGLIST');
+  $prm = $const->config_param_names('FLAG_PARAMETER');
+  @mnv_flaglist = $cfg->val($paramSectName,$prm);
+  if(!@mnv_flaglist){
+    carp("No ".$const->config_param_names('CONFIG_MNVFLAGLIST')." found in ".$file." for section $paramSectName. No flagging will be done.");
+    @mnv_flaglist = ();
+    return ($sectParams,\@flagList,$bedFileParams,\@mnv_flaglist);
+  }
+  return ($sectParams, \@flagList, $bedFileParams, \@mnv_flaglist);
 }
 
 sub _get_yml_config_params{
@@ -103,17 +111,22 @@ sub _get_yml_config_params{
   if(! $section){
     croak("No section combination for $species $seq_type found in config file '$file'.");
   }
-  my $sectParams = $section->{$CONFIG_PARAMETERS};
+  my $sectParams = $section->{$const->config_param_names('CONFIG_PARAMETERS')};
   if(! $sectParams){
-    croak("No $CONFIG_PARAMETERS section for $species $seq_type found in config file '$file'.");
+    croak("No ".$const->config_param_names('CONFIG_PARAMETERS')." section for $species $seq_type found in config file '$file'.");
   }
-  my $flagList = $section->{$CONFIG_FLAGLIST};
+  my $flagList = $section->{$const->config_param_names('CONFIG_FLAGLIST')};
   if(! $flagList){
-    croak("No $CONFIG_FLAGLIST section for $species $seq_type found in config file '$file'.");
+    croak("No ".$const->config_param_names('CONFIG_FLAGLIST')." section for $species $seq_type found in config file '$file'.");
   }
-  my $bedFileParams = $section->{$CONFIG_BEDFILES};
+  # MNV may not exist so only warn
+  my $mnvflaglist = $section->{$const->config_param_names('CONFIG_MNVFLAGLIST')};
+  if(! $flagList){
+    carp("No ".$const->config_param_names('CONFIG_MNVFLAGLIST')." section for $species $seq_type found in config file '$file'.");
+  }
+  my $bedFileParams = $section->{$const->config_param_names('CONFIG_BEDFILES')};
   if(! $bedFileParams){
-    croak("No $CONFIG_BEDFILES section for $species $seq_type found in config file '$file'.");
+    croak("No ".$const->config_param_names('CONFIG_BEDFILES')." section for $species $seq_type found in config file '$file'.");
   }
   return ($sectParams, $flagList, $bedFileParams);
 }
@@ -139,17 +152,17 @@ sub validate_yaml_config{
   if(! $section){
     croak("No section combination for $species $seq_type found in config file '$file'.");
   }
-  my $sectParams = $section->{$CONFIG_PARAMETERS};
+  my $sectParams = $section->{$const->config_param_names('CONFIG_PARAMETERS')};
   if(! $sectParams){
-    croak("No $CONFIG_PARAMETERS section for $species $seq_type found in config file '$file'.");
+    croak("No ".$const->config_param_names('CONFIG_PARAMETERS')." section for $species $seq_type found in config file '$file'.");
   }
-  my $flagList = $section->{$CONFIG_FLAGLIST};
+  my $flagList = $section->{$const->config_param_names('CONFIG_FLAGLIST')};
   if(! $flagList){
-    croak("No $CONFIG_FLAGLIST section for $species $seq_type found in config file '$file'.");
+    croak("No ".$const->config_param_names('CONFIG_FLAGLIST')." section for $species $seq_type found in config file '$file'.");
   }
-  my $bedFileParams = $section->{$CONFIG_BEDFILES};
+  my $bedFileParams = $section->{$const->config_param_names('CONFIG_BEDFILES')};
   if(! $bedFileParams){
-    croak("No $CONFIG_BEDFILES section for $species $seq_type found in config file '$file'.");
+    croak("No ".$const->config_param_names('CONFIG_BEDFILES')." section for $species $seq_type found in config file '$file'.");
   }
   return
 }
@@ -173,26 +186,26 @@ sub convert_ini_to_yaml{
     foreach my $seq_type(@{$species_seq_type{$species}}){
       my $key = $species."_".$seq_type;
       $yaml_out->{$species}->{$seq_type} = {};
-      my $paramSectName = $key." ".$CONFIG_PARAMETERS;
+      my $paramSectName = $key." ".$const->config_param_names('CONFIG_PARAMETERS');
       my @parameterNames = $cfg->Parameters($paramSectName);
       #iterate through each parameter name and load into a hash for module setup.
       my ($sectParams,$bedFileParams);
       foreach my $paramName(@parameterNames){
-        $yaml_out->{$species}->{$seq_type}->{$CONFIG_PARAMETERS}->{$paramName} = $cfg->val($paramSectName,$paramName);
+        $yaml_out->{$species}->{$seq_type}->{$const->config_param_names('CONFIG_PARAMETERS')}->{$paramName} = $cfg->val($paramSectName,$paramName);
       }
 
-      $paramSectName = $key." ".$CONFIG_FLAGLIST;
-      my @flagList = $cfg->val($paramSectName,$FLAG_PARAMETER);
-      $yaml_out->{$species}->{$seq_type}->{$CONFIG_FLAGLIST} = \@flagList;
+      $paramSectName = $key." ".$const->config_param_names('CONFIG_FLAGLIST');
+      my @flagList = $cfg->val($paramSectName,$const->config_param_names('FLAG_PARAMETER'));
+      $yaml_out->{$species}->{$seq_type}->{$const->config_param_names('CONFIG_FLAGLIST')} = \@flagList;
 
-      $paramSectName = $key." ".$CONFIG_BEDFILES;
+      $paramSectName = $key." ".$const->config_param_names('CONFIG_BEDFILES');
       @parameterNames = $cfg->Parameters($paramSectName);
       foreach my $pName(@parameterNames){
         $val = $cfg->val($paramSectName,$pName);
         if ($val eq ''){
           $val = undef 
         }
-        $yaml_out->{$species}->{$seq_type}->{$CONFIG_BEDFILES}->{$pName} = $val;
+        $yaml_out->{$species}->{$seq_type}->{$const->config_param_names('CONFIG_BEDFILES')}->{$pName} = $val;
       }
     }
   }

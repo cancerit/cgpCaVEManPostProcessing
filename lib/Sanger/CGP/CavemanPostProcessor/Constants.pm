@@ -70,6 +70,17 @@ sub default_flag_values {
   return %DEFAULT_FLAG_VALUES{$item};
 }
 
+const my %VCF_COLUMNS => (
+  'VCF_COLUMN_NORMAL' => 'NORMAL',
+  'VCF_COLUMN_TUMOUR' => 'TUMOUR',
+  'VCF_COLUMN_FORMAT' => 'FORMAT',
+);
+
+sub vcf_columns{
+  my ($class,$item) = @_;
+  return %VCF_COLUMNS{$item};
+}
+
 const my %CIGAR_TYPES => (
   'MATCH_CIG' => 'M',
   'SKIP_CIG' => 'N',
@@ -82,6 +93,38 @@ const my %CIGAR_TYPES => (
 sub cigar_types {
   my ($class,$item) = @_;
   return %CIGAR_TYPES{$item};
+}
+
+const my %CONFIG_PARAM_NAMES => (
+  'CONFIG_FLAGLIST' => 'FLAGLIST',
+  'CONFIG_PARAMETERS' => 'PARAMS',
+  'CONFIG_BEDFILES' => 'BEDFILES',
+  'FLAG_PARAMETER' => 'flagList',
+  'CONFIG_DEFAULT' => 'DEFAULT',
+  'CONFIG_MNVFLAGLIST' => 'MNVFLAGLIST',
+);
+
+sub config_param_names {
+  my ($class, $item) = @_;
+  return %CONFIG_PARAM_NAMES{$item};
+}
+
+const my %CONFIG_FLAG_NAMES => (
+  'mnvFlag' => 'mnvFlag',
+);
+
+sub flag_names {
+  my ($class, $item) = @_;
+  return %CONFIG_FLAG_NAMES{$item};
+}
+
+const my %VCF_INFO_IDS => (
+  'MNV_INFO_ID' => 'MNVFLAG_',
+);
+
+sub vcf_info_ids{
+  my ($class,$item) = @_;
+  return %VCF_INFO_IDS{$item};
 }
 
 const my %ALLELE_FORMAT => (

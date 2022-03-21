@@ -97,7 +97,7 @@ sub _get_cfg_ini_config_params{
   $prm = $const->config_param_names('FLAG_PARAMETER');
   @mnv_flaglist = $cfg->val($paramSectName,$prm);
   if(!@mnv_flaglist){
-    carp("No ".$const->config_param_names('CONFIG_MNVFLAGLIST')." found in ".$file." for section $paramSectName. No flagging will be done.");
+    #carp("No ".$const->config_param_names('CONFIG_MNVFLAGLIST')." found in ".$file." for section $paramSectName. No flagging will be done.");
     @mnv_flaglist = ();
     return ($sectParams,\@flagList,$bedFileParams,\@mnv_flaglist);
   }
@@ -195,8 +195,16 @@ sub convert_ini_to_yaml{
       }
 
       $paramSectName = $key." ".$const->config_param_names('CONFIG_FLAGLIST');
-      my @flagList = $cfg->val($paramSectName,$const->config_param_names('FLAG_PARAMETER'));
+      my $flagprm = $const->config_param_names('FLAG_PARAMETER');
+      my @flagList = $cfg->val($paramSectName,$flagprm);
       $yaml_out->{$species}->{$seq_type}->{$const->config_param_names('CONFIG_FLAGLIST')} = \@flagList;
+
+      $paramSectName = $key." ".$const->config_param_names('CONFIG_MNVFLAGLIST');
+      my $flagmnvprm = $const->config_param_names('FLAG_PARAMETER');
+      if ($cfg->exists($paramSectName, $flagmnvprm)){
+        my @mnvflagList = $cfg->val($paramSectName,$flagmnvprm);
+        $yaml_out->{$species}->{$seq_type}->{$const->config_param_names('CONFIG_MNVFLAGLIST')} = \@mnvflagList;
+      }
 
       $paramSectName = $key." ".$const->config_param_names('CONFIG_BEDFILES');
       @parameterNames = $cfg->Parameters($paramSectName);

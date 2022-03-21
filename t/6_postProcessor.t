@@ -33,6 +33,7 @@ use Sanger::CGP::CavemanPostProcessor::PostProcessor;
 use Data::Dumper;
 use Bio::DB::HTS;
 use Const::Fast qw(const);
+use Test::MockObject;
 
 use Test::More tests => 24;
 
@@ -540,37 +541,160 @@ subtest 'Initialise module (bam clip params)' => sub {
 
 subtest 'getCavemanMatchedNormalResult' => sub {
     my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::PostProcessor' => [tumBam => $CLIP_M_BAM, normBam => $CLIP_N_BAM]);
+    my $mock_vcf = Test::MockObject->new();
+    my $mock_line = Test::MockObject->new();
+    #($vcf, $x, $index)
     my $normal_col = '0/0:90:0:10:0:0.1'; #0.1
     my $normal_col_fail = '0/0:60:0:40:0:0.4'; #0.4
     my $tumcol = '1/0:50:0:50:0:0.5'; #0.5
     my $oldformat = 'GT:AA:CA:GA:TA:PM';
+    my $ncol = $normal_col;
+    my $tcol = $tumcol;
+    my $form = $oldformat;
+    $mock_vcf->mock( 'get_column', 
+                sub{ 
+                  if($_[2] eq 'NORMAL'){
+                    return $ncol;
+                  }elsif($_[2] eq 'TUMOUR'){
+                    return $tcol;
+                  }elsif($_[2] eq 'FORMAT'){
+                    return $form;
+                  }else{
+                    \@_;
+                  }
+                } );
     $processor->runProcess('6',138186703,138186703,"A","G");
-    ok($processor->getCavemanMatchedNormalResult($normal_col,$tumcol,$oldformat)==1,"Pass caveman matched normal check old format");
+    ok($processor->getCavemanMatchedNormalResult($mock_vcf, $mock_line, undef)==1,"Pass caveman matched normal check old format");
+    my ($name, $args) = $mock_vcf->next_call();
+  #     my $normal_col = $vcf->get_column($x,$norm_title);
+  # my $tumour_col = $vcf->get_column($x,$tum_title);
+  # my $format = $vcf->get_column($x,$format_title);
+    my $iter = 1;
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'NORMAL');
+    $iter++;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'TUMOUR');
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'FORMAT');
+    $mock_vcf->clear();
+    $ncol = $normal_col_fail;
     $processor->runProcess('6',138186703,138186703,"A","G");
-    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$oldformat)==0,"Fail caveman matched normal check old format");
+    ok($processor->getCavemanMatchedNormalResult($mock_vcf, $mock_line, undef)==0,"Fail caveman matched normal check old format");
+    $iter = 1;
+
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'NORMAL');
+    $iter++;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'TUMOUR');
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'FORMAT');
+    $mock_vcf->clear();
     $processor->maxCavemanMatchedNormalProportion(0.09);
     $processor->runProcess('6',138186703,138186703,"A","G");
-    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$oldformat)==1,"Pass caveman matched normal check old format, modified proportion");
+    ok($processor->getCavemanMatchedNormalResult($mock_vcf, $mock_line, undef)==1,"Pass caveman matched normal check old format, modified proportion");
+    $iter = 1;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'NORMAL');
+    $iter++;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'TUMOUR');
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'FORMAT');
+    $mock_vcf->clear();
     $processor->maxCavemanMatchedNormalProportion(0.2);
     $processor->runProcess('6',138186703,138186703,"A","G");
-    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$oldformat)==0,"Fail caveman matched normal check old format, modified proportion");
+    ok($processor->getCavemanMatchedNormalResult($mock_vcf, $mock_line, undef)==0,"Fail caveman matched normal check old format, modified proportion");
+    $iter = 1;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'NORMAL');
+    $iter++;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'TUMOUR');
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'FORMAT');
+    $mock_vcf->clear();
 
     my $newformat = 'GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM';
     $normal_col = '0/0:45:0:5:0:45:0:5:0:0.1'; #0.1
     $normal_col_fail = '0/0:30:0:20:0:30:0:20:0:0.4'; #0.4
     $tumcol = '1/0:25:0:25:0:25:0:25:0:0.5'; #0.5
+    $ncol = $normal_col;
+    $tcol = $tumcol;
+    $form = $newformat;
+
     $processor->runProcess('6',138186703,138186703,"A","G");
-    ok($processor->getCavemanMatchedNormalResult($normal_col,$tumcol,$newformat)==1,"Pass caveman matched normal check new format");
+    ok($processor->getCavemanMatchedNormalResult($mock_vcf, $mock_line, undef)==1,"Pass caveman matched normal check new format");
+    $iter = 1;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'NORMAL');
+    $iter++;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'TUMOUR');
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'FORMAT');
+    $mock_vcf->clear();
     $processor->runProcess('6',138186703,138186703,"A","G");
-    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$newformat)==0,"Fail caveman matched normal check new format");
+    $ncol = $normal_col_fail;
+    ok($processor->getCavemanMatchedNormalResult($mock_vcf, $mock_line, undef)==0,"Fail caveman matched normal check new format");
+    $iter = 1;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'NORMAL');
+    $iter++;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'TUMOUR');
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'FORMAT');
+    $mock_vcf->clear();
     #Modify proportion cutoff to pass again
     $processor->maxCavemanMatchedNormalProportion(0.09);
     $processor->runProcess('6',138186703,138186703,"A","G");
-    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$newformat)==1,"Pass caveman matched normal check new format, modified proportion");
+    ok($processor->getCavemanMatchedNormalResult($mock_vcf, $mock_line, undef)==1,"Pass caveman matched normal check new format, modified proportion");
+    $iter = 1;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'NORMAL');
+    $iter++;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'TUMOUR');
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'FORMAT');
+    $mock_vcf->clear();
     $processor->maxCavemanMatchedNormalProportion(0.2);
     $processor->runProcess('6',138186703,138186703,"A","G");
-    ok($processor->getCavemanMatchedNormalResult($normal_col_fail,$tumcol,$newformat)==0,"Fail caveman matched normal check new format, modified proportion");
-
+    ok($processor->getCavemanMatchedNormalResult($mock_vcf, $mock_line, undef)==0,"Fail caveman matched normal check new format, modified proportion");
+    $iter = 1;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'NORMAL');
+    $iter++;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'TUMOUR');
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'FORMAT');
+    $mock_vcf->clear();
 };
 
 subtest '_getDistanceFromGapInRead' => sub {

@@ -29,7 +29,7 @@
 #
 
 use strict;
-use Test::More tests => 31;
+use Test::More tests => 34;
 use strict;
 use warnings FATAL => 'all';
 use Carp;
@@ -56,6 +56,7 @@ my $test_simple_repeat_bed = $test_data_path.'simple_repeats.bed.gz';
 my $test_centro_repeat_bed = $test_data_path.'centromeric_repeats.bed.gz';
 my $test_exp_config = $test_data_path.'flag.vcf.config.ini';
 my $test_config = $test_data_path.'flag.vcf.config.tmp.ini';
+my $test_mnv_config = $test_data_path.'flag.vcf.config.mnv.ini';
 my $test_vcf_convert_config = $test_data_path.'flag.to.vcf.convert.ini';
 my $script = $script_path.'cgpFlagCaVEMan.pl';
 my $oldVersionNormBam = $test_data_path.'oldversion.wt.bam';
@@ -69,9 +70,12 @@ my $test_mut_mnv_bam = $test_data_path.'mnv_sample.bam';
 my $test_norm_mnv_bam = $test_data_path.'mnv_normal.bam';
 my $test_germ_indel_mnv_bed = $test_data_path.'mnv_pindel.germline.gz';
 my $expected_output_mnv = $test_data_path.'mnv_exp_out.vcf';
+my $expected_output_flag_mnv = $test_data_path.'mnv_exp_out_flag_mnv.vcf';
 
 my $unmatched_vcf = $test_data_path.'unmatchedVCF/';
+my $unmatched_mnv_vcf = $test_data_path.'mnvUnmatchedVCF/';
 my $ref = $test_data_path.'genome.fa.fai';
+my $mnv_ref = $test_data_path.'genome_38.fa.fai';
 
 my $perl_exec = "$^X -I ".(join ':', @INC);
 
@@ -97,6 +101,8 @@ sub main{
   # Test mnv flagging
   run_mnv_flag();
   compare($test_out_mnv_file, $expected_output_mnv, undef, __LINE__);
+  run_mnv_flag_mnvs();
+  compare($test_out_mnv_file,$expected_output_flag_mnv, undef, __LINE__);
 	checkSupportedButNoFlags();
 	checkUnsupportedOption();
 	run_old_flag();
@@ -171,12 +177,25 @@ sub run_flag{
 	is($exit, 0,'Flagging ran correctly');
 }
 
+sub run_mnv_flag_mnvs{
+  my $cmd = "$perl_exec $script -i $test_input_mnv_file -o $test_out_mnv_file -c $test_mnv_config".
+      " -s human -t genome -m $test_mut_mnv_bam -n $test_norm_mnv_bam".
+      " -g $test_germ_indel_mnv_bed -v $test_vcf_convert_config ".
+      "-b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
+      "-u $unmatched_mnv_vcf -ref $mnv_ref";
+  my ($out, $err, $exit) = capture{ system($cmd) };
+  if($exit!=0){
+    die Dumper($cmd,"\n\n",$err);
+  }
+  is($exit, 0,'Flagging ran correctly');
+}
+
 sub run_mnv_flag{
 	my $cmd = "$perl_exec $script -i $test_input_mnv_file -o $test_out_mnv_file -c $test_config".
 			" -s human -t genome -m $test_mut_mnv_bam -n $test_norm_mnv_bam".
 			" -g $test_germ_indel_mnv_bed -v $test_vcf_convert_config ".
 			"-b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
-			"-u $unmatched_vcf -ref $ref";
+			"-u $unmatched_mnv_vcf -ref $mnv_ref";
 	my ($out, $err, $exit) = capture{ system($cmd) };
 	if($exit!=0){
 		die Dumper($cmd,"\n\n",$err);

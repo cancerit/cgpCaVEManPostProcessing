@@ -33,8 +33,9 @@ use Sanger::CGP::CavemanPostProcessor::MNVPostProcessor;
 use Data::Dumper;
 use Bio::DB::HTS;
 use Const::Fast qw(const);
+use Test::MockObject;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 use FindBin qw($Bin);
 my $lib_path = "$Bin/../lib";
@@ -234,4 +235,111 @@ subtest '_isCurrentPosCoveredFromAlignment' => sub {
                                                       $currentPos_end);
   ok($res==0, "Position is not covered in skipped region (soft clipped) $res != 0");
   done_testing();
+};
+
+subtest 'getCavemanMatchedNormalResult' => sub {
+    my $processor = new_ok('Sanger::CGP::CavemanPostProcessor::MNVPostProcessor' => [tumBam => $MNV_T_BAM, normBam => $MNV_N_BAM]);
+    my $mock_vcf = Test::MockObject->new();
+    my $mock_line = Test::MockObject->new();
+#    chr16
+#12568729
+#7e1ef7fc-3aaf-11ec-85ef-a787a78d7800;7e1ef89c-3aaf-11ec-85ef-a787a78d7800
+#AC
+#CA
+#.
+#PASS
+#SPCONF=0.49995027580426177;DP_1=54;MP_1=1.0;GP_1=2.1e-12;TG_1=AA/AAACC;TP_1=0.48;SG_1=AA/AAAAC;SP_1=0.41;DP_2=53;MP_2=0.86;GP_2=3.5e-12;TG_2=CC/AACCC;TP_2=0.41;SG_2=CC/ACCCC;SP_2=0.35
+#GT_1:FAZ_1:FCZ_1:FGZ_1:FTZ_1:RAZ_1:RCZ_1:RGZ_1:RTZ_1:PM_1:GT_2:FAZ_2:FCZ_2:FGZ_2:FTZ_2:RAZ_2:RCZ_2:RGZ_2:RTZ_2:PM_2
+#0|0:18:0:0:0:26:0:0:0:0.0:0|0:0:18:0:0:0:25:0:0:0.0
+#0|1:0:0:0:0:7:3:0:0:0.3:0|1:0:0:0:0:3:7:0:0:0.3
+
+  # my ($self, $vcf_obj,$vcf_line,$index) = @_;
+  # my $normal_col_full = $vcf_obj->get_column($vcf_line,$const->vcf_columns('VCF_COLUMN_NORMAL'));
+  # my $tumour_col_full = $vcf_obj->get_column($vcf_line,$const->vcf_columns('VCF_COLUMN_TUMOUR'));
+  # #We can assume new format as MNV's not back supported
+  # my $format = $vcf_obj->get_column($vcf_line,$const->vcf_columns('VCF_COLUMN_FORMAT'));
+    #($vcf, $x, $index)
+    my $normal_col= '0|0:18:0:0:0:26:0:0:0:0.0:0|0:0:18:0:0:0:25:0:0:0.0'; #0.0
+    my $normal_col_fail = '0|0:18:6:0:0:26:5:0:0:0.0:0|0:0:18:0:0:0:25:0:0:0.0'; #0.2
+    my $tumcol = '0|1:0:0:0:0:7:3:0:0:0.3:0|1:0:0:0:0:3:7:0:0:0.3'; #0.3
+    my $index = 0;
+    my $newformat = 'GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM';    
+    my $ncol = $normal_col;
+    my $tcol = $tumcol;
+    my $form = $newformat;
+    $mock_vcf->mock( 'get_column', 
+                sub{ 
+                  if($_[2] eq 'NORMAL'){
+                    return $ncol;
+                  }elsif($_[2] eq 'TUMOUR'){
+                    return $tcol;
+                  }elsif($_[2] eq 'FORMAT'){
+                    return $form;
+                  }else{
+                    \@_;
+                  }
+                } );
+    $processor->runProcess('chr16',12568729,12568729,"A","C");
+    ok($processor->getCavemanMatchedNormalResult($mock_vcf, $mock_line, $index)==1,"Pass caveman matched normal check");
+    my ($name, $args) = $mock_vcf->next_call();
+  #     my $normal_col = $vcf->get_column($x,$norm_title);
+  # my $tumour_col = $vcf->get_column($x,$tum_title);
+  # my $format = $vcf->get_column($x,$format_title);
+    my $iter = 1;
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'NORMAL');
+    $iter++;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'TUMOUR');
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'FORMAT');
+    $mock_vcf->clear();
+    $ncol = $normal_col_fail;
+    $processor->runProcess('chr16',12568729,12568729,"A","C");
+    ok($processor->getCavemanMatchedNormalResult($mock_vcf, $mock_line, $index)==0,"Fail caveman matched normal check");
+    $iter = 1;
+
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'NORMAL');
+    $iter++;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'TUMOUR');
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'FORMAT');
+    $mock_vcf->clear();
+    $processor->runProcess('chr16',12568729,12568729,"A","C");
+    $processor->maxCavemanMatchedNormalProportion(0.01);
+    ok($processor->getCavemanMatchedNormalResult($mock_vcf, $mock_line, $index)==1,"Pass caveman matched normal check, modified proportion");
+    $iter = 1;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'NORMAL');
+    $iter++;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'TUMOUR');
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'FORMAT');
+    $mock_vcf->clear();
+    $processor->runProcess('chr16',12568729,12568729,"A","C");
+    $processor->maxCavemanMatchedNormalProportion(0.2);
+    ok($processor->getCavemanMatchedNormalResult($mock_vcf, $mock_line, $index)==0,"Fail caveman matched normal check, modified proportion");
+    $iter = 1;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'NORMAL');
+    $iter++;
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'TUMOUR');
+    ($name, $args) = $mock_vcf->next_call();
+    ok($name eq 'get_column', "Check method call in mock $iter");
+    ok($args->[2] eq 'FORMAT');
+    $mock_vcf->clear();
 };

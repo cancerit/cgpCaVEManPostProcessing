@@ -47,7 +47,7 @@ HUMAN:
       - alignmentScoreReadLengthAdjustedFlag
       - clippingMedianFlag
       - alnScoreMedianFlag
-
+    
     BEDFILES:
       centromericRepeatBed: centromeric_repeats.bed.gz
       simpleRepeatBed: simple_repeats.bed.gz
@@ -99,6 +99,8 @@ HUMAN:
       - alignmentScoreReadLengthAdjustedFlag
       - clippingMedianFlag
       - alnScoreMedianFlag
+    
+    MNVFLAGLIST: []
 
     BEDFILES:
       centromericRepeatBed: centromeric_repeats.bed.gz

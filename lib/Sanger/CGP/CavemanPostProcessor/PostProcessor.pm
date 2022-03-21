@@ -481,7 +481,7 @@ sub _callbackTumFetch{
     $this_read->{softclipcount} = 0;
     my $type = $const->cigar_types('SOFT_CLIP_CIG');
     if ($cig_str =~ m/$type/){
-      $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
+      $this_read->{softclipcount} = $self->_get_soft_clip_count_from_cigar($algn->cigar_array);
     }
     $this_read->{primaryalnscore} = $a->aux_get('AS');# $algn->get_tag_values('AS');
     $this_read->{qual} = $a->qual;
@@ -571,7 +571,7 @@ sub populate_muts{
 }
 
 sub _get_soft_clip_count_from_cigar{
-  my ($cig_arr) = @_;
+  my ($self, $cig_arr) = @_;
   my $count = 0;
   foreach my $cigentry(@$cig_arr){
     if($cigentry->[0] eq $const->cigar_types('SOFT_CLIP_CIG')){
@@ -755,7 +755,7 @@ sub _callbackMatchedNormFetch{
     $this_read->{softclipcount} = 0;
     my $type = $const->cigar_types('SOFT_CLIP_CIG');
     if ($cig_str =~ m/$type/){
-      $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($cigar_array);
+      $this_read->{softclipcount} = $self->_get_soft_clip_count_from_cigar($cigar_array);
     }
     $this_read->{primaryalnscore} = $a->aux_get('AS');# $algn->get_tag_values('AS');
     $this_read->{qual} = $a->qual;
@@ -1364,8 +1364,14 @@ sub _checkDepth{
 }
 
 sub getCavemanMatchedNormalResult{
-    my ($self, $normal_col, $tumour_col, $format) = @_;
-    if(!defined($self->{'cmnp'})){
+  my ($self, $vcf, $x, $index) = @_;
+  my $norm_title = $const->vcf_columns('VCF_COLUMN_NORMAL');
+  my $tum_title = $const->vcf_columns('VCF_COLUMN_TUMOUR');
+  my $format_title = $const->vcf_columns('VCF_COLUMN_FORMAT');
+  my $normal_col = $vcf->get_column($x,$norm_title);
+  my $tumour_col = $vcf->get_column($x,$tum_title);
+  my $format = $vcf->get_column($x,$format_title);
+  if(!defined($self->{'cmnp'})){
     $self->{'cmnp'} = $self->_checkCavemanMatchedNormal($normal_col, $tumour_col, $format);
   }
   return $self->{'cmnp'};

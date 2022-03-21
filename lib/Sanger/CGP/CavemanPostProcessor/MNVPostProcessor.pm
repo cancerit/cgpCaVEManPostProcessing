@@ -183,7 +183,7 @@ sub _callbackTumFetch{
     $this_read->{softclipcount} = 0;
     my $type = $const->cigar_types('SOFT_CLIP_CIG');
     if ($cig_str =~ m/$type/){
-      $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($algn->cigar_array);
+      $this_read->{softclipcount} = $self->_get_soft_clip_count_from_cigar($algn->cigar_array);
     }
     $this_read->{primaryalnscore} = $a->aux_get('AS');# $algn->get_tag_values('AS');
     $this_read->{qual} = $a->qual;
@@ -430,7 +430,7 @@ sub _callbackMatchedNormFetch{
     $this_read->{softclipcount} = 0;
     my $type = $const->cigar_types('SOFT_CLIP_CIG');
     if ($cig_str =~ m/$type/){
-      $this_read->{softclipcount} = _get_soft_clip_count_from_cigar($cigar_array);
+      $this_read->{softclipcount} = $self->_get_soft_clip_count_from_cigar($cigar_array);
     }
     $this_read->{primaryalnscore} = $a->aux_get('AS');# $algn->get_tag_values('AS');
     $this_read->{qual} = $a->qual;
@@ -475,6 +475,58 @@ sub _checkDepth{
     }
   }
   return 0;
+}
+
+sub getCavemanMatchedNormalResult{
+  my ($self, $vcf_obj,$vcf_line,$index) = @_;
+  my $norm_title = $const->vcf_columns('VCF_COLUMN_NORMAL');
+  my $tum_title = $const->vcf_columns('VCF_COLUMN_TUMOUR');
+  my $format_title = $const->vcf_columns('VCF_COLUMN_FORMAT');  
+  my $normal_col_full = $vcf_obj->get_column($vcf_line,$norm_title);
+  my $tumour_col_full = $vcf_obj->get_column($vcf_line,$tum_title);
+  #We can assume new format as MNV's not back supported
+  my $format = $vcf_obj->get_column($vcf_line,$format_title);
+  my $fake_format = $const->allele_format('NEW_ALLELE_VCF_FORMAT'); 
+
+  my $length_of_info = split ':', $fake_format;
+  #subset array of split format using index and rejoin on :
+  my $offset = $index*$length_of_info;
+  my @normal_col_split = split ':',$normal_col_full;
+  my @tum_col_split = split ':',$tumour_col_full;
+  my @usable_norm_col = splice(@normal_col_split,$offset, $length_of_info);
+  my $normal_col = join(':',@usable_norm_col);
+  my @usable_tum_col = splice(@tum_col_split,$offset, $length_of_info);
+  my $tumour_col = join(':',@usable_tum_col);
+  if(!defined($self->{'cmnp'})){
+    $self->{'cmnp'} = $self->_checkCavemanMatchedNormal($normal_col, $tumour_col, $fake_format);
+  }
+  return $self->{'cmnp'};
+}
+
+sub run_mnv_flag{
+  my ($self,$results_arr,$vcf,$x) = @_;
+  # Iterate through each set of flags
+  my $is_pass = 0;
+  my %overall_fails = ();
+  for (my $i=1; $i<=scalar(@$results_arr); $i++){
+    my $is_fail = 0;
+    my $this_flag_list = "";
+    for my $key (keys %{$results_arr->[$i-1]}){
+      if ($results_arr->[$i-1]->{$key} == 1){
+        $is_fail = 1;
+        $this_flag_list .= $key.",";
+        $overall_fails{$key} = 1;
+      }
+    }
+    $this_flag_list = "." if ($this_flag_list eq "");
+    $this_flag_list =~ s/,$//;
+    $is_pass = 1 if (!$is_fail);
+    #Add list of fails for this variant to info field.
+    my $info_id = $const->vcf_info_ids('MNV_INFO_ID')."$i";
+    $$x[7]=$vcf->add_info_field($$x[7], $info_id => $this_flag_list);
+  }
+  %overall_fails = () if ($is_pass);
+  return (\%overall_fails, $vcf, $x);
 }
 
 return 1;

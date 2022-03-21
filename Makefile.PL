@@ -52,6 +52,7 @@ WriteMakefile(
                      'PerlIO::gzip' => 0.20,
                      'List::Util'=> 1.56,
                      'YAML::XS' => 0.83,
+                     'Test::MockObject' => 1.20,
                    }
 );
 

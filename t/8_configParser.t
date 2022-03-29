@@ -87,7 +87,8 @@ const my @EXP_FLAGLIST => (
           'matchedNormalProportion',
           'alignmentScoreReadLengthAdjustedFlag',
           'clippingMedianFlag',
-          'alnScoreMedianFlag'
+          'alnScoreMedianFlag',
+          'mnvFlag'
           );
 
 const my %EXP_BED_PARAMS => (
@@ -110,6 +111,10 @@ const my %EXP_BED_PARAMS_INI => (
           'simpleRepeatBed' => 'simple_repeats.bed.gz',
         );
 
+const my @EXP_MNV_FLAGLIST => (
+            'unmatchedNormalVcfFlag'
+          );
+
 
 #----------------
 #	Init tests
@@ -126,6 +131,7 @@ subtest '_get_yml_config_params' => sub {
   is_deeply($sectParams,\%EXP_SECT_PARAMS, '_get_yml_config_params'." sectParams");
   is_deeply($flagList,\@EXP_FLAGLIST, '_get_yml_config_params'." flagList");
   is_deeply($bedFileParams,\%EXP_BED_PARAMS, '_get_yml_config_params'." bedFileParams");
+  is_deeply($mnv_flaglist, \@EXP_MNV_FLAGLIST, '_get_yml_config_params'." mnvFlagList");
   done_testing();
 };
 
@@ -135,6 +141,7 @@ subtest '_get_cfg_ini_config_params' => sub {
   is_deeply($sectParams,\%EXP_SECT_PARAMS, '_get_cfg_ini_config_params'." sectParams");
   is_deeply($flagList,\@EXP_FLAGLIST, '_get_cfg_ini_config_params'." flagList");
   is_deeply($bedFileParams,\%EXP_BED_PARAMS_INI, '_get_cfg_ini_config_params'." bedFileParams");
+  is_deeply($mnv_flaglist, \@EXP_MNV_FLAGLIST, '_get_cfg_ini_config_params'." mnvFlagList");
   done_testing();
 };
 
@@ -149,7 +156,7 @@ subtest 'getConfigParams' => sub {
   is_deeply($sectParams,\%EXP_SECT_PARAMS, 'getConfigParams_ini'." sectParams");
   is_deeply($flagList,\@EXP_FLAGLIST, 'getConfigParams_ini'." flagList");
   is_deeply($bedFileParams,\%EXP_BED_PARAMS_INI, 'getConfigParams_ini'." bedFileParams");
-
+  is_deeply($mnv_flaglist, \@EXP_MNV_FLAGLIST, 'getConfigParams_ini'." mnvFlagList");
   $opts{'c'} = $YAML_CONFIG;
 
   ($sectParams, $flagList, $bedFileParams) = 

@@ -273,7 +273,7 @@ sub main{
         my $mnv_len = length($$x[3])-1;
         for my $i(0 .. $mnv_len){
           my $thisPos = $$x[1] + $i;
-          if(first {'unmatchedNormalVcfFlag'} @$mnvflaglist && exists($umNormVcf->{$$x[0]})){
+          if(defined($mnvflaglist) && first {'unmatchedNormalVcfFlag'} @$mnvflaglist && exists($umNormVcf->{$$x[0]})){
             $isInUmVCF = getUnmatchedVCFIntersectMatch($$x[0],$thisPos,$umNormVcf->{$$x[0]},$UNMATCHED_VCF_KEY);
           }
           #Use $mnvflaglist of MNV permitted flags instead of $flagList

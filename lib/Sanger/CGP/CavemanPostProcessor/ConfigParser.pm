@@ -121,14 +121,14 @@ sub _get_yml_config_params{
   }
   # MNV may not exist so only warn
   my $mnvflaglist = $section->{$const->config_param_names('CONFIG_MNVFLAGLIST')};
-  if(! $flagList){
+  if(! $mnvflaglist){
     carp("No ".$const->config_param_names('CONFIG_MNVFLAGLIST')." section for $species $seq_type found in config file '$file'.");
   }
   my $bedFileParams = $section->{$const->config_param_names('CONFIG_BEDFILES')};
   if(! $bedFileParams){
     croak("No ".$const->config_param_names('CONFIG_BEDFILES')." section for $species $seq_type found in config file '$file'.");
   }
-  return ($sectParams, $flagList, $bedFileParams);
+  return ($sectParams, $flagList, $bedFileParams, $mnvflaglist);
 }
 
 sub getConfigParams{

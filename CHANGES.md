@@ -1,8 +1,13 @@
 # CHANGES
 
+## 1.11.0
+
+- flag.vcf.config.ini can now be passed as a .yaml or .yml file.
+- Added a utility script to convert old config ini to new yaml format.
+
 ## 1.10.0
 
-- add cCircleci support
+- add Circleci support
 - Addition of optional WXS flags developed alongside Dermatlas project
 
 ## 1.9.3

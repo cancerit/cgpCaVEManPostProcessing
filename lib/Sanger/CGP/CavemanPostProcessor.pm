@@ -39,7 +39,34 @@ use Attribute::Abstract;
 use Data::Dumper;
 use base 'Exporter';
 
-our $VERSION = '1.10.0';
+our $VERSION = '1.11.0';
+our @EXPORT = qw($VERSION);
+
+const my $MATCH_CIG => 'M';
+const my $SKIP_CIG => 'N';
+const my $INS_CIG => 'I';
+const my $DEL_CIG => 'D';
+const my $SOFT_CLIP_CIG => 'S';
+const my $HARD_CLIP_CIG => 'H';
+
+const my $MIN_SINGLE_END_CVG => 10;
+const my $MATCHED_NORMAL_MAX_MUT_PROP => 0.2;
+
+my $muts;
+my $norms;
+my $muts_rds;
+my $norms_rds;
+my $currentPos;
+my $refBase;
+my $mutBase;
+my $keepSW = 0;
+my $minAnalysedQual = 11;
+my $tum_readnames;
+my $norm_readnames;
+my $tum_readnames_arr;
+my $norm_readnames_arr;
+my $tum_readnames_hash;
+my $norm_readnames_hash;
 
 sub new {
   my ($proto) = shift;

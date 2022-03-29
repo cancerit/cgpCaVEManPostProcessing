@@ -521,7 +521,7 @@ sub getVCFToAddResultsOfFilters{
   }
   #Iterate through each flag we need to run.
   foreach my $flagName(@$flagList){
-    continue if $flagName eq 'mnvFlag';
+    next if $flagName eq 'mnvFlag';
     #Get the id of this flag.
     my $flagId = $cfg->val($flagName,"id");
     #Run this flag

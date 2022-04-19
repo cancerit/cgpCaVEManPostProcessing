@@ -84,97 +84,97 @@ my $id_analysis_proc = 123456;
 main(@ARGV);
 
 sub main{
-	setup_config();
-	run_flag();
-	compare($test_out_file, $expect_output,$index, __LINE__);
-	#Test create output directory not existing
-	run_flag_output_dir();
-	compare($test_out_file_new_dir, $expect_output,$index, __LINE__);
-	unlink($test_out_file_new_dir.'.1');
-	rmdir($test_new_dir) or croak("Error trying to rmdir $test_new_dir");
-	# Test flaglist at cmdline single
-	run_flag_one_cmdline_flag();
-	compare($test_out_file, $expect_output_oneflag, $index, __LINE__);
-	# Test flaglist at cmdline multi
-	run_flag_multi_cmdline_flag();
-	compare($test_out_file, $expect_output_multiflag, $index, __LINE__);
+  setup_config();
+  run_flag();
+  compare($test_out_file, $expect_output,$index, __LINE__);
+  #Test create output directory not existing
+  run_flag_output_dir();
+  compare($test_out_file_new_dir, $expect_output,$index, __LINE__);
+  unlink($test_out_file_new_dir.'.1');
+  rmdir($test_new_dir) or croak("Error trying to rmdir $test_new_dir");
+  # Test flaglist at cmdline single
+  run_flag_one_cmdline_flag();
+  compare($test_out_file, $expect_output_oneflag, $index, __LINE__);
+  # Test flaglist at cmdline multi
+  run_flag_multi_cmdline_flag();
+  compare($test_out_file, $expect_output_multiflag, $index, __LINE__);
   # Test mnv flagging
   run_mnv_flag();
   compare($test_out_mnv_file, $expected_output_mnv, undef, __LINE__);
   run_mnv_flag_mnvs();
   compare($test_out_mnv_file,$expected_output_flag_mnv, undef, __LINE__);
-	checkSupportedButNoFlags();
-	checkUnsupportedOption();
-	run_old_flag();
-	#check_old_version_correct
-	compare($test_out_oldVersionVCF, $expected_out_oldVersionVCF, undef,__LINE__);
-	remove_created_files();
+  checkSupportedButNoFlags();
+  checkUnsupportedOption();
+  run_old_flag();
+  #check_old_version_correct
+  compare($test_out_oldVersionVCF, $expected_out_oldVersionVCF, undef,__LINE__);
+remove_created_files();
 }
 
 sub setup_config{
-	my $FH;
-	open($FH, '<', $test_exp_config) || croak("Error trying to open config file $test_exp_config: $!");
-		my @data = <$FH>;
-		my $dat = join("",@data);
-	close($FH);
+  my $FH;
+  open($FH, '<', $test_exp_config) || croak("Error trying to open config file $test_exp_config: $!");
+    my @data = <$FH>;
+    my $dat = join("",@data);
+  close($FH);
 
-	my $OUT;
-	open($OUT, '>', $test_config) || croak("Error trying to open config file for write $test_config: $!");
-		print $OUT $dat;
-	close($OUT);
+  my $OUT;
+  open($OUT, '>', $test_config) || croak("Error trying to open config file for write $test_config: $!");
+    print $OUT $dat;
+  close($OUT);
 }
 
 sub run_flag_one_cmdline_flag{
-	my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
-			" -s human -t genome -m $test_mut_bam -n $test_norm_bam".
-			" -g $test_germ_indel_bed -v $test_vcf_convert_config ".
-			"--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
-			"-u $unmatched_vcf -ref $ref -f matchedNormalProportion";
-	my ($out, $err, $exit) = capture{ system($cmd) };
-	if($exit!=0){
-		warn Dumper($err);
-	}
-	is($exit, 0,'Flagging with single ran correctly');
+  my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
+      " -s human -t genome -m $test_mut_bam -n $test_norm_bam".
+      " -g $test_germ_indel_bed -v $test_vcf_convert_config ".
+      "--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
+      "-u $unmatched_vcf -ref $ref -f matchedNormalProportion";
+  my ($out, $err, $exit) = capture{ system($cmd) };
+  if($exit!=0){
+    warn Dumper($err);
+  }
+  is($exit, 0,'Flagging with single ran correctly');
 }
 
 sub run_flag_multi_cmdline_flag{
-	my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
-			" -s human -t genome -m $test_mut_bam -n $test_norm_bam".
-			" -g $test_germ_indel_bed -v $test_vcf_convert_config ".
-			"--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
-			"-u $unmatched_vcf -ref $ref -f matchedNormalProportion -f singleEndFlag";
-	my ($out, $err, $exit) = capture{ system($cmd) };
-	if($exit!=0){
-		warn Dumper($err);
-	}
-	is($exit, 0,'Flagging with single ran correctly');
+  my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
+      " -s human -t genome -m $test_mut_bam -n $test_norm_bam".
+      " -g $test_germ_indel_bed -v $test_vcf_convert_config ".
+      "--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
+      "-u $unmatched_vcf -ref $ref -f matchedNormalProportion -f singleEndFlag";
+  my ($out, $err, $exit) = capture{ system($cmd) };
+  if($exit!=0){
+    warn Dumper($err);
+  }
+  is($exit, 0,'Flagging with single ran correctly');
 }
 
 sub run_flag_output_dir{
-	my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file_new_dir -c $test_config".
-			" -s human -t genome -m $test_mut_bam -n $test_norm_bam".
-			" -g $test_germ_indel_bed -v $test_vcf_convert_config ".
-			"--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
-			"-u $unmatched_vcf -ref $ref";
-	my ($out, $err, $exit) = capture{ system($cmd) };
-	if($exit!=0){
-		warn Dumper($err);
-	}
-	is($exit, 0,'Flagging with output dir ran correctly');
+  my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file_new_dir -c $test_config".
+      " -s human -t genome -m $test_mut_bam -n $test_norm_bam".
+      " -g $test_germ_indel_bed -v $test_vcf_convert_config ".
+      "--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
+      "-u $unmatched_vcf -ref $ref";
+  my ($out, $err, $exit) = capture{ system($cmd) };
+  if($exit!=0){
+    warn Dumper($err);
+  }
+  is($exit, 0,'Flagging with output dir ran correctly');
 }
 
 
 sub run_flag{
-	my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
-			" -s human -t genome -m $test_mut_bam -n $test_norm_bam".
-			" -g $test_germ_indel_bed -v $test_vcf_convert_config ".
-			"--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
-			"-u $unmatched_vcf -ref $ref";
-	my ($out, $err, $exit) = capture{ system($cmd) };
-	if($exit!=0){
-		die Dumper($cmd,"\n\n",$err);
-	}
-	is($exit, 0,'Flagging ran correctly');
+  my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
+      " -s human -t genome -m $test_mut_bam -n $test_norm_bam".
+      " -g $test_germ_indel_bed -v $test_vcf_convert_config ".
+      "--index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
+      "-u $unmatched_vcf -ref $ref";
+  my ($out, $err, $exit) = capture{ system($cmd) };
+  if($exit!=0){
+    die Dumper($cmd,"\n\n",$err);
+  }
+  is($exit, 0,'Flagging ran correctly');
 }
 
 sub run_mnv_flag_mnvs{
@@ -191,114 +191,114 @@ sub run_mnv_flag_mnvs{
 }
 
 sub run_mnv_flag{
-	my $cmd = "$perl_exec $script -i $test_input_mnv_file -o $test_out_mnv_file -c $test_config".
-			" -s human -t genome -m $test_mut_mnv_bam -n $test_norm_mnv_bam".
-			" -g $test_germ_indel_mnv_bed -v $test_vcf_convert_config ".
-			"-b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
-			"-u $unmatched_mnv_vcf -ref $mnv_ref";
-	my ($out, $err, $exit) = capture{ system($cmd) };
-	if($exit!=0){
-		die Dumper($cmd,"\n\n",$err);
-	}
-	is($exit, 0,'Flagging ran correctly');
+  my $cmd = "$perl_exec $script -i $test_input_mnv_file -o $test_out_mnv_file -c $test_config".
+      " -s human -t genome -m $test_mut_mnv_bam -n $test_norm_mnv_bam".
+      " -g $test_germ_indel_mnv_bed -v $test_vcf_convert_config ".
+      "-b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
+      "-u $unmatched_mnv_vcf -ref $mnv_ref";
+  my ($out, $err, $exit) = capture{ system($cmd) };
+  if($exit!=0){
+    die Dumper($cmd,"\n\n",$err);
+  }
+  is($exit, 0,'Flagging ran correctly');
 }
 
 sub run_old_flag{
-	my $cmd = "$perl_exec $script -i $oldVersionVcf -o $test_out_oldVersionVCF -c $test_config".
-			" -s human -t genome -m $oldVersionMutBam -n $oldVersionNormBam".
-			" -g $test_germ_indel_bed -v $test_vcf_convert_config ".
-			" -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
-			" -u $unmatched_vcf -ref $ref";
-	my ($out, $err, $exit) = capture{ system($cmd) };
+  my $cmd = "$perl_exec $script -i $oldVersionVcf -o $test_out_oldVersionVCF -c $test_config".
+      " -s human -t genome -m $oldVersionMutBam -n $oldVersionNormBam".
+      " -g $test_germ_indel_bed -v $test_vcf_convert_config ".
+      " -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
+      " -u $unmatched_vcf -ref $ref";
+  my ($out, $err, $exit) = capture{ system($cmd) };
     if($exit!=0){
-		warn Dumper($err);
-	}
-	is($exit, 0, 'Old version flagging ran correctly');
+    warn Dumper($err);
+  }
+  is($exit, 0, 'Old version flagging ran correctly');
 }
 
 sub checkSupportedButNoFlags{
-	my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
-			" -s human -t pulldown -m $test_mut_bam -n $test_norm_bam".
-			" -v $test_vcf_convert_config".
-			" --index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
-			"-u $unmatched_vcf -ref $ref";
-	my ($out, $err, $exit) = capture{ system($cmd) };
-	like($err, qr/No flagList found in .+ for section HUMAN_WXS FLAGLIST. No flagging will be done./, 'Correctly exits as no flags available (check message).');
-	isnt($exit, 0, 'Correctly runs with warnings as no flags available (check exitcode).');
+  my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
+      " -s human -t pulldown -m $test_mut_bam -n $test_norm_bam".
+      " -v $test_vcf_convert_config".
+      " --index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc ".
+      "-u $unmatched_vcf -ref $ref";
+  my ($out, $err, $exit) = capture{ system($cmd) };
+  like($err, qr/No flagList found in .+ for section HUMAN_WXS FLAGLIST. No flagging will be done./, 'Correctly exits as no flags available (check message).');
+  isnt($exit, 0, 'Correctly runs with warnings as no flags available (check exitcode).');
 }
 
 sub checkUnsupportedOption{
-	my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
-			" -s human -t pulldown -m $test_mut_bam -n $test_norm_bam".
-			" -v $test_vcf_convert_config".
-			" --index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc -x".
-			" -u $unmatched_vcf -ref $ref";
-	my ($out, $err, $exit) = capture{ system($cmd) };
-	like($err, qr/Unknown parameter: -x at .+ line \d+./, 'Correctly fails for not supported CL option (check message).');
-	isnt($exit, 0, 'Correctly fails for not supported CL option (check exitcode).');
+  my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file -c $test_config".
+      " -s human -t pulldown -m $test_mut_bam -n $test_norm_bam".
+      " -v $test_vcf_convert_config".
+      " --index $index -b $test_snp_bed -ab $test_snp_bed -p $id_analysis_proc -x".
+      " -u $unmatched_vcf -ref $ref";
+  my ($out, $err, $exit) = capture{ system($cmd) };
+  like($err, qr/Unknown parameter: -x at .+ line \d+./, 'Correctly fails for not supported CL option (check message).');
+  isnt($exit, 0, 'Correctly fails for not supported CL option (check exitcode).');
 }
 
 sub compare{
-	my ($test_out_file, $expect_output,$idx, $line_no) = @_;
-	#Read new file
-	my $NW;
-	my $new;
-	if(defined($idx)){
-		$test_out_file .= ".$index"
-	}
-	open($NW,'<',$test_out_file) || croak("Error reading new output $test_out_file : $!");
-		my @dat = <$NW>;
-		$new = join("",@dat);
-		close($NW);
-	#Read expected file
-	my $XP;
-	my $exp;
-	open($XP,'<',$expect_output) || croak("Error reading expected output $expect_output:$!");
-		@dat = <$XP>;
-		$exp = join("",@dat);
-	close($XP);
-	#Make modifications for vcfProcessLog entries etc
+  my ($test_out_file, $expect_output,$idx, $line_no) = @_;
+  #Read new file
+  my $NW;
+  my $new;
+  if(defined($idx)){
+    $test_out_file .= ".$index"
+  }
+  open($NW,'<',$test_out_file) || croak("Error reading new output $test_out_file : $!");
+    my @dat = <$NW>;
+    $new = join("",@dat);
+    close($NW);
+  #Read expected file
+  my $XP;
+  my $exp;
+  open($XP,'<',$expect_output) || croak("Error reading expected output $expect_output:$!");
+    @dat = <$XP>;
+    $exp = join("",@dat);
+  close($XP);
+  #Make modifications for vcfProcessLog entries etc
 
-	my ($current_processLog_date) = $new =~ /##vcfProcessLog_([0-9]+)/;# this is a hack and will replace all occurences with the first date it comes across...
-	$exp =~ s/##vcfProcessLog_[0-9]+/##vcfProcessLog_$current_processLog_date/g;
-	$new =~ s/##vcfProcessLog_[0-9]+/##vcfProcessLog_$current_processLog_date/g;
+  my ($current_processLog_date) = $new =~ /##vcfProcessLog_([0-9]+)/;# this is a hack and will replace all occurences with the first date it comes across...
+  $exp =~ s/##vcfProcessLog_[0-9]+/##vcfProcessLog_$current_processLog_date/g;
+  $new =~ s/##vcfProcessLog_[0-9]+/##vcfProcessLog_$current_processLog_date/g;
 
-	my ($current_analysis_proc_date) = $new =~ /##cgpAnalysisProc_([0-9]+)/;# this is a hack and will replace all occurences with the first date it comes across...
-	$exp =~ s/##cgpAnalysisProc_[0-9]+/##cgpAnalysisProc_$current_processLog_date/g;
-	$new =~ s/##cgpAnalysisProc_[0-9]+/##cgpAnalysisProc_$current_processLog_date/g;
-	######################
+  my ($current_analysis_proc_date) = $new =~ /##cgpAnalysisProc_([0-9]+)/;# this is a hack and will replace all occurences with the first date it comes across...
+  $exp =~ s/##cgpAnalysisProc_[0-9]+/##cgpAnalysisProc_$current_processLog_date/g;
+  $new =~ s/##cgpAnalysisProc_[0-9]+/##cgpAnalysisProc_$current_processLog_date/g;
+  ######################
 
 
 
-	######################
-	## Becuase the params go in in random order we have to take them out and test them seperately.
-	#my ($vcf_test_log_loc,$output_test_string_proces_log_params) = $exp =~ /##vcfProcessLog_([0-9]+\.[0-9]+).+InputVCFParam=<(.+)>>/g;
-	while($exp =~ /##vcfProcessLog_([0-9]+\.[0-9]+)=<InputVCF=<([^>]+)>.+InputVCFParam=<(.+)>>/g){
-		my $vcf_test_log_loc = $1;
-		my $input = $2;
-		my $output_test_string_proces_log_params = $3;
-		my ($vcf_log_loc, $output_proces_log_params) = $new =~ /##vcfProcessLog_($vcf_test_log_loc)=<InputVCF=<$input>.+InputVCFParam=<(.+)>>/g;
-		my $output_test_string_proces_log_params_hash = {};
-		my $output_proces_log_params_hash = {};
+  ######################
+  ## Becuase the params go in in random order we have to take them out and test them seperately.
+  #my ($vcf_test_log_loc,$output_test_string_proces_log_params) = $exp =~ /##vcfProcessLog_([0-9]+\.[0-9]+).+InputVCFParam=<(.+)>>/g;
+  while($exp =~ /##vcfProcessLog_([0-9]+\.[0-9]+)=<InputVCF=<([^>]+)>.+InputVCFParam=<(.+)>>/g){
+    my $vcf_test_log_loc = $1;
+    my $input = $2;
+    my $output_test_string_proces_log_params = $3;
+    my ($vcf_log_loc, $output_proces_log_params) = $new =~ /##vcfProcessLog_($vcf_test_log_loc)=<InputVCF=<$input>.+InputVCFParam=<(.+)>>/g;
+    my $output_test_string_proces_log_params_hash = {};
+    my $output_proces_log_params_hash = {};
 
-		foreach my $pair(split(",",$output_test_string_proces_log_params)){
-			my ($key,$value) = split("=",$pair);
-			$output_test_string_proces_log_params_hash->{$key} = $value;
-		}
+    foreach my $pair(split(",",$output_test_string_proces_log_params)){
+      my ($key,$value) = split("=",$pair);
+      $output_test_string_proces_log_params_hash->{$key} = $value;
+    }
 
-		foreach my $pair(split(",",$output_proces_log_params)){
-			my ($key,$value) = split("=",$pair);
-			$output_proces_log_params_hash->{$key} = $value;
-		}
-		is_deeply($output_proces_log_params_hash,$output_test_string_proces_log_params_hash,"convert:: process log params");
-	}
+    foreach my $pair(split(",",$output_proces_log_params)){
+      my ($key,$value) = split("=",$pair);
+      $output_proces_log_params_hash->{$key} = $value;
+    }
+    is_deeply($output_proces_log_params_hash,$output_test_string_proces_log_params_hash,"convert:: process log params");
+  }
 
-	$exp =~ s/InputVCFParam=<(.+)>>/InputVCFParam=<>>/g;
-	$new =~ s/InputVCFParam=<(.+)>>/InputVCFParam=<>>/g;
-	$exp =~ s/InputVCFVer=<(.+)>>/InputVCFVer=<>>/g;
-	$new =~ s/InputVCFVer=<(.+)>>/InputVCFVer=<>>/g;
-	#check they equate.
-	is_deeply(_tab_data_to_object($new), _tab_data_to_object($exp),"compare $line_no") or diag($new, $exp);
+  $exp =~ s/InputVCFParam=<(.+)>>/InputVCFParam=<>>/g;
+  $new =~ s/InputVCFParam=<(.+)>>/InputVCFParam=<>>/g;
+  $exp =~ s/InputVCFVer=<(.+)>>/InputVCFVer=<>>/g;
+  $new =~ s/InputVCFVer=<(.+)>>/InputVCFVer=<>>/g;
+  #check they equate.
+  is_deeply(_tab_data_to_object($new), _tab_data_to_object($exp),"compare $line_no") or diag($new, $exp);
 }
 
 sub _tab_data_to_object {
@@ -318,10 +318,10 @@ sub _tab_data_to_object {
 }
 
 sub remove_created_files{
-	#vcf
-	unlink($test_out_file.".$index");
-	#config created
-	unlink($test_config);
-	unlink($test_out_oldVersionVCF);
+  #vcf
+  unlink($test_out_file.".$index");
+  #config created
+  unlink($test_config);
+  unlink($test_out_oldVersionVCF);
   unlink($test_out_mnv_file);
 }

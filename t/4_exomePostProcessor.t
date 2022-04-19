@@ -120,7 +120,7 @@ subtest 'Initialise module (ALL params 2)' => sub {
                           'tumBam' => $T_BAM,
                           'normBam' => $T_BAM,
                           'minDepthQual' => 2,
-                          'depthCutoffProportion' => (1/2),
+                          'depthCutoffProportion' => 0.5,
                           'minNormMutAllelequal' => 3,
                           'minAnalysedQual' => 5,
                           'samePosMaxPercent' => 8,
@@ -137,7 +137,7 @@ subtest 'Initialise module (ALL params 2)' => sub {
                           'minRdPosDepth' => 10]);
 
   ok($processor->minDepthQual == 2,"Min depth qual");
-  is($processor->depthCutoffProportion, (1/2),"depthCutoffProportion");
+  is($processor->depthCutoffProportion, 0.5,"depthCutoffProportion");
   ok($processor->minNormalMutAlleleQual == 3,"Min normal mut allele qual");
   ok($processor->minAnalysedQual() == 5,"Min analysed qualities");
   ok($processor->percentageSamePos == 8,"Same position max pct");

@@ -649,32 +649,32 @@ sub runFlagger{
   }elsif($flagName eq 'centromericRepeatFlag'){
     #CENTROMERIC REPEATS
     #Use intersect to check for centromeric repeats
-        return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
+    return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
   }elsif($flagName eq 'snpFlag'){
     #SNPS
     my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-        my $line = undef;
+    my $line = undef;
     $line = $iter->next if(defined($iter)); # undef if not found
     if(defined($line)){
       $$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
     }
     return -1;
-    }elsif($flagName eq 'cavemanMatchNormalProportionFlag'){
-        return $flagger->getCavemanMatchedNormalResult($vcf,$x,$index);
+  }elsif($flagName eq 'cavemanMatchNormalProportionFlag'){
+    return $flagger->getCavemanMatchedNormalResult($vcf,$x,$index);
   }elsif($flagName eq 'phasingFlag'){
     #PHASING
     return $flagger->getPhasingResult();
   }elsif($flagName eq 'annotationFlag'){
     #ANNOTATION
-        return _interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
+    return _interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
   }elsif($flagName eq 'hiSeqDepthFlag'){
     #HIGH SEQ DEPTH
-        return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
+    return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
   }elsif($flagName eq 'codingFlag'){
     #CODING
-        if(_interval_hit($tabixList->{$flagName},$chr,$pos,$pos)){
-            $$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
-        }
+    if(_interval_hit($tabixList->{$flagName},$chr,$pos,$pos)){
+      $$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
+    }
     return -1;
   }elsif($flagName eq 'clippingMedianFlag'){
     $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getClipMedianResult());

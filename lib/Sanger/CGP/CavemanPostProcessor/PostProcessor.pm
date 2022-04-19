@@ -483,7 +483,7 @@ sub _callbackTumFetch{
     if ($cig_str =~ m/$type/){
       $this_read->{softclipcount} = $self->_get_soft_clip_count_from_cigar($algn->cigar_array);
     }
-    $this_read->{primaryalnscore} = $a->aux_get('AS');# $algn->get_tag_values('AS');
+    $this_read->{primaryalnscore} = $a->aux_get('AS');
     $this_read->{qual} = $a->qual;
     $this_read->{start} = $algn->start;
     $this_read->{rdName} = $rdname;
@@ -651,67 +651,67 @@ sub _isCurrentPosCoveredFromAlignment{
 }
 
 sub populate_norms{
-    my ($self, $read) = @_;
-    if(!defined($muts->{'totalNCoverage'})){
-        $muts->{'totalNCoverage'} = 0;
-    }
-    $muts->{'totalNCoverage'} += 1;
+  my ($self, $read) = @_;
+  if(!defined($muts->{'totalNCoverage'})){
+    $muts->{'totalNCoverage'} = 0;
+  }
+  $muts->{'totalNCoverage'} += 1;
 
-    if(!defined($muts->{'allNormBases'})){
-        $muts->{'allNormBases'} = [];
-    }
-    push(@{$muts->{'allNormBases'}},$read->{qbase});
+  if(!defined($muts->{'allNormBases'})){
+    $muts->{'allNormBases'} = [];
+  }
+  push(@{$muts->{'allNormBases'}},$read->{qbase});
 
-    if(!defined($muts->{'allNormBaseQuals'})){
-        $muts->{'allNormBaseQuals'} = [];
-    }
-    push(@{$muts->{'allNormBaseQuals'}},$read->{qscore});
+  if(!defined($muts->{'allNormBaseQuals'})){
+    $muts->{'allNormBaseQuals'} = [];
+  }
+  push(@{$muts->{'allNormBaseQuals'}},$read->{qscore});
 
-    if(!defined($muts->{'allNormStrands'})){
-        $muts->{'allNormStrands'} = [];
-    }
-    push(@{$muts->{'allNormStrands'}},$read->{str});
+  if(!defined($muts->{'allNormStrands'})){
+    $muts->{'allNormStrands'} = [];
+  }
+  push(@{$muts->{'allNormStrands'}},$read->{str});
 
-    return if ($self->keepSW == 0 && defined($read->{xt}) && $read->{xt} eq 'M');
+  return if ($self->keepSW == 0 && defined($read->{xt}) && $read->{xt} eq 'M');
 
   return if($read->{qscore} < $self->minAnalysedQual());
 
-    if(!defined($muts->{'normcvg'})){
-        $muts->{'normcvg'} = 0;
-    }
-    $muts->{'normcvg'} += 1;
+  if(!defined($muts->{'normcvg'})){
+    $muts->{'normcvg'} = 0;
+  }
+  $muts->{'normcvg'} += 1;
 
-    if($read->{str} == +1){
-        $muts->{'npcvg'} += 1;
-    }else{
-        $muts->{'nncvg'} += 1;
-        $read->{rdPos} = ($read->{ln} - $read->{rdPos}) + 1;
-    }
+  if($read->{str} == +1){
+    $muts->{'npcvg'} += 1;
+  }else{
+    $muts->{'nncvg'} += 1;
+    $read->{rdPos} = ($read->{ln} - $read->{rdPos}) + 1;
+  }
 
   return if(uc($read->{qbase}) ne uc($mutBase));
 
-    #Tum quals
-    if(!defined($muts->{'nqs'})){
-        my @empty = ();
-        $muts->{'nqs'} = \@empty;
-    }
-    push(@{$muts->{'nqs'}},$read->{qscore});
+  #Tum quals
+  if(!defined($muts->{'nqs'})){
+    my @empty = ();
+    $muts->{'nqs'} = \@empty;
+  }
+  push(@{$muts->{'nqs'}},$read->{qscore});
 
-    #Tum Rd Pos
-    if(!defined($muts->{'nrp'})){
-        my @empty = ();
-        $muts->{'nrp'} = \@empty;
-    }
-    push(@{$muts->{'nrp'}},$read->{rdPos});
+  #Tum Rd Pos
+  if(!defined($muts->{'nrp'})){
+    my @empty = ();
+    $muts->{'nrp'} = \@empty;
+  }
+  push(@{$muts->{'nrp'}},$read->{rdPos});
 
-    #Tum rd length
-    if(!defined($muts->{'nrl'})){
-        my @empty = ();
-        $muts->{'nrl'} = \@empty;
-    }
-    push(@{$muts->{'nrl'}},$read->{ln});
+  #Tum rd length
+  if(!defined($muts->{'nrl'})){
+    my @empty = ();
+    $muts->{'nrl'} = \@empty;
+  }
+  push(@{$muts->{'nrl'}},$read->{ln});
 
-    return;
+  return;
 }
 
 sub _callbackMatchedNormFetch{

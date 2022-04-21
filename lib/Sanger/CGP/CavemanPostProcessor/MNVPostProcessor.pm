@@ -185,7 +185,7 @@ sub _callbackTumFetch{
     if ($cig_str =~ m/$type/){
       $this_read->{softclipcount} = $self->_get_soft_clip_count_from_cigar($algn->cigar_array);
     }
-    $this_read->{primaryalnscore} = $a->aux_get('AS');# $algn->get_tag_values('AS');
+    $this_read->{primaryalnscore} = $a->aux_get('AS');
     $this_read->{qual} = $a->qual;
     $this_read->{start} = $algn->start;
     $this_read->{rdName} = $rdname;
@@ -324,22 +324,22 @@ sub _isCurrentPosCoveredFromAlignment{
 sub populate_norms{
   my ($self, $read) = @_;
   if(!defined($self->_muts->{'totalNCoverage'})){
-      $self->_muts->{'totalNCoverage'} = 0;
+    $self->_muts->{'totalNCoverage'} = 0;
   }
   $self->_muts->{'totalNCoverage'} += 1;
 
   if(!defined($self->_muts->{'allNormBases'})){
-      $self->_muts->{'allNormBases'} = [];
+    $self->_muts->{'allNormBases'} = [];
   }
   push(@{$self->_muts->{'allNormBases'}},$read->{qbase});
 
   if(!defined($self->_muts->{'allNormBaseQuals'})){
-      $self->_muts->{'allNormBaseQuals'} = [];
+    $self->_muts->{'allNormBaseQuals'} = [];
   }
   push(@{$self->_muts->{'allNormBaseQuals'}},$read->{qscore});
 
   if(!defined($self->_muts->{'allNormStrands'})){
-      $self->_muts->{'allNormStrands'} = [];
+    $self->_muts->{'allNormStrands'} = [];
   }
   push(@{$self->_muts->{'allNormStrands'}},$read->{str});
 
@@ -348,7 +348,7 @@ sub populate_norms{
   return if(min($read->{qscore}) < $self->minAnalysedQual());
 
   if(!defined($self->_muts->{'normcvg'})){
-      $self->_muts->{'normcvg'} = 0;
+    $self->_muts->{'normcvg'} = 0;
   }
   $self->_muts->{'normcvg'} += 1;
 

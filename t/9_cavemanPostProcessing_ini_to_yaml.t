@@ -1,4 +1,4 @@
-# Copyright (c) 2014-2021
+# Copyright (c) 2014-2022
 #
 # Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #

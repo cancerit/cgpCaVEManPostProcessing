@@ -1,5 +1,10 @@
 # CHANGES
 
+## 1.12.0
+
+- Add mnv flagging support.
+  - Use MNVFLAGLIST to define flags to be run over MNVs in combination with mnvFlag in the original FLAGLIST section.
+
 ## 1.11.0
 
 - flag.vcf.config.ini can now be passed as a .yaml or .yml file.

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# Copyright (c) 2014-2021
+# Copyright (c) 2014-2022
 #
 # Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
@@ -52,6 +52,7 @@ WriteMakefile(
                      'PerlIO::gzip' => 0.20,
                      'List::Util'=> 1.56,
                      'YAML::XS' => 0.83,
+                     'Test::MockObject' => 1.20,
                    }
 );
 

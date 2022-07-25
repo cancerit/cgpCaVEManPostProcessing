@@ -1,4 +1,4 @@
-# Copyright (c) 2014-2021
+# Copyright (c) 2014-2022
 #
 # Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
@@ -52,12 +52,12 @@ my $perl_exec = "$^X -I ".(join ':', @INC);
 main(@ARGV);
 
 sub main{
-  run_flag();
+  run_convert();
   compare($test_out_file, $expect_output, __LINE__);
   unlink($test_out_file);
 }
 
-sub run_flag{
+sub run_convert{
   my $cmd = "$perl_exec $script -i $test_input_file -o $test_out_file";
   my ($out, $err, $exit) = capture{ system($cmd) };
   if($exit!=0){

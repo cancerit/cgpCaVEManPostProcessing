@@ -1,4 +1,4 @@
-# Copyright (c) 2014-2021
+# Copyright (c) 2014-2022
 #
 # Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
@@ -44,7 +44,7 @@ my $test_data_path = "$Bin/../testData/";
 # Add modules here that cannot be instantiated (should be extended and have no 'new')
 # or need a set of inputs - these should be tested in own test script
 use constant MODULE_SKIP => qw( Sanger::CGP::CavemanPostProcessor Sanger::CGP::CavemanPostProcessor::PostProcessor Sanger::CGP::CavemanPostProcessing);
-use constant VER_MODULE_SKIP => qw ( Sanger::CGP::CavemanPostProcessor::ConfigParser );
+use constant VER_MODULE_SKIP => qw ( Sanger::CGP::CavemanPostProcessor::ConfigParser Sanger::CGP::CavemanPostProcessor::Constants );
 
 my $init_cwd = getcwd;
 

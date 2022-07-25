@@ -1,6 +1,6 @@
 # CHANGES
 
-## mnv-flags
+## 1.12.0
 
 - Add mnv flagging support.
   - Use MNVFLAGLIST to define flags to be run over MNVs in combination with mnvFlag in the original FLAGLIST section.

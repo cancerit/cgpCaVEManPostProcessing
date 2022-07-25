@@ -1,0 +1,96 @@
+##fileformat=VCFv4.1
+##fileDate=20211031
+##reference=genome.fa
+##vcfProcessLog=<InputVCF=<.>,InputVCFSource=<CaVEMan>,InputVCFParam=<SNP_CUTOFF=0.95,MUT_CUTOFF=0.8,PRIOR_MUT_RATE=6e-06,PRIOR_SNP_RATE=0.0001,NORMAL_CONTAMINATION=0,REF_BIAS=0.95>>
+##cavemanVersion=1.15.1
+##contig=<ID=chr1,assembly=NCBI38,length=248956422,species=Human>
+##contig=<ID=chr2,assembly=NCBI38,length=242193529,species=Human>
+##contig=<ID=chr3,assembly=NCBI38,length=198295559,species=Human>
+##contig=<ID=chr4,assembly=NCBI38,length=190214555,species=Human>
+##contig=<ID=chr5,assembly=NCBI38,length=181538259,species=Human>
+##contig=<ID=chr6,assembly=NCBI38,length=170805979,species=Human>
+##contig=<ID=chr7,assembly=NCBI38,length=159345973,species=Human>
+##contig=<ID=chr8,assembly=NCBI38,length=145138636,species=Human>
+##contig=<ID=chr9,assembly=NCBI38,length=138394717,species=Human>
+##contig=<ID=chr10,assembly=NCBI38,length=133797422,species=Human>
+##contig=<ID=chr11,assembly=NCBI38,length=135086622,species=Human>
+##contig=<ID=chr12,assembly=NCBI38,length=133275309,species=Human>
+##contig=<ID=chr13,assembly=NCBI38,length=114364328,species=Human>
+##contig=<ID=chr14,assembly=NCBI38,length=107043718,species=Human>
+##contig=<ID=chr15,assembly=NCBI38,length=101991189,species=Human>
+##contig=<ID=chr16,assembly=NCBI38,length=90338345,species=Human>
+##contig=<ID=chr17,assembly=NCBI38,length=83257441,species=Human>
+##contig=<ID=chr18,assembly=NCBI38,length=80373285,species=Human>
+##contig=<ID=chr19,assembly=NCBI38,length=58617616,species=Human>
+##contig=<ID=chr20,assembly=NCBI38,length=64444167,species=Human>
+##contig=<ID=chr21,assembly=NCBI38,length=46709983,species=Human>
+##contig=<ID=chr22,assembly=NCBI38,length=50818468,species=Human>
+##contig=<ID=chrX,assembly=NCBI38,length=156040895,species=Human>
+##contig=<ID=chrY,assembly=NCBI38,length=57227415,species=Human>
+##INFO=<ID=DP,Number=1,Type=Integer,Description="Total Depth">
+##INFO=<ID=MP,Number=1,Type=Float,Description="Sum of CaVEMan somatic genotype probabilities">
+##INFO=<ID=GP,Number=1,Type=Float,Description="Sum of CaVEMan germline genotype probabilities">
+##INFO=<ID=TG,Number=1,Type=String,Description="Most probable genotype as called by CaVEMan">
+##INFO=<ID=TP,Number=1,Type=Float,Description="Probability of most probable genotype as called by CaVEMan">
+##INFO=<ID=SG,Number=1,Type=String,Description="2nd most probable genotype as called by CaVEMan">
+##INFO=<ID=SP,Number=1,Type=Float,Description="Probability of 2nd most probable genotype as called by CaVEMan">
+##INFO=<ID=DS,Number=.,Type=String,Description="DBSnp ID of known SNP">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=FAZ,Number=1,Type=Integer,Description="Reads presenting a A for this position, forward strand">
+##FORMAT=<ID=FCZ,Number=1,Type=Integer,Description="Reads presenting a C for this position, forward strand">
+##FORMAT=<ID=FGZ,Number=1,Type=Integer,Description="Reads presenting a G for this position, forward strand">
+##FORMAT=<ID=FTZ,Number=1,Type=Integer,Description="Reads presenting a T for this position, forward strand">
+##FORMAT=<ID=RAZ,Number=1,Type=Integer,Description="Reads presenting a A for this position, reverse strand">
+##FORMAT=<ID=RCZ,Number=1,Type=Integer,Description="Reads presenting a C for this position, reverse strand">
+##FORMAT=<ID=RGZ,Number=1,Type=Integer,Description="Reads presenting a G for this position, reverse strand">
+##FORMAT=<ID=RTZ,Number=1,Type=Integer,Description="Reads presenting a T for this position, reverse strand">
+##FORMAT=<ID=PM,Number=1,Type=Float,Description="Proportion of mut allele">
+##SAMPLE=<ID=NORMAL,Description="Normal",Accession=.,Platform=ILLUMINA,Protocol=WXS,SampleName=test_norm,Source=.>
+##SAMPLE=<ID=TUMOUR,Description="Tumour",Accession=.,Platform=ILLUMINA,Protocol=WXS,SampleName=test_tum,Source=.>
+##vcfProcessLog=<InputVCF=<caveman_c.test.vcf.gz>,InputVCFSource=<merge_mnv_to_vcf.py>,InputVCFParam=<vcfin=test.vcf.gz,output=test.mnv.vcf,smart_phased_output=caveman_c.test.phased,bed=caveman_c.test.bed,cutoff=0.0,exclude=2>>
+##INFO=<ID=DP_1,Number=1,Type=Integer,Description="Total Depth (MNV allele 1 in series)">
+##INFO=<ID=DP_2,Number=1,Type=Integer,Description="Total Depth (MNV allele 2 in series)">
+##INFO=<ID=MP_1,Number=1,Type=Float,Description="Sum of CaVEMan somatic genotype probabilities (MNV allele 1 in series)">
+##INFO=<ID=MP_2,Number=1,Type=Float,Description="Sum of CaVEMan somatic genotype probabilities (MNV allele 2 in series)">
+##INFO=<ID=GP_1,Number=1,Type=Float,Description="Sum of CaVEMan germline genotype probabilities (MNV allele 1 in series)">
+##INFO=<ID=GP_2,Number=1,Type=Float,Description="Sum of CaVEMan germline genotype probabilities (MNV allele 2 in series)">
+##INFO=<ID=TG_1,Number=1,Type=String,Description="Most probable genotype as called by CaVEMan (MNV allele 1 in series)">
+##INFO=<ID=TG_2,Number=1,Type=String,Description="Most probable genotype as called by CaVEMan (MNV allele 2 in series)">
+##INFO=<ID=TP_1,Number=1,Type=Float,Description="Probability of most probable genotype as called by CaVEMan (MNV allele 1 in series)">
+##INFO=<ID=TP_2,Number=1,Type=Float,Description="Probability of most probable genotype as called by CaVEMan (MNV allele 2 in series)">
+##INFO=<ID=SG_1,Number=1,Type=String,Description="2nd most probable genotype as called by CaVEMan (MNV allele 1 in series)">
+##INFO=<ID=SG_2,Number=1,Type=String,Description="2nd most probable genotype as called by CaVEMan (MNV allele 2 in series)">
+##INFO=<ID=SP_1,Number=1,Type=Float,Description="Probability of 2nd most probable genotype as called by CaVEMan (MNV allele 1 in series)">
+##INFO=<ID=SP_2,Number=1,Type=Float,Description="Probability of 2nd most probable genotype as called by CaVEMan (MNV allele 2 in series)">
+##INFO=<ID=DS_1,Number=.,Type=String,Description="DBSnp ID of known SNP (MNV allele 1 in series)">
+##INFO=<ID=DS_2,Number=.,Type=String,Description="DBSnp ID of known SNP (MNV allele 2 in series)">
+##FORMAT=<ID=GT_1,Number=1,Type=String,Description="Genotype (MNV allele 1 in series)">
+##FORMAT=<ID=GT_2,Number=1,Type=String,Description="Genotype (MNV allele 2 in series)">
+##FORMAT=<ID=FAZ_1,Number=1,Type=Integer,Description="Reads presenting a A for this position, forward strand (MNV allele 1 in series)">
+##FORMAT=<ID=FAZ_2,Number=1,Type=Integer,Description="Reads presenting a A for this position, forward strand (MNV allele 2 in series)">
+##FORMAT=<ID=FCZ_1,Number=1,Type=Integer,Description="Reads presenting a C for this position, forward strand (MNV allele 1 in series)">
+##FORMAT=<ID=FCZ_2,Number=1,Type=Integer,Description="Reads presenting a C for this position, forward strand (MNV allele 2 in series)">
+##FORMAT=<ID=FGZ_1,Number=1,Type=Integer,Description="Reads presenting a G for this position, forward strand (MNV allele 1 in series)">
+##FORMAT=<ID=FGZ_2,Number=1,Type=Integer,Description="Reads presenting a G for this position, forward strand (MNV allele 2 in series)">
+##FORMAT=<ID=FTZ_1,Number=1,Type=Integer,Description="Reads presenting a T for this position, forward strand (MNV allele 1 in series)">
+##FORMAT=<ID=FTZ_2,Number=1,Type=Integer,Description="Reads presenting a T for this position, forward strand (MNV allele 2 in series)">
+##FORMAT=<ID=RAZ_1,Number=1,Type=Integer,Description="Reads presenting a A for this position, reverse strand (MNV allele 1 in series)">
+##FORMAT=<ID=RAZ_2,Number=1,Type=Integer,Description="Reads presenting a A for this position, reverse strand (MNV allele 2 in series)">
+##FORMAT=<ID=RCZ_1,Number=1,Type=Integer,Description="Reads presenting a C for this position, reverse strand (MNV allele 1 in series)">
+##FORMAT=<ID=RCZ_2,Number=1,Type=Integer,Description="Reads presenting a C for this position, reverse strand (MNV allele 2 in series)">
+##FORMAT=<ID=RGZ_1,Number=1,Type=Integer,Description="Reads presenting a G for this position, reverse strand (MNV allele 1 in series)">
+##FORMAT=<ID=RGZ_2,Number=1,Type=Integer,Description="Reads presenting a G for this position, reverse strand (MNV allele 2 in series)">
+##FORMAT=<ID=RTZ_1,Number=1,Type=Integer,Description="Reads presenting a T for this position, reverse strand (MNV allele 1 in series)">
+##FORMAT=<ID=RTZ_2,Number=1,Type=Integer,Description="Reads presenting a T for this position, reverse strand (MNV allele 2 in series)">
+##FORMAT=<ID=PM_1,Number=1,Type=Float,Description="Proportion of mut allele (MNV allele 1 in series)">
+##FORMAT=<ID=PM_2,Number=1,Type=Float,Description="Proportion of mut allele (MNV allele 2 in series)">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NORMAL	TUMOUR
+chr16	12564124	7e1ef6c6-3aaf-11ec-85ef-a787a78d7800;7e1ef6f8-3aaf-11ec-85ef-a787a78d7800	CG	TA	.	.	DP_1=60;MP_1=1.0;GP_1=1.3e-15;TG_1=CC/CTTTT;TP_1=0.56;SG_1=CC/CCTTT;SP_1=0.34;DP_2=60;MP_2=1.0;GP_2=1.3e-15;TG_2=GG/AAAAG;TP_2=0.56;SG_2=GG/AAAGG;SP_2=0.33	GT_1:FAZ_1:FCZ_1:FGZ_1:FTZ_1:RAZ_1:RCZ_1:RGZ_1:RTZ_1:PM_1:GT_2:FAZ_2:FCZ_2:FGZ_2:FTZ_2:RAZ_2:RCZ_2:RGZ_2:RTZ_2:PM_2	0|0:0:27:0:0:0:28:0:0:0.0:0|0:0:0:27:0:0:0:28:0:0.0	0|1:0:0:0:2:0:1:0:2:0.8:0|1:2:0:0:0:2:0:1:0:0.8
+chr16	12567488	7e1ef72a-3aaf-11ec-85ef-a787a78d7800	A	G	.	.	DP=52;MP=1.0;GP=1.4e-13;TG=AA/AGGGG;TP=0.45;SG=AA/AAGGG;SP=0.36	GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM	0|0:19:0:0:0:29:0:0:0:0.0	0|1:1:0:2:0:0:0:1:0:0.75
+chr16	12567560	7e1ef75c-3aaf-11ec-85ef-a787a78d7800	G	A	.	.	DP=46;MP=1.0;GP=1.5e-11;TG=GG/AAAAG;TP=0.54;SG=GG/AAAGG;SP=0.32	GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM	0|0:0:0:19:0:0:0:22:0:0.0	0|1:2:0:0:0:2:0:1:0:0.8
+chr16	12568471	7e1ef798-3aaf-11ec-85ef-a787a78d7800	C	G	.	.	DP=213;MP=1.0;GP=1.1e-12;TG=CC/CCCGG;TP=1.0;SG=CC/CCCCG;SP=1.8e-06	GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM	0|0:0:24:0:0:0:21:0:0:0.0	0|1:0:76:47:0:0:31:14:0:0.36
+chr16	12568563	7e1ef7ca-3aaf-11ec-85ef-a787a78d7800	C	T	.	.	DP=214;MP=1.0;GP=5.4e-13;TG=CC/CCCTT;TP=1.0;SG=CC/CCTTT;SP=0.00033	GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM	0|0:0:21:0:0:0:25:0:0:0.0	0|1:0:22:0:28:0:74:0:44:0.43
+chr16	12568729	7e1ef7fc-3aaf-11ec-85ef-a787a78d7800;7e1ef89c-3aaf-11ec-85ef-a787a78d7800	AC	CA	.	.	SPCONF=0.49995027580426177;DP_1=54;MP_1=1.0;GP_1=2.1e-12;TG_1=AA/AAACC;TP_1=0.48;SG_1=AA/AAAAC;SP_1=0.41;DP_2=53;MP_2=0.86;GP_2=3.5e-12;TG_2=CC/AACCC;TP_2=0.41;SG_2=CC/ACCCC;SP_2=0.35	GT_1:FAZ_1:FCZ_1:FGZ_1:FTZ_1:RAZ_1:RCZ_1:RGZ_1:RTZ_1:PM_1:GT_2:FAZ_2:FCZ_2:FGZ_2:FTZ_2:RAZ_2:RCZ_2:RGZ_2:RTZ_2:PM_2	0|0:18:0:0:0:26:0:0:0:0.0:0|0:0:18:0:0:0:25:0:0:0.0	0|1:0:0:0:0:7:3:0:0:0.3:0|1:0:0:0:0:3:7:0:0:0.3
+chr16	12577175	7e1ef8d8-3aaf-11ec-85ef-a787a78d7800	G	C	.	.	DP=61;MP=1.0;GP=9.9e-15;TG=GG/CCGGG;TP=0.49;SG=GG/CCCGG;SP=0.36	GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM	0|0:0:0:26:0:0:0:26:0:0.0	0|1:0:4:5:0:0:0:0:0:0.44
+chr16	12577196	7e1ef90a-3aaf-11ec-85ef-a787a78d7800	G	A	.	.	DP=62;MP=1.0;GP=7.3e-14;TG=GG/AAAGG;TP=0.57;SG=GG/AAGGG;SP=0.34	GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM	0|0:0:0:26:0:0:0:23:0:0.0	0|1:7:0:6:0:0:0:0:0:0.54
+chr16	12577362	7e1ef93c-3aaf-11ec-85ef-a787a78d7800	C	T	.	.	DP=53;MP=0.97;GP=1.4e-13;TG=CC/CCTTT;TP=0.41;SG=CC/CCCTT;SP=0.26	GT:FAZ:FCZ:FGZ:FTZ:RAZ:RCZ:RGZ:RTZ:PM	0|0:0:30:0:0:0:18:0:0:0.0	0|1:0:0:0:2:0:2:0:1:0.6

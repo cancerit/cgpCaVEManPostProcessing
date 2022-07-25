@@ -1,4 +1,4 @@
-# Copyright (c) 2014-2021
+# Copyright (c) 2014-2022
 #
 # Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
@@ -35,37 +35,38 @@ use Carp;
 use Const::Fast qw(const);
 
 use Sanger::CGP::CavemanPostProcessor;
-our $VERSION = Sanger::CGP::CavemanPostProcessor->VERSION;
+use Sanger::CGP::CavemanPostProcessor::Constants;
 
-use base qw(Sanger::CGP::CavemanPostProcessor::PostProcessor);
+use parent qw(Sanger::CGP::CavemanPostProcessor::PostProcessor);
 
-const my $MAX_MATCHED_NORM_MUT_ALLELE_PROP => 0.05;
-const my $MAX_PHASING_MINORITY_STRAND_PROP => 0.04;
-const my $RD_POS_BEGINNING_OF_RD_PROP => 0.08;
-const my $RD_POS_END_OF_TWOTHIRDS_EXTEND_PROP => 0.08;
-const my $MIN_PASS_AVG_QUAL_PENTAMER => 20;
-const my $SAME_RD_POS_PERCENT => 80;
-const my $MAX_TUM_INDEL_PROP => 10;
-const my $MAX_NORM_INDEL_PROP => 10;
-const my $MIN_AVG_MAP_QUAL => 21;
-const my $MIN_AVG_PHASING_BASE_QUAL => 21;
-const my $MIN_DEPTH_QUAL => 25;
-const my $MIN_NORM_MUT_ALLELE_BASE_QUAL => 15;
-const my $MIN_RD_POS_DEPTH => 8;
-const my $MATCHED_NORMAL_ALLELE_HICVG_CUTOFF => 2;
-const my $MAX_MATCHED_NORMAL_ALLELE_HICVG_PROPORTION => 0.03;
+my $const = 'Sanger::CGP::CavemanPostProcessor::Constants';
+
+sub new{
+  my ($proto) = shift;
+  my $class = ref($proto) || $proto;
+  my %inputs = @_;
+  my $self = $class->SUPER::new(%inputs);
+  bless $self, $class;
+  return $self;
+}
 
 #---------------
 #	Init methods
 #---------------
-
 sub _init{
 	my ($self,$inputs) = @_;
-	$self->matchedNormalAlleleHiCvgCutoff($inputs->{'matchedNormalAlleleHiCvgCutoff'});
-	$self->maxMatchedNormalAlleleHiCvgProportion($inputs->{'maxMatchedNormalAlleleHiCvgProportion'});
-	$self->minSingleEndCoverage($inputs->{'minSingleEndCoverage'});
-	$self->SUPER::_init($inputs);
-	return $self;
+  my ($self,$inputs) = @_;
+  if(!defined($inputs->{'tumBam'}) || !defined($inputs->{'normBam'})){
+    croak("tumBam and normBam are required for initialisation.\n");
+  }
+  $self->tumBam($inputs->{'tumBam'}, $inputs->{'ref'});
+  $self->normBam($inputs->{'normBam'}, $inputs->{'ref'});
+  $self->keepSW($inputs->{'keepSW'}) if exists $inputs->{'keepSW'};
+  $self->minAnalysedQual($inputs->{'minAnalysedQual'}) if exists $inputs->{'minAnalysedQual'};
+  $self->matchedNormalAlleleHiCvgCutoff($inputs->{'matchedNormalAlleleHiCvgCutoff'});
+  $self->maxMatchedNormalAlleleHiCvgProportion($inputs->{'maxMatchedNormalAlleleHiCvgProportion'});
+  $self->SUPER::_init($inputs);
+  return $self;
 }
 
 sub clearResults{
@@ -110,7 +111,7 @@ sub matchedNormalAlleleHiCvgCutoff{
 		 $self->{'mnahcc'} = $p;
 	}else{
 		if(!defined($self->{'mnahcc'})){
-			$self->{'mnahcc'} = $MATCHED_NORMAL_ALLELE_HICVG_CUTOFF;
+			$self->{'mnahcc'} = $const->default_flag_values('MATCHED_NORMAL_ALLELE_HICVG_CUTOFF');
 		}
 	}
 	return $self->{'mnahcc'};
@@ -122,7 +123,7 @@ sub maxMatchedNormalAlleleHiCvgProportion{
 		 $self->{'mmnahcvp'} = $p;
 	}else{
 		if(!defined($self->{'mmnahcvp'})){
-			$self->{'mmnahcvp'} = $MAX_MATCHED_NORMAL_ALLELE_HICVG_PROPORTION;
+			$self->{'mmnahcvp'} = $const->default_flag_values('MAX_MATCHED_NORMAL_ALLELE_HICVG_PROPORTION');
 		}
 	}
 	return $self->{'mmnahcvp'};
@@ -150,33 +151,19 @@ CavemanPostProcessor - Perl module for post processing CaVEMan data.
   my $processor = CavemanPostProcessor->new(tumBam => 'tumBamPath', normBam => 'normBamPath'); #Required
 
   #Optional...
-  											'minDepthQual' => 25,
-                                            'depthCutoffProportion' => 0.333333
-  											'minNormMutAllelequal' => 20,
-  											'maxNormalMutAlleleCount' => 1,
-  											'minAnalysedQual' => 10,
-  											'samePosMaxPercent' => 80,
-  											'keepSW' => 1,
-  											'maxTumIndelProportion' => 10,
-  											'maxNormIndelProportion' => 10 ,
-  											'pentamerMinPassAvgQual'  => 20,
-  											'minPassPhaseQual'=> 21,
-  											'minPassAvgMapQual' =>	,
-  											'maxMatchedNormalAlleleProportion' => 0.05
-
-	foreach (chromosome){
-		foreach(mutant position){
-			$processor->runProcess($chr,$start,$stop,$refBase,$mutBase);
-			if($processor->getDepthResult == 1 &&
-						$processor->getReadPositionResult == 1 &&
-						$processor->getNormMutsAllelesResult == 1 &&
-						$postProcessor->getUnmatchedNormalResult == 1){
-				$pass = 1;
-			}
-		}
-	}
-
-
+                        'minDepthQual' => 25,
+                        'depthCutoffProportion' => 0.333333
+                        'minNormMutAllelequal' => 20,
+                        'maxNormalMutAlleleCount' => 1,
+                        'minAnalysedQual' => 10,
+                        'samePosMaxPercent' => 80,
+                        'keepSW' => 1,
+                        'maxTumIndelProportion' => 10,
+                        'maxNormIndelProportion' => 10 ,
+                        'pentamerMinPassAvgQual'  => 20,
+                        'minPassPhaseQual'=> 21,
+                        'minPassAvgMapQual' =>	,
+                        'maxMatchedNormalAlleleProportion' => 0.05
 
 =head1 DESCRIPTION
 

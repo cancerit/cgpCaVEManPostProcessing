@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# Copyright (c) 2014-2021
+# Copyright (c) 2014-2022
 #
 # Author: CASM/Cancer IT <cgphelp@sanger.ac.uk>
 #
@@ -46,9 +46,11 @@ use Sanger::CGP::CavemanPostProcessor;
 use Sanger::CGP::CavemanPostProcessor::ConfigParser;
 use Sanger::CGP::CavemanPostProcessor::ExomePostProcessor;
 use Sanger::CGP::CavemanPostProcessor::GenomePostProcessor;
+use Sanger::CGP::CavemanPostProcessor::MNVPostProcessor;
 use Pod::Usage;
 use FindBin qw($Bin);
 use Set::IntervalTree;
+use List::Util qw (first);
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Bio::DB::HTS::Tabix;
 use File::Path qw(make_path);
@@ -64,6 +66,8 @@ const my $FLAG_CONFIG => '%s/%s/%s/flag.vcf.config.ini';
 const my $DEFAULT_LINE_CACHE => 2000;
 const my $OLD_CAVE_FLAG_BUG_FLAG => 'CB';
 const my $OLD_CAVE_FLAG_BUG_DESC => 'Bug in older versions of CaVEMan means this position cannot be flagged';
+const my $MNV_INFO_DESC => "Flags failed for %d base in MNV";
+const my $MNV_INFO_ID => 'MNVFLAG_';
 const my $GOOD_CAVE_VER => '0_3_1';
 
 const my $CENTROMERIC_REPEAT_HIT_KEY => 'CENT';
@@ -74,6 +78,7 @@ const my $ANNOTATABLE_HIT_KEY => 'ANN';
 const my $CODING_ANNOTATION_HIT_KEY => 'COD';
 const my $HIGH_SEQ_DEPTH_HIT_KEY => 'HSD';
 const my $UNMATCHED_VCF_KEY => 'UMK';
+const my $SMARTPHASE_SCORE_INFO => 'SPCONF';
 
 const my $CENTROMERIC_REP_BED_PARAMETER => 'centromericRepeatBed';
 const my $SIMPLE_REP_BED_PARAMETER => 'simpleRepeatBed';
@@ -91,15 +96,12 @@ const my $OLD_CAVE_BUG => 'CB';
 const my $UNMATCHED_FORMAT_VCF => 'VCF';
 const my $UNMATCHED_FORMAT_BED=> 'BED';
 
-const my $VCF_COLUMN_NORMAL => 'NORMAL';
-const my $VCF_COLUMN_TUMOUR => 'TUMOUR';
-const my $VCF_COLUMN_FORMAT => 'FORMAT';
-
 my $index = undef;
 my $flagopts = undef;
 my $intersectFlagStore;
 my $unmatchedForOutput;
 my $unmatchedFH;
+my $const = 'Sanger::CGP::CavemanPostProcessor::Constants';
 my $umformat = $UNMATCHED_FORMAT_VCF;
 
 my $opts = option_builder();
@@ -156,7 +158,7 @@ sub main{
   my $umNormVcf;
   my $tabixList;
   my ($configParams,$flagList,$centBed,$simpBed,$snpBed,
-        $indelBed,$annoBed,$codingBed,$hsdBed) = setupFromConfig($opts);
+        $indelBed,$annoBed,$codingBed,$hsdBed,$mnvflaglist) = setupFromConfig($opts);
   warn "Performing intersects\n" if($opts->{'loud'});
     if(grep(/centromericRepeatFlag/,@$flagList)){
       my $idx = $centBed.".tbi";
@@ -262,10 +264,36 @@ sub main{
       $$x[7]=$vcf->add_info_field($$x[7],'SNP'=>undef,'coding'=>undef,'ASRD'=>undef,
                                                         'CLPM'=>undef,'ASMD'=>undef,'SR'=>undef);
       #Files are sorted by chr/pos, so we can open the tabix index once per vcf file.
-      if($unmatchedVCFFlag==1 && exists($umNormVcf->{$$x[0]})){
-        $isInUmVCF = getUnmatchedVCFIntersectMatch($$x[0],$$x[1],$umNormVcf->{$$x[0]},$UNMATCHED_VCF_KEY);
+      my $this_flagger;
+      my $results = ();
+      my $results_arr = [];
+      if (length($$x[3]) > 1) {
+        $this_flagger = $flagger->{'MNV'};
+        #Divide MNV into SNV sections and flag each as an individual SNV
+        my $mnv_len = length($$x[3])-1;
+        for my $i(0 .. $mnv_len){
+          my $thisPos = $$x[1] + $i;
+          if(defined($mnvflaglist) && first {'unmatchedNormalVcfFlag'} @$mnvflaglist && exists($umNormVcf->{$$x[0]})){
+            $isInUmVCF = getUnmatchedVCFIntersectMatch($$x[0],$thisPos,$umNormVcf->{$$x[0]},$UNMATCHED_VCF_KEY);
+          }
+          #Use $mnvflaglist of MNV permitted flags instead of $flagList
+          $results = getVCFToAddResultsOfFilters($$x[0],$thisPos,substr($$x[3],$i,1),substr($$x[4],$i,1),$mnvflaglist,$this_flagger,$cfg,$x,$vcf,$configParams,$isInUmVCF,$tabixList,$i);
+          push(@$results_arr,$results);
+        }
+      }else{
+        if($unmatchedVCFFlag==1 && exists($umNormVcf->{$$x[0]})){
+          $isInUmVCF = getUnmatchedVCFIntersectMatch($$x[0],$$x[1],$umNormVcf->{$$x[0]},$UNMATCHED_VCF_KEY);
+        }
+        $this_flagger = $flagger->{'SNV'};
+        $results = getVCFToAddResultsOfFilters($$x[0],$$x[1],$$x[3],$$x[4],$flagList,$this_flagger,$cfg,$x,$vcf,$configParams,$isInUmVCF,$tabixList,$index);
       }
-      my $results = getVCFToAddResultsOfFilters($$x[0],$$x[1],$$x[3],$$x[4],$flagList,$flagger,$cfg,$x,$vcf,$configParams,$isInUmVCF,$tabixList);
+      #Only if we have a list of mnv usable flags and the MNVflag itself
+      my $mnv_flagname = $const->flag_names('mnvFlag');
+      if(defined $mnvflaglist && scalar(@$mnvflaglist) > 0 && first {$mnv_flagname} @$flagList && length($$x[3]) > 1){
+        #TODO run mnv flag here, use list of mnv flags and get results of all flags to apply to each position in the MNV
+        #Run MNV specific flag here
+        ($results, $vcf, $x) = $flagger->{'MNV'}->run_mnv_flag($results_arr,$vcf,$x);
+      }
       #Add the relevant filters or PASS to the filter section.
       $$x[6]=$vcf->add_filter($$x[6],%$results);
       #Validate this line and append this line to the output file;
@@ -484,7 +512,7 @@ sub _trim_file_path{
 }
 
 sub getVCFToAddResultsOfFilters{
-  my ($chr,$pos,$wt,$mut,$flagList,$flagger,$cfg,$x,$vcf,$configParams,$isInUmVCF,$tabixList) = @_;
+  my ($chr,$pos,$wt,$mut,$flagList,$flagger,$cfg,$x,$vcf,$configParams,$isInUmVCF,$tabixList,$index) = @_;
   my %resFlags = ();
   $flagger->runProcess($chr,$pos,$pos,$wt,$mut);
   if($oldCaveVersion && (!exists($flagger->_muts->{'tqs'}) || scalar(@{$flagger->_muts->{'tqs'}})== 0)){
@@ -493,10 +521,11 @@ sub getVCFToAddResultsOfFilters{
   }
   #Iterate through each flag we need to run.
   foreach my $flagName(@$flagList){
+    next if $flagName eq 'mnvFlag';
     #Get the id of this flag.
     my $flagId = $cfg->val($flagName,"id");
     #Run this flag
-    my $flagRes = runFlagger($flagger,$flagName,$flagId,$chr,$pos,$mut,$x,$vcf,$configParams,$isInUmVCF,$tabixList);
+    my $flagRes = runFlagger($flagger,$flagName,$flagId,$chr,$pos,$mut,$x,$vcf,$configParams,$isInUmVCF,$tabixList,$index);
     #Add inverse of the flag result to the resFlags (we return 1 for pass... fails want to be added to filter)
     if($flagName !~ m/(snp|coding)Flag/){
       $resFlags{$flagId} = !$flagRes;
@@ -544,7 +573,7 @@ sub getUnmatchedVCFIntersectMatch{
 }
 
 sub runFlagger{
-  my ($flagger,$flagName,$flagId,$chr,$pos,$mut,$x,$vcf,$cfg,$isInUmVCF,$tabixList) = @_;
+  my ($flagger,$flagName,$flagId,$chr,$pos,$mut,$x,$vcf,$cfg,$isInUmVCF,$tabixList,$index) = @_;
   my $coord = $chr.':'.$pos;
   if($flagName eq 'depthFlag'){
     #DEPTH
@@ -566,14 +595,6 @@ sub runFlagger{
   }elsif($flagName eq 'germlineIndelFlag'){
     #GERMLINE INDEL
     return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
-    #Use intersect to check for indel
-  #   my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-  #   my $line = undef;
-    # $line = $iter->next if(defined($iter)); # undef if not found
-  #   if(defined($line)){
-  #     return 0;
-  #   }
-  #   return 1;
   }elsif($flagName eq 'tumIndelDepthFlag'){
     #TUM INDEL DEPTH
     return $flagger->getTumIndelReadDepthResult();
@@ -583,13 +604,6 @@ sub runFlagger{
   }elsif($flagName eq 'simpleRepeatFlag'){
     #SIMPLE REPEATS
         return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
-  #   my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-    # my $line = undef;
-  #   $line = $iter->next if(defined($iter)); # undef if not found
-  #   if(defined($line)){
-  #     return 0;
-  #   }
-  #   return 1;
   }elsif($flagName eq 'unmatchedNormalVcfFlag'){
     if(defined($isInUmVCF)){
       if($umformat eq $UNMATCHED_FORMAT_BED){#Check for bed rather than VCF
@@ -600,74 +614,74 @@ sub runFlagger{
             #End of if this is BED unmatched
       }elsif($umformat eq $UNMATCHED_FORMAT_VCF){
 
-            my ($ch,$po,$ident,$refAll,$altAll,$quality,$filts,$info,$format,@samples) = split(/\t/,$isInUmVCF);
-            #CHROM  POS  ID  REF  ALT  QUAL  FILTER  INFO  FORMAT  PD4106b  PD4107b  PD4108b  PD4109b  PD4110b  PD4111b  PD4112b  PD4113b  PD4114b  PD4115b
-            my ($geno,@formats) = split(':',$format);
-            my $sampleHitCount = 0;
-            my $totalSampleCnt = 0;
-            foreach my $sampData(@samples){
-                $totalSampleCnt++;
-                next if($sampData eq q{0:.:.:.:.} || $sampData eq q{-} || $sampData eq q{.});
-                #GT:GF:CF:TF:AF  0|0:41:0:0:0
-                my ($gentype,@data) = split(':',$sampData);
-                my $totalCvg = 0;
-                my $mutAlleleCvg = 0;
-                my $proportion = 0;
-                for (my $i=0;$i<scalar(@data);$i++){
-                    next unless ($formats[$i] =~ m/^[ACGT]{1}[A-Z]$/);
-                    $totalCvg += $data[$i];
-                    if(substr($formats[$i],0,1) eq $mut){
-                    $mutAlleleCvg = $data[$i];
-                    }
-                }
-                if($mutAlleleCvg >= $cfg->{"vcfUnmatchedMinMutAlleleCvg"}){
-                    $sampleHitCount++;
-                }
+        my ($ch,$po,$ident,$refAll,$altAll,$quality,$filts,$info,$format,@samples) = split(/\t/,$isInUmVCF);
+        #CHROM  POS  ID  REF  ALT  QUAL  FILTER  INFO  FORMAT  SAMPLE1b  SAMPLE2b  SAMPLE3b
+        my ($geno,@formats) = split(':',$format);
+        my $sampleHitCount = 0;
+        my $totalSampleCnt = 0;
+        foreach my $sampData(@samples){
+          $totalSampleCnt++;
+          next if($sampData eq q{0:.:.:.:.} || $sampData eq q{-} || $sampData eq q{.});
+          #GT:GF:CF:TF:AF  0|0:41:0:0:0
+          my ($gentype,@data) = split(':',$sampData);
+          my $totalCvg = 0;
+          my $mutAlleleCvg = 0;
+          my $proportion = 0;
+          for (my $i=0;$i<scalar(@data);$i++){
+            next unless ($formats[$i] =~ m/^[ACGT]{1}[A-Z]$/);
+            $totalCvg += $data[$i];
+            if(substr($formats[$i],0,1) eq $mut){
+              $mutAlleleCvg = $data[$i];
             }
-            return 1 if($totalSampleCnt == 0);
-            if((($sampleHitCount/$totalSampleCnt)*100) >= $cfg->{"vcfUnmatchedMinSamplePct"}){
-                return 0;
-            }
-          }#End of if this is VCF
+          }
+          if($mutAlleleCvg >= $cfg->{"vcfUnmatchedMinMutAlleleCvg"}){
+            $sampleHitCount++;
+          }
+        }
+        return 1 if($totalSampleCnt == 0);
+        if((($sampleHitCount/$totalSampleCnt)*100) >= $cfg->{"vcfUnmatchedMinSamplePct"}){
+          return 0;
+        }
+      }#End of if this is VCF
 
     }
     return 1;
   }elsif($flagName eq 'centromericRepeatFlag'){
     #CENTROMERIC REPEATS
     #Use intersect to check for centromeric repeats
-        return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
+    return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
   }elsif($flagName eq 'snpFlag'){
     #SNPS
     my $iter = $tabixList->{$flagName}->query_full($chr,$pos,$pos);
-        my $line = undef;
+    my $line = undef;
     $line = $iter->next if(defined($iter)); # undef if not found
     if(defined($line)){
       $$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
     }
     return -1;
-    }elsif($flagName eq 'cavemanMatchNormalProportionFlag'){
-        return $flagger->getCavemanMatchedNormalResult($vcf->get_column($x,$VCF_COLUMN_NORMAL),$vcf->get_column($x,$VCF_COLUMN_TUMOUR),$vcf->get_column($x,$VCF_COLUMN_FORMAT));
+  }elsif($flagName eq 'cavemanMatchNormalProportionFlag'){
+    return $flagger->getCavemanMatchedNormalResult($vcf,$x,$index);
   }elsif($flagName eq 'phasingFlag'){
     #PHASING
     return $flagger->getPhasingResult();
   }elsif($flagName eq 'annotationFlag'){
     #ANNOTATION
-        return _interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
+    return _interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
   }elsif($flagName eq 'hiSeqDepthFlag'){
     #HIGH SEQ DEPTH
-        return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
+    return !_interval_hit($tabixList->{$flagName},$chr,$pos,$pos);
   }elsif($flagName eq 'codingFlag'){
     #CODING
-        if(_interval_hit($tabixList->{$flagName},$chr,$pos,$pos)){
-            $$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
-        }
+    if(_interval_hit($tabixList->{$flagName},$chr,$pos,$pos)){
+      $$x[7]=$vcf->add_info_field($$x[7],$flagId=>'');
+    }
     return -1;
   }elsif($flagName eq 'clippingMedianFlag'){
     $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getClipMedianResult());
   }elsif($flagName eq 'alignmentScoreReadLengthAdjustedFlag'){
-        $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAlignmentScoreMedianReadAdjusted());
+    $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAlignmentScoreMedianReadAdjusted());
   }elsif($flagName eq 'alnScoreMedianFlag'){
-        $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAlignmentScoreMedian());
+    $$x[7]=$vcf->add_info_field($$x[7],$flagId=>$flagger->getAlignmentScoreMedian());
   }elsif($flagName eq 'lowMutBurdenFlag'){
     #Low mut burden
     croak('LOW_MUT_BURDEN');
@@ -701,6 +715,21 @@ sub appendFiltersToHeader{
   if($oldCave){
     $vcf->add_header_line({key=>'FILTER', ID=>$OLD_CAVE_FLAG_BUG_FLAG,Description=>$OLD_CAVE_FLAG_BUG_DESC});
   }
+  #See if we have (if any) FORMAT lines for MNVs to find the max length
+  my $max_len = 1;
+  while (defined($vcf->get_header_line(key=>'FORMAT', ID=>'FAZ_'.($max_len+1))) &&
+                scalar(@{$vcf->get_header_line(key=>'FORMAT', ID=>'FAZ_'.($max_len+1))})){
+    $max_len += 1;
+  }
+  if ($max_len > 1){ # We have MNVs
+    my $type = "String";
+    my $val = ".";
+    for my $i(1..$max_len){
+      my $description = sprintf($MNV_INFO_DESC,$i);
+      my $id = "$MNV_INFO_ID"."$i";
+      $vcf->add_header_line({key=>'INFO', ID=>$id,Type=>$type,Number=>$val,Description=>$description});
+    }
+  }
   return;
 }
 
@@ -716,7 +745,7 @@ sub getDescriptionWithParams{
 sub setupFromConfig{
   my ($opts) = @_;
   #Load in config file.
-  my ($configParams,$flagList,$bedFileParams) = Sanger::CGP::CavemanPostProcessor::ConfigParser::getConfigParams($opts,$flagopts);
+  my ($configParams,$flagList,$bedFileParams, $mnvflaglist) = Sanger::CGP::CavemanPostProcessor::ConfigParser::getConfigParams($opts,$flagopts);
   #Use the parameters and do some sanity checks for flag/bed file requirements.
   my ($centBed,$simpBed,$snpBed,$indelBed,$annoBed,$codingBed,$hsdBed) = undef;
   my @errs = ();
@@ -800,18 +829,21 @@ sub setupFromConfig{
   my $tmp_ref = $opts->{'ref'};
   $tmp_ref =~ s/\.fai$//;
   $configParams->{'ref'} = $tmp_ref;
-  return ($configParams,$flagList,$centBed,$simpBed,$snpBed,$indelBed,$annoBed,$codingBed,$hsdBed);
+  return ($configParams,$flagList,$centBed,$simpBed,$snpBed,$indelBed,$annoBed,$codingBed,$hsdBed, $mnvflaglist);
 }
 
 sub initFlagModuleForSpeciesType{
   my ($params,$type) = @_;
+  my $flag_mods;
   if(lc($type) eq lc("pulldown") || lc($type) eq lc("followup") || $type eq "WXS" || $type eq "AMPLICON" || $type eq "TARGETED"){
-    return Sanger::CGP::CavemanPostProcessor::ExomePostProcessor->new(%$params);
+    $flag_mods->{'SNV'} = Sanger::CGP::CavemanPostProcessor::ExomePostProcessor->new(%$params);
   }elsif($type eq "WGS" || $type eq "RNASEQ"){
-    return Sanger::CGP::CavemanPostProcessor::GenomePostProcessor->new(%$params);
+    $flag_mods->{'SNV'} = Sanger::CGP::CavemanPostProcessor::GenomePostProcessor->new(%$params);
   }else{
     croak("No flagging module for type: $type\n");
   }
+  $flag_mods->{'MNV'} = Sanger::CGP::CavemanPostProcessor::MNVPostProcessor->new(%$params);
+  return $flag_mods;
 }
 
 sub get_version {
@@ -827,7 +859,7 @@ sub get_config_files {
 
   $data_path = dist_dir('cgpCaVEManPostProcessing') unless(-e $data_path);
 
-  print "Using $data_path as share directory if files not pathed ad commandline\n" if($options->{'loud'});
+  print "Using $data_path as share directory if files not pathed at commandline\n" if($options->{'loud'});
 
   if($options->{'v'} && (! -e $options->{'v'} || ! -r $options->{'v'})){
     pod2usage("Error with flagToVcfConfig input check permissions.".$options->{'v'}."\n");
@@ -877,6 +909,7 @@ sub option_builder {
     'sp|sampleToIgnoreInUnmatched=s' => \$opts{'sp'},
     'b|bedFileLoc=s' => \$opts{'b'},
     'f|flags=s' => \@{$opts{'flags'}},
+    'r|flag-mnv' => \$opts{'flagmnv'},
     'version' => \$opts{'version'},
   );
   return \%opts;
@@ -1024,6 +1057,8 @@ cgpFlagCaVEMan.pl [-h] -f vcfToFlag.vcf -o flaggedVCF.vcf -c configFile.ini -s h
                                          ../config/flag.to.vcf.convert.ini for example
 
     --studyType            (-t)       Study type, used to decide parameters in file (genome|genomic|WGS|pulldown|exome|WXS|followup|AMPLICON|targeted|RNA_seq).
+
+    --flag-mnv             (-r)       Include flagging of MNVs (currently disabled)
 
   Examples:
 
